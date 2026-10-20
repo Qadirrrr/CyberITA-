@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="Python Automation">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1f1a"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.7" cy="0.35" r="0.55">
+      <stop offset="0" stop-color="#6ee7b7" stop-opacity="0.28"/><stop offset="1" stop-color="#6ee7b7" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0v48" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <rect width="1200" height="675" fill="url(#glow)"/>
+  <rect width="1200" height="675" fill="url(#grid)"/>
+  <circle cx="1080" cy="80" r="220" fill="none" stroke="#6ee7b7" stroke-opacity="0.12" stroke-width="2"/>
+  <circle cx="1080" cy="80" r="150" fill="none" stroke="#6ee7b7" stroke-opacity="0.1" stroke-width="2"/>
+  
+    <rect x="700" y="210" width="330" height="250" rx="24" fill="rgba(2,6,23,0.5)" stroke="rgba(255,255,255,0.15)"/>
+    <path d="M780 280l-32 32 32 32M900 280l32 32-32 32" fill="none" stroke="#6ee7b7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M862 266l-28 94" stroke="#a7f3d0" stroke-width="9" stroke-linecap="round"/>
+    <path d="M720 320h-10M1040 320h-10" stroke="rgba(255,255,255,0.2)" stroke-width="8" stroke-linecap="round"/>
+  
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <rect x="80" y="92" width="44" height="6" rx="3" fill="#6ee7b7"/>
+    <text x="80" y="150" fill="#6ee7b7" font-size="22" font-weight="700" letter-spacing="5">SCRIPTING FOR OPS</text>
+    <text x="80" y="275" fill="#ffffff" font-size="66" font-weight="700">Python Automation</text>
+    <text x="80" y="340" fill="rgba(226,232,240,0.7)" font-size="26" font-family="'JetBrains Mono', Consolas, monospace">cyberita.plus</text>
+  </g>
+  <rect x="0" y="0" width="1200" height="675" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+</svg>

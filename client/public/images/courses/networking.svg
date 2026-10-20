@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="Networking Essentials">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111a3a"/><stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.7" cy="0.35" r="0.55">
+      <stop offset="0" stop-color="#a5b4fc" stop-opacity="0.28"/><stop offset="1" stop-color="#a5b4fc" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0v48" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <rect width="1200" height="675" fill="url(#glow)"/>
+  <rect width="1200" height="675" fill="url(#grid)"/>
+  <circle cx="1080" cy="80" r="220" fill="none" stroke="#a5b4fc" stroke-opacity="0.12" stroke-width="2"/>
+  <circle cx="1080" cy="80" r="150" fill="none" stroke="#a5b4fc" stroke-opacity="0.1" stroke-width="2"/>
+  
+    <g fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="4">
+      <path d="M760 340 860 240M760 340 880 360M860 240 880 360M880 360 950 280"/>
+    </g>
+    <g>
+      <circle cx="760" cy="340" r="30" fill="#a5b4fc"/><circle cx="860" cy="240" r="26" fill="#c7d2fe"/><circle cx="880" cy="360" r="26" fill="#818cf8"/><circle cx="950" cy="280" r="20" fill="#e0e7ff"/>
+    </g>
+    <rect x="690" y="150" width="330" height="300" rx="28" fill="none" stroke="rgba(255,255,255,0.12)"/>
+  
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <rect x="80" y="92" width="44" height="6" rx="3" fill="#a5b4fc"/>
+    <text x="80" y="150" fill="#a5b4fc" font-size="22" font-weight="700" letter-spacing="5">TCP/IP &amp; ROUTING</text>
+    <text x="80" y="275" fill="#ffffff" font-size="66" font-weight="700">Networking Essentials</text>
+    <text x="80" y="340" fill="rgba(226,232,240,0.7)" font-size="26" font-family="'JetBrains Mono', Consolas, monospace">cyberita.plus</text>
+  </g>
+  <rect x="0" y="0" width="1200" height="675" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+</svg>

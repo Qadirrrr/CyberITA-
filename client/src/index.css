@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-night-950 font-sans text-slate-300 antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.08), transparent),
+      linear-gradient(to bottom, #05070d, #070b13);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    @apply font-display tracking-tight text-white;
+  }
+
+  ::selection {
+    @apply bg-brand-400/30 text-white;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1f2b42 transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-night-600;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl border border-white/10 bg-night-850/90 shadow-card;
+  }
+
+  .card-hover {
+    @apply transition duration-300 hover:-translate-y-1 hover:border-brand-400/30 hover:shadow-glow;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-300;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-night-900/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  select.input {
+    @apply appearance-none bg-[length:16px] bg-[right_0.9rem_center] bg-no-repeat pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium;
+  }
+
+  .link {
+    @apply text-brand-300 underline-offset-4 hover:text-brand-200 hover:underline;
+  }
+
+  .kbd {
+    @apply inline-flex items-center rounded border border-white/15 bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-slate-300;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .markdown {
+    @apply text-[15px] leading-7 text-slate-300;
+  }
+
+  .markdown > * + * {
+    @apply mt-4;
+  }
+
+  .markdown h1 {
+    @apply mt-8 text-3xl;
+  }
+
+  .markdown h2 {
+    @apply mt-8 border-b border-white/10 pb-2 text-2xl;
+  }
+
+  .markdown h3 {
+    @apply mt-6 text-xl;
+  }
+
+  .markdown h4 {
+    @apply mt-5 text-lg;
+  }
+
+  .markdown p {
+    @apply leading-7;
+  }
+
+  .markdown a {
+    @apply text-brand-300 underline decoration-brand-400/40 underline-offset-4 hover:text-brand-200;
+  }
+
+  .markdown strong {
+    @apply font-semibold text-white;
+  }
+
+  .markdown ul {
+    @apply list-disc space-y-1.5 pl-6 marker:text-brand-400;
+  }
+
+  .markdown ol {
+    @apply list-decimal space-y-1.5 pl-6 marker:text-brand-400;
+  }
+
+  .markdown li > ul,
+  .markdown li > ol {
+    @apply mt-1.5;
+  }
+
+  .markdown blockquote {
+    @apply rounded-r-xl border-l-2 border-brand-400/60 bg-brand-400/5 py-2 pl-4 pr-3 text-slate-300;
+  }
+
+  .markdown code {
+    @apply rounded bg-white/10 px-1.5 py-0.5 font-mono text-[13px] text-brand-200;
+  }
+
+  .markdown pre {
+    @apply overflow-x-auto rounded-xl border border-white/10 bg-night-950 p-4;
+  }
+
+  .markdown pre code {
+    @apply bg-transparent p-0 text-[13px] leading-6 text-slate-200;
+  }
+
+  .markdown table {
+    @apply w-full border-collapse overflow-hidden rounded-xl border border-white/10 text-sm;
+  }
+
+  .markdown th {
+    @apply bg-white/5 px-4 py-2 text-left font-semibold text-white;
+  }
+
+  .markdown td {
+    @apply border-t border-white/10 px-4 py-2 align-top;
+  }
+
+  .markdown hr {
+    @apply my-8 border-white/10;
+  }
+
+  .markdown img {
+    @apply rounded-xl border border-white/10;
+  }
+
+  .markdown input[type='checkbox'] {
+    @apply mr-2 accent-brand-400;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+}
