@@ -41,7 +41,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:5173. The API runs on http://localhost:4000 and the Vite dev server proxies `/api`, `/uploads` and `/ws`.
+Open http://43.204.246.241:5173. The API runs on http://43.204.246.241:4000 and the Vite dev server proxies `/api`, `/uploads` and `/ws`.
 
 ## Demo accounts
 

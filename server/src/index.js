@@ -24,7 +24,7 @@ async function main() {
   tokenPurge.unref();
 
   server.listen(env.port, () => {
-    logger.info(`CyberITA+ API listening on http://localhost:${env.port}`, {
+    logger.info(`CyberITA+ API listening on http://43.204.246.241:${env.port}`, {
       env: env.nodeEnv,
       labProvider: env.labs.provider,
     });

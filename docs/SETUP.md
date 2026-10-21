@@ -53,7 +53,7 @@ Edit both copies:
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 - `TEST_DB_NAME` for the integration test database
 - `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`
-- `CORS_ORIGINS` (defaults to `http://localhost:5173`)
+- `CORS_ORIGINS` (defaults to `http://43.204.246.241:5173`)
 - `PORT` if port 4000 is already in use
 
 Generate production-grade secrets with:
@@ -99,10 +99,10 @@ Seed behaviour:
 npm run dev
 ```
 
-- Frontend: http://localhost:5173
-- API: http://localhost:4000
-- API health: http://localhost:4000/api/health
-- WebSocket: ws://localhost:4000/ws
+- Frontend: http://43.204.246.241:5173
+- API: http://43.204.246.241:4000
+- API health: http://43.204.246.241:4000/api/health
+- WebSocket: ws://43.204.246.241:4000/ws
 
 The Vite dev server proxies `/api`, `/uploads` and `/ws` to the API.
 

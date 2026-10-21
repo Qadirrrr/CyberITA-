@@ -24,7 +24,7 @@ export const env = {
     accessTtlSeconds: parseTtl(process.env.ACCESS_TOKEN_TTL, '12h'),
     cookieSecure: String(process.env.COOKIE_SECURE || 'false').toLowerCase() === 'true',
   },
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173')
+  corsOrigins: (process.env.CORS_ORIGINS || 'http://43.204.246.241:5173')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
