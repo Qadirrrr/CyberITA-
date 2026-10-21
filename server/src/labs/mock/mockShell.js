@@ -440,9 +440,9 @@ export class MockShell {
     return { output: 'Usage: ip addr|route', exitCode: 1 };
   }
   cmdPing(args) {
-    const target = args.find((a) => !a.startsWith('-')) || 'localhost';
     const countIdx = args.indexOf('-c');
     const count = countIdx >= 0 ? Math.min(Number(args[countIdx + 1]) || 3, 10) : 3;
+    const target = args.find((a, i) => !a.startsWith('-') && i !== countIdx + 1) || 'localhost';
     const ip = fakeIpFor(target);
     const lines = [`PING ${target} (${ip}) 56(84) bytes of data.`];
     for (let i = 1; i <= count; i += 1) {
@@ -598,7 +598,7 @@ function fakeIpFor(target) {
   if (target === 'localhost' || target === '127.0.0.1') return '127.0.0.1';
   let hash = 0;
   for (const ch of String(target)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return `93.184.${(hash >> 8) % 256}.${(hash & 255) || 1}`;
+  return `93.184.${(hash >>> 8) % 256}.${(hash & 255) || 1}`;
 }
 
 function matchGlob(pattern, value) {

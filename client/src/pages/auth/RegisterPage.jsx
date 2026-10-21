@@ -5,7 +5,7 @@ import { Alert, Button, Checkbox, Input } from '../../components/ui';
 import { dashboardPath, useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { getErrorMessage, getFieldErrors } from '../../lib/api';
-import { IconArrowRight, IconEye, IconEyeOff, IconMail } from '../../components/icons';
+import { IconArrowRight, IconEye, IconEyeOff, IconMail, IconUser } from '../../components/icons';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -47,12 +47,9 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create your free account"
-      subtitle="Start with any course, run your first lab, and keep a verified record of your progress."
-      quote={{
-        title: 'Your first verified command is minutes away.',
-        body: 'No installation, no setup. Open a sandboxed terminal, follow the steps and watch your progress get verified as you work.',
-      }}
+      compact
+      title="Create your account"
+      subtitle="Start with guided labs and verified progress."
       footer={
         <>
           Already have an account?{' '}
@@ -68,28 +65,35 @@ export default function RegisterPage() {
         </Alert>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Input
-          label="Full name"
-          required
-          autoComplete="name"
-          value={form.fullName}
-          onChange={update('fullName')}
-          error={errors.fullName}
-          placeholder="Alex Rivera"
-        />
-        <div className="relative">
-          <Input
-            label="Email address"
-            type="email"
-            required
-            autoComplete="email"
-            value={form.email}
-            onChange={update('email')}
-            error={errors.email}
-            placeholder="you@example.com"
-          />
-          <IconMail size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
+      <form onSubmit={onSubmit} className="space-y-2.5 sm:space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="relative">
+            <Input
+              label="Full name"
+              required
+              autoComplete="name"
+              value={form.fullName}
+              onChange={update('fullName')}
+              error={errors.fullName}
+              placeholder="Alex Rivera"
+              className="pr-10"
+            />
+            <IconUser size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
+          </div>
+          <div className="relative">
+            <Input
+              label="Email address"
+              type="email"
+              required
+              autoComplete="email"
+              value={form.email}
+              onChange={update('email')}
+              error={errors.email}
+              placeholder="you@example.com"
+              className="pr-10"
+            />
+            <IconMail size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
+          </div>
         </div>
         <div className="relative">
           <Input
@@ -100,8 +104,9 @@ export default function RegisterPage() {
             value={form.password}
             onChange={update('password')}
             error={errors.password}
-            hint="At least 8 characters, including a letter and a number."
+            hint="8+ characters with a letter and number."
             placeholder="••••••••"
+            className="pr-10"
           />
           <button
             type="button"
@@ -123,16 +128,14 @@ export default function RegisterPage() {
           placeholder="••••••••"
         />
         <Checkbox
-          label="I agree to the terms of service and understand my lab activity is recorded for verification."
+          label="I agree to the Terms of Service and lab activity recording."
           checked={accepted}
           onChange={(event) => setAccepted(event.target.checked)}
+          className="text-xs leading-5"
         />
         <Button type="submit" loading={loading} size="lg" className="w-full">
           Create account <IconArrowRight size={17} />
         </Button>
-        <p className="text-center text-[11px] leading-5 text-slate-600">
-          Free to start. No credit card required.
-        </p>
       </form>
     </AuthShell>
   );

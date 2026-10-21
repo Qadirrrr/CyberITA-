@@ -22,6 +22,7 @@ import contactRoutes from './routes/contact.js';
 import certificateRoutes from './routes/certificates.js';
 import statsRoutes from './routes/stats.js';
 import learningPathRoutes from './routes/learningPaths.js';
+import navRoutes from './routes/nav.js';
 
 export function createApp() {
   const app = express();
@@ -66,6 +67,7 @@ export function createApp() {
   app.use('/api/contact', contactRoutes);
   app.use('/api/certificates', certificateRoutes);
   app.use('/api/learning-paths', learningPathRoutes);
+  app.use('/api/nav', navRoutes);
   app.use('/api', statsRoutes);
 
   // Serve the built frontend in production (single-origin deployment)

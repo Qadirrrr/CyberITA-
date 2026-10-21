@@ -68,6 +68,7 @@ All seeded accounts use the password from `SEED_PASSWORD` (`Passw0rd!` by defaul
 | `npm run test:client` | Run client unit tests |
 | `npm run db:migrate` | Apply pending SQL migrations |
 | `npm run db:seed` | Seed demo content (skipped if users already exist) |
+| `npm run db:seed:extra` | Add the extended course and lab catalog to an existing database (idempotent) |
 | `npm run db:reset` | Drop, recreate and migrate the database |
 
 Set `FORCE_SEED=1` with `npm run db:seed` to reseed a populated development database (this clears existing data).

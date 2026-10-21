@@ -15,11 +15,36 @@ export const CATEGORIES = [
   'Networking',
   'Cybersecurity',
   'Cloud',
+  'Windows',
   'DevOps',
   'Programming',
+  'Web Development',
   'Databases',
+  'Automation',
   'Career',
 ];
+
+export const SUBCATEGORY_SUGGESTIONS = {
+  Linux: ['Linux Administration', 'Shell Scripting', 'System Hardening'],
+  Networking: ['Network Fundamentals', 'Troubleshooting', 'Network Security', 'Cisco & Routing'],
+  Cybersecurity: [
+    'Security Fundamentals',
+    'Ethical Hacking',
+    'Penetration Testing',
+    'Security Operations',
+    'Governance & Compliance',
+    'Threat Detection',
+    'Incident Response',
+  ],
+  Cloud: ['Cloud Platforms', 'Cloud Security', 'Cloud Architecture', 'AWS', 'Cloud Networking'],
+  Windows: ['Server Administration', 'Active Directory', 'PowerShell'],
+  DevOps: ['CI/CD & Automation', 'Containers', 'Infrastructure as Code'],
+  Programming: ['Python', 'JavaScript', 'Go', 'Bash'],
+  'Web Development': ['React', 'Express', 'Full Stack', 'APIs'],
+  Databases: ['SQL & PostgreSQL', 'Database Design', 'Performance'],
+  Automation: ['Python Automation', 'Ansible', 'Scripting'],
+  Career: ['Career Growth', 'Interview Prep', 'Portfolio'],
+};
 
 export const LAB_CATEGORIES = ['Linux', 'Networking', 'Cybersecurity', 'Cloud', 'DevOps', 'Programming', 'Databases'];
 

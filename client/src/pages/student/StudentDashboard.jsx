@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import CourseCard from '../../components/CourseCard';
-import { Alert, Badge, Button, Card, EmptyState, ProgressBar, Skeleton, StatCard } from '../../components/ui';
+import { Alert, AnimatedNumber, Badge, Button, Card, EmptyState, ProgressBar, Skeleton, StatCard } from '../../components/ui';
 import {
   IconArrowRight,
   IconAward,
@@ -84,8 +84,8 @@ export default function StudentDashboard() {
     <div className="space-y-6">
       {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-brand-500/[0.1] via-night-850 to-accent-500/[0.08] p-6 sm:p-8">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-400/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-night-900/60 p-6 sm:p-8">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-brand-400/[0.07] blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-300">
@@ -285,11 +285,15 @@ export default function StudentDashboard() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                <p className="font-display text-xl font-semibold text-white">{stats?.activeDays30 ?? 0}</p>
+                <p className="font-display text-xl font-semibold text-white tabular-nums">
+                  <AnimatedNumber value={stats?.activeDays30 ?? 0} />
+                </p>
                 <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-500">Active days (30d)</p>
               </div>
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                <p className="font-display text-xl font-semibold text-white">{stats?.quizzes.passed ?? 0}</p>
+                <p className="font-display text-xl font-semibold text-white tabular-nums">
+                  <AnimatedNumber value={stats?.quizzes.passed ?? 0} />
+                </p>
                 <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-500">Quizzes passed</p>
               </div>
             </div>

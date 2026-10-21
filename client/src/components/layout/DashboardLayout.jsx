@@ -12,14 +12,12 @@ import {
   IconBookOpen,
   IconClipboard,
   IconFileText,
-  IconGlobe,
   IconGraduationCap,
   IconLayout,
   IconLogOut,
   IconMail,
   IconMenu,
   IconSend,
-  IconServer,
   IconShield,
   IconTerminal,
   IconUsers,
@@ -121,21 +119,7 @@ export default function DashboardLayout() {
         </nav>
       </div>
 
-      <div className="mt-auto space-y-2 p-4">
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-            <IconServer size={14} className="text-brand-400" /> Lab environments
-          </div>
-          <p className="mt-1.5 text-[11px] leading-4 text-slate-500">
-            Mock provider active. Sandboxed Linux containers are simulated in the browser for every exercise.
-          </p>
-        </div>
-        <NavLink
-          to="/"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
-        >
-          <IconGlobe size={18} /> Back to learning site
-        </NavLink>
+      <div className="mt-auto p-4">
         <button
           type="button"
           onClick={onLogout}

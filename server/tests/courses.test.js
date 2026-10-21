@@ -186,6 +186,30 @@ describe('Courses & enrollment', () => {
     expect(overview.body.students.learners).toBeGreaterThanOrEqual(1);
   });
 
+  it('exposes a subcategory-aware catalog for the navbar', async () => {
+    const instructor = await createUser({ role: 'instructor' });
+    const session = await loginAs(instructor);
+    const published = await createCourseFor(session.token, {
+      title: 'React Frontend',
+      category: 'Web Development',
+      subcategory: 'React',
+      status: 'published',
+    });
+    const draft = await createCourseFor(session.token, {
+      title: 'Express API Draft',
+      category: 'Web Development',
+      subcategory: 'Express',
+      status: 'draft',
+    });
+
+    const res = await api().get('/api/nav').expect(200);
+    const listed = res.body.courses.find((course) => course.id === published.id);
+    expect(listed).toBeTruthy();
+    expect(listed.subcategory).toBe('React');
+    expect(res.body.courses.find((course) => course.id === draft.id)).toBeUndefined();
+    expect(Array.isArray(res.body.labs)).toBe(true);
+  });
+
   it('supports learning paths in the public API', async () => {
     const { query } = await import('../src/config/db.js');
     const instructor = await createUser({ role: 'instructor' });

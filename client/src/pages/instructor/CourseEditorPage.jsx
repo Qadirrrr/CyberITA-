@@ -28,7 +28,7 @@ import {
   IconUsers,
   IconZap,
 } from '../../components/icons';
-import { CATEGORIES, DIFFICULTIES } from '../../lib/constants';
+import { CATEGORIES, DIFFICULTIES, SUBCATEGORY_SUGGESTIONS } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
 
 const tabs = [
@@ -45,6 +45,7 @@ const emptyDetails = {
   summary: '',
   description: '',
   category: 'Linux',
+  subcategory: '',
   level: 'beginner',
   durationHours: 0,
   price: 0,
@@ -99,6 +100,7 @@ export default function CourseEditorPage() {
         summary: course.summary || '',
         description: course.description || '',
         category: course.category || 'Linux',
+        subcategory: course.subcategory || '',
         level: course.level || 'beginner',
         durationHours: course.duration_hours ?? 0,
         price: course.price ?? 0,
@@ -138,6 +140,7 @@ export default function CourseEditorPage() {
       summary: details.summary.trim(),
       description: details.description,
       category: details.category,
+      subcategory: details.subcategory.trim() || 'General',
       level: details.level,
       durationHours: Number(details.durationHours) || 0,
       price: Number(details.price) || 0,
@@ -583,6 +586,22 @@ export default function CourseEditorPage() {
                 <datalist id="course-categories">
                   {CATEGORIES.map((category) => (
                     <option key={category} value={category} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <label htmlFor="course-subcategory" className="label">Subcategory</label>
+                <input
+                  id="course-subcategory"
+                  list="course-subcategories"
+                  className="input mt-1.5"
+                  value={details.subcategory}
+                  onChange={updateDetail('subcategory')}
+                  placeholder="e.g. React, Express, Linux Administration"
+                />
+                <datalist id="course-subcategories">
+                  {(SUBCATEGORY_SUGGESTIONS[details.category] || []).map((subcategory) => (
+                    <option key={subcategory} value={subcategory} />
                   ))}
                 </datalist>
               </div>

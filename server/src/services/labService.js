@@ -268,7 +268,7 @@ export async function executeInSession(session, lab, command) {
      WHERE id = $4 RETURNING *`,
     [JSON.stringify(history), JSON.stringify(exec.fsState), exec.cwd, session.id]
   );
-  const updatedSession = updatedRows[0];
+  const updatedSession = { ...session, ...updatedRows[0] };
 
   const verification = await verifyStepsAfterCommand({ session: updatedSession, command, output: exec.output });
 

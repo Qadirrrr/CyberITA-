@@ -309,4 +309,13 @@ describe('Practical labs', () => {
     await instructorSession.auth(api().delete(`/api/labs/${lab.id}`)).expect(200);
     await api().get(`/api/labs/${lab.id}`).expect(404);
   });
+
+  it('includes published labs in the navbar catalog', async () => {
+    const { lab, course } = await setupLabFixture();
+    const res = await api().get('/api/nav').expect(200);
+    const found = res.body.labs.find((entry) => String(entry.id) === String(lab.id));
+    expect(found).toBeTruthy();
+    expect(String(found.course_id)).toBe(String(course.id));
+    expect(found.course_title).toBe(course.title);
+  });
 });

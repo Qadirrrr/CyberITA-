@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { dashboardPath, useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Avatar, Badge } from '../ui';
-import { IconChevronDown, IconGlobe, IconLogOut, IconUser } from '../icons';
+import { IconChevronDown, IconLogOut, IconUser } from '../icons';
 import { ROLES } from '../../lib/constants';
 import useClickOutside from '../../hooks/useClickOutside';
 
@@ -62,13 +62,6 @@ export default function UserMenu() {
                 <IconUser size={16} /> Profile settings
               </Link>
             )}
-            <Link
-              to="/"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
-            >
-              <IconGlobe size={16} /> Learning site
-            </Link>
             <button
               type="button"
               onClick={onLogout}

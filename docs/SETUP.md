@@ -85,6 +85,8 @@ npm run db:seed
 
 For a clean slate, `npm run db:reset` drops, recreates and migrates the main database. It does not seed. Run `npm run db:seed` afterwards.
 
+`db:seed` includes the extended catalog. If your database was seeded before that catalog existed, run `npm run db:seed:extra` instead; it is idempotent and does not clear user data.
+
 Seed behaviour:
 
 - Seeding is skipped when users already exist.
@@ -124,6 +126,7 @@ Server tests create and migrate `TEST_DB_NAME` and should not point at a databas
 | Task | Command |
 | --- | --- |
 | Reseed demo content only | `npm run db:seed` |
+| Add the extended catalog | `npm run db:seed:extra` |
 | Force a full reseed | `$env:FORCE_SEED='1'; npm run db:seed` (PowerShell) |
 | Rebuild frontend | `npm run build` |
 | Run the production build locally | `npm run build; npm start` |

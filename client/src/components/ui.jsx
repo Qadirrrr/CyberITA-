@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useId } from 'react';
+import React, { forwardRef, useEffect, useId, useRef, useState } from 'react';
 import { IconAlert, IconCheckCircle, IconChevronLeft, IconChevronRight, IconInbox, IconInfo, IconX } from './icons';
 
 export function cx(...parts) {
@@ -7,7 +7,7 @@ export function cx(...parts) {
 
 const buttonVariants = {
   primary:
-    'bg-brand-400 text-night-950 font-semibold hover:bg-brand-300 focus-visible:ring-brand-400/50 shadow-glow-sm',
+    'bg-brand-400 text-night-950 font-semibold hover:bg-brand-300 focus-visible:ring-brand-400/50',
   secondary:
     'border border-white/15 bg-white/5 text-slate-100 hover:border-white/25 hover:bg-white/10 focus-visible:ring-white/30',
   ghost: 'text-slate-300 hover:bg-white/5 hover:text-white focus-visible:ring-white/20',
@@ -193,6 +193,90 @@ export function ProgressBar({ value = 0, className = '', tone = 'brand', size = 
   );
 }
 
+const easeOutCubic = (progress) => 1 - Math.pow(1 - progress, 3);
+
+export function AnimatedNumber({ value = 0, duration = 1100, decimals = 0, className = '' }) {
+  const target = Number.isFinite(Number(value)) ? Number(value) : 0;
+  const [display, setDisplay] = useState(0);
+  const current = useRef(0);
+
+  useEffect(() => {
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    if (reduceMotion) {
+      current.current = target;
+      setDisplay(target);
+      return undefined;
+    }
+
+    const from = current.current;
+    if (from === target) {
+      setDisplay(target);
+      return undefined;
+    }
+
+    let frame;
+    const startedAt = performance.now();
+    const step = (now) => {
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / duration));
+      const next = from + (target - from) * easeOutCubic(progress);
+      current.current = next;
+      setDisplay(next);
+      if (progress < 1) frame = requestAnimationFrame(step);
+      else current.current = target;
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [target, duration]);
+
+  return (
+    <span className={className}>
+      {display.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}
+    </span>
+  );
+}
+
+export function AnimatedStatValue({ value }) {
+  if (typeof value === 'number') {
+    return (
+      <>
+        <span className="sr-only">{value}</span>
+        <span aria-hidden="true">
+          <AnimatedNumber value={value} />
+        </span>
+      </>
+    );
+  }
+
+  if (typeof value !== 'string') return value;
+
+  const match = value.match(/^(\D*?)(-?\d[\d,]*(?:\.\d+)?)(\D*)$/);
+  if (!match) return value;
+
+  const [, prefix, rawNumber, suffix] = match;
+  const numeric = Number(rawNumber.replace(/,/g, ''));
+  if (!Number.isFinite(numeric)) return value;
+
+  const decimals = (rawNumber.split('.')[1] || '').length;
+
+  return (
+    <>
+      <span className="sr-only">{value}</span>
+      <span aria-hidden="true">
+        {prefix}
+        <AnimatedNumber value={numeric} decimals={decimals} />
+        {suffix}
+      </span>
+    </>
+  );
+}
+
 export function StatCard({ icon: IconComponent, label, value, hint, tone = 'brand', className = '' }) {
   const tones = {
     brand: 'bg-brand-400/10 text-brand-300',
@@ -202,19 +286,19 @@ export function StatCard({ icon: IconComponent, label, value, hint, tone = 'bran
     rose: 'bg-rose-400/10 text-rose-300',
   };
   return (
-    <Card className={cx('p-5', className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-          <p className="mt-2 font-display text-3xl font-semibold text-white">{value}</p>
-          {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-        </div>
+    <Card className={cx('p-5 transition-colors hover:border-white/20', className)}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
         {IconComponent && (
-          <div className={cx('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', tones[tone] || tones.brand)}>
-            <IconComponent size={22} />
-          </div>
+          <span className={cx('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', tones[tone] || tones.brand)}>
+            <IconComponent size={18} />
+          </span>
         )}
       </div>
+      <p className="mt-3 font-display text-[2rem] font-semibold leading-none tracking-tight text-white tabular-nums">
+        <AnimatedStatValue value={value ?? 0} />
+      </p>
+      {hint && <p className="mt-2 text-xs text-slate-500">{hint}</p>}
     </Card>
   );
 }

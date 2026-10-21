@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { Badge, Button, Card, ProgressBar, Skeleton, StatCard } from '../../components/ui';
+import { AnimatedNumber, Badge, Button, Card, ProgressBar, Skeleton, StatCard } from '../../components/ui';
 import {
   IconArrowRight,
   IconBookOpen,
@@ -144,7 +144,9 @@ export default function StaffDashboard() {
                 <span className="flex items-center gap-2 text-xs text-amber-200">
                   <IconFileText size={14} /> Practical reports
                 </span>
-                <span className="font-display text-lg font-semibold text-amber-300">{stats?.pending?.reports_pending ?? 0}</span>
+                <span className="font-display text-lg font-semibold text-amber-300 tabular-nums">
+                  <AnimatedNumber value={stats?.pending?.reports_pending ?? 0} />
+                </span>
               </Link>
               <Link
                 to="/instructor/submissions"
@@ -153,7 +155,9 @@ export default function StaffDashboard() {
                 <span className="flex items-center gap-2 text-xs text-brand-200">
                   <IconClipboard size={14} /> Assignment submissions
                 </span>
-                <span className="font-display text-lg font-semibold text-brand-300">{stats?.pending?.submissions_pending ?? 0}</span>
+                <span className="font-display text-lg font-semibold text-brand-300 tabular-nums">
+                  <AnimatedNumber value={stats?.pending?.submissions_pending ?? 0} />
+                </span>
               </Link>
             </div>
           </Card>
@@ -184,7 +188,9 @@ export default function StaffDashboard() {
           <Card className="p-5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">Avg. learner progress</span>
-              <span className="font-mono text-slate-300">{Math.round(Number(stats?.students?.avg_progress ?? 0))}%</span>
+              <span className="font-mono text-slate-300">
+                <AnimatedNumber value={Math.round(Number(stats?.students?.avg_progress ?? 0))} />%
+              </span>
             </div>
             <ProgressBar value={Number(stats?.students?.avg_progress ?? 0)} size="sm" className="mt-2" />
             <p className="mt-2 text-[10px] leading-4 text-slate-600">

@@ -163,6 +163,13 @@ export default function CourseDetailPage() {
     }
   };
 
+  const openCurriculum = () => {
+    setTab('curriculum');
+    window.requestAnimationFrame(() => {
+      document.getElementById('course-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   if (loading) {
     return (
       <div className="container-page py-10">
@@ -228,11 +235,69 @@ export default function CourseDetailPage() {
                 <p className="text-xs text-slate-500">{course.instructor_headline || 'Instructor'}</p>
               </div>
             </div>
+
+            {(modules.length > 0 || course.tags?.length > 0) && (
+              <div className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Inside this course
+                  </p>
+                  {modules.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={openCurriculum}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-brand-300 transition hover:text-brand-200"
+                    >
+                      View curriculum <IconArrowRight size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {modules.length > 0 && (
+                  <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    {modules.slice(0, 4).map((module, index) => (
+                      <div key={module.id} className="flex items-start gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 font-display text-[11px] font-semibold text-brand-300">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-slate-200">{module.title}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">
+                            {module.lessons.length} {module.lessons.length === 1 ? 'lesson' : 'lessons'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {modules.length > 4 && (
+                  <button
+                    type="button"
+                    onClick={openCurriculum}
+                    className="mt-3 text-xs text-slate-500 transition hover:text-brand-300"
+                  >
+                    +{modules.length - 4} more modules in the full curriculum
+                  </button>
+                )}
+
+                {modules.length < 3 && course.tags?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Skills</span>
+                    {course.tags.slice(0, 6).map((tag) => (
+                      <Badge key={tag} tone="slate">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="lg:sticky lg:top-24 lg:self-start">
             <Card className="overflow-hidden">
-              <div className="relative h-40 bg-gradient-to-br from-brand-500/25 via-night-800 to-accent-500/20">
+              <div className="relative h-36 bg-gradient-to-br from-brand-500/25 via-night-800 to-accent-500/20">
                 {course.cover_image && (
                   <img src={course.cover_image} alt="" className="h-full w-full object-cover opacity-80" />
                 )}
@@ -293,26 +358,11 @@ export default function CourseDetailPage() {
                 </div>
               </div>
             </Card>
-            {data.quizzes.length > 0 && (
-              <Card className="mt-4 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assessments</p>
-                <ul className="mt-3 space-y-2">
-                  {data.quizzes.map((quiz) => (
-                    <li key={quiz.id} className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate text-slate-300">{quiz.title}</span>
-                      <span className="shrink-0 text-xs text-slate-500">
-                        {quiz.question_count} Q · {Math.round(Number(quiz.pass_score))}% to pass
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
           </div>
         </div>
       </section>
 
-      <section className="container-page py-10 lg:py-14">
+      <section id="course-tabs" className="container-page scroll-mt-24 py-10 lg:py-14">
         <Tabs
           value={tab}
           onChange={setTab}
@@ -432,6 +482,21 @@ export default function CourseDetailPage() {
                     : 'For practitioners ready to go deeper into production scenarios.'}
               </p>
             </Card>
+            {data.quizzes.length > 0 && (
+              <Card className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assessments</p>
+                <ul className="mt-3 space-y-2">
+                  {data.quizzes.map((quiz) => (
+                    <li key={quiz.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="truncate text-slate-300">{quiz.title}</span>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {quiz.question_count} Q · {Math.round(Number(quiz.pass_score))}% to pass
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
             <Card className="p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Need guidance?</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">

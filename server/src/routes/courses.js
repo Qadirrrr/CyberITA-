@@ -11,11 +11,11 @@ const router = Router();
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 
 const courseColumns = (alias = 'c') => `${alias}.id, ${alias}.slug, ${alias}.title, ${alias}.summary,
-  ${alias}.description, ${alias}.category, ${alias}.level, ${alias}.duration_hours, ${alias}.price,
+  ${alias}.description, ${alias}.category, ${alias}.subcategory, ${alias}.level, ${alias}.duration_hours, ${alias}.price,
   ${alias}.cover_image, ${alias}.status, ${alias}.tags, ${alias}.created_at, ${alias}.updated_at,
   ${alias}.published_at, ${alias}.instructor_id`;
 
-const courseReturning = `id, slug, title, summary, description, category, level, duration_hours, price,
+const courseReturning = `id, slug, title, summary, description, category, subcategory, level, duration_hours, price,
   cover_image, status, tags, created_at, updated_at, published_at, instructor_id`;
 
 const courseCreateSchema = z.object({
@@ -23,6 +23,7 @@ const courseCreateSchema = z.object({
   summary: z.string().trim().max(400).default(''),
   description: z.string().trim().max(20000).default(''),
   category: z.string().trim().max(80).default('General'),
+  subcategory: z.string().trim().max(80).default('General'),
   level: z.enum(LEVELS).default('beginner'),
   durationHours: z.coerce.number().min(0).max(1000).default(0),
   price: z.coerce.number().min(0).max(100000).default(0),
@@ -290,12 +291,12 @@ router.post(
     const body = req.body;
     const slug = uniqueSlug(body.title);
     const { rows } = await query(
-      `INSERT INTO courses (slug, title, summary, description, category, level, duration_hours,
+      `INSERT INTO courses (slug, title, summary, description, category, subcategory, level, duration_hours,
          price, cover_image, status, tags, instructor_id, published_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING ${courseReturning}`,
       [
-        slug, body.title, body.summary, body.description, body.category, body.level,
+        slug, body.title, body.summary, body.description, body.category, body.subcategory, body.level,
         body.durationHours, body.price, body.coverImage ?? null, body.status, body.tags,
         req.user.id, body.status === 'published' ? new Date() : null,
       ]
@@ -320,18 +321,19 @@ router.put(
          summary = COALESCE($2, summary),
          description = COALESCE($3, description),
          category = COALESCE($4, category),
-         level = COALESCE($5, level),
-         duration_hours = COALESCE($6, duration_hours),
-         price = COALESCE($7, price),
-         cover_image = COALESCE($8, cover_image),
-         status = COALESCE($9, status),
-         tags = COALESCE($10, tags),
-         published_at = COALESCE(published_at, $12)
-       WHERE id = $11 RETURNING ${courseReturning}`,
+         subcategory = COALESCE($5, subcategory),
+         level = COALESCE($6, level),
+         duration_hours = COALESCE($7, duration_hours),
+         price = COALESCE($8, price),
+         cover_image = COALESCE($9, cover_image),
+         status = COALESCE($10, status),
+         tags = COALESCE($11, tags),
+         published_at = COALESCE(published_at, $13)
+       WHERE id = $12 RETURNING ${courseReturning}`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.category ?? null,
-        b.level ?? null, b.durationHours ?? null, b.price ?? null, b.coverImage ?? null,
-        b.status ?? null, b.tags ?? null, course.id,
+        b.subcategory ?? null, b.level ?? null, b.durationHours ?? null, b.price ?? null,
+        b.coverImage ?? null, b.status ?? null, b.tags ?? null, course.id,
         b.status === 'published' && course.published_at == null ? new Date() : null,
       ]
     );

@@ -7,6 +7,7 @@ import logger from '../config/logger.js';
 import { hashPassword } from '../services/authService.js';
 import { certificateSerial, slugify } from '../utils/helpers.js';
 import { defaultFs } from '../labs/mock/virtualFs.js';
+import { seedExtraCatalog } from './seedCatalog.js';
 
 const PASSWORD = env.seed.password;
 
@@ -30,14 +31,14 @@ async function createUser(client, { email, name, role, headline, bio }) {
   return rows[0].id;
 }
 
-async function createCourse(client, { instructorId, title, slug, summary, description, category, level, durationHours, price = 0, tags, cover, status = 'published' }) {
+async function createCourse(client, { instructorId, title, slug, summary, description, category, subcategory = 'General', level, durationHours, price = 0, tags, cover, status = 'published' }) {
   const { rows } = await client.query(
-    `INSERT INTO courses (slug, title, summary, description, category, level, duration_hours, price,
+    `INSERT INTO courses (slug, title, summary, description, category, subcategory, level, duration_hours, price,
        cover_image, status, tags, instructor_id, published_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      RETURNING id, slug`,
-    [slug, title, summary, description, category, level, durationHours, price, cover, status, tags, instructorId,
-     status === 'published' ? new Date() : null]
+    [slug, title, summary, description, category, subcategory, level, durationHours, price, cover, status, tags,
+     instructorId, status === 'published' ? new Date() : null]
   );
   return rows[0];
 }
@@ -182,7 +183,7 @@ Linux runs the modern data center. In this course you move from your first termi
 Help desk staff, junior sysadmins and anyone moving into IT operations.
 
 Every module includes a **hands-on lab** running in your browser.`,
-      category: 'Linux', level: 'beginner', durationHours: 14, price: 49,
+      category: 'Linux', subcategory: 'Linux Administration', level: 'beginner', durationHours: 14, price: 49,
       tags: ['linux', 'bash', 'sysadmin', 'beginner'],
       cover: '/images/courses/linux.svg',
     });
@@ -208,7 +209,7 @@ From the OSI model to real troubleshooting workflows, this course teaches you to
 
 ### Who it's for
 Support engineers, field technicians and aspiring network admins.`,
-      category: 'Networking', level: 'beginner', durationHours: 12, price: 59,
+      category: 'Networking', subcategory: 'Network Fundamentals', level: 'beginner', durationHours: 12, price: 59,
       tags: ['networking', 'tcp-ip', 'dns', 'troubleshooting'],
       cover: '/images/courses/networking.svg',
     });
@@ -231,7 +232,7 @@ Understand the CIA triad, common attack vectors and how to harden a system. You 
 ### Requirements
 - Comfort with the command line is helpful
 - Linux Fundamentals is recommended but not required`,
-      category: 'Cybersecurity', level: 'beginner', durationHours: 10, price: 69,
+      category: 'Cybersecurity', subcategory: 'Security Fundamentals', level: 'beginner', durationHours: 10, price: 69,
       tags: ['security', 'cia', 'hardening', 'defensive'],
       cover: '/images/courses/security.svg',
     });
@@ -254,7 +255,7 @@ Virtual machines, object storage, VPCs, IAM and scaling. The course is provider-
 ### Requirements
 - Networking Essentials or equivalent knowledge
 - Basic Linux skills recommended`,
-      category: 'Cloud', level: 'intermediate', durationHours: 11, price: 79,
+      category: 'Cloud', subcategory: 'Cloud Platforms', level: 'intermediate', durationHours: 11, price: 79,
       tags: ['cloud', 'aws', 'iaas', 'architecture'],
       cover: '/images/courses/cloud.svg',
     });
@@ -277,7 +278,7 @@ Domains, users, group policy, storage and monitoring — the core skills for a W
 ### Requirements
 - Basic Windows client experience
 - No server administration experience needed`,
-      category: 'Windows', level: 'intermediate', durationHours: 13, price: 64,
+      category: 'Windows', subcategory: 'Server Administration', level: 'intermediate', durationHours: 13, price: 64,
       status: 'draft',
       tags: ['windows', 'active-directory', 'gpo'],
       cover: '/images/courses/windows.svg',
@@ -301,7 +302,7 @@ Write scripts that manage files, call APIs, parse logs and talk to network devic
 ### Requirements
 - A computer and a browser
 - No programming experience required`,
-      category: 'Automation', level: 'beginner', durationHours: 9, price: 39,
+      category: 'Automation', subcategory: 'Python Automation', level: 'beginner', durationHours: 9, price: 39,
       tags: ['python', 'automation', 'scripting'],
       cover: '/images/courses/python.svg',
     });
@@ -923,6 +924,9 @@ ss -tuln
 
 > Apply the pattern in the **Users, Groups & Permissions** lab.`, instructorNet]
     );
+
+    // ---------- extra catalog ----------
+    await seedExtraCatalog(client, { linux: instructorLinux, net: instructorNet });
 
     // ---------- notifications & contact ----------
     await client.query(

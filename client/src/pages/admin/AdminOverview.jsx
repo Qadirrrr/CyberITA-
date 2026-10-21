@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
-import { Badge, Button, Card, Skeleton, StatCard } from '../../components/ui';
+import { AnimatedNumber, Badge, Button, Card, Skeleton, StatCard } from '../../components/ui';
 import {
   IconArrowRight,
   IconAward,
@@ -26,7 +26,7 @@ function SeriesBars({ data, tone = 'brand' }) {
           <div
             className={`w-full rounded-t ${tone === 'brand' ? 'bg-brand-400/60 group-hover:bg-brand-300' : 'bg-accent-400/60 group-hover:bg-accent-300'} transition`}
             style={{ height: `${Math.max(4, (item.count / max) * 88)}px` }}
-            title={`${new Date(item.week).toLocaleDateString()} Â· ${item.count}`}
+            title={`${new Date(item.week).toLocaleDateString()} · ${item.count}`}
           />
           <span className="text-[8px] text-slate-700">{new Date(item.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
         </div>
@@ -100,7 +100,7 @@ export default function AdminOverview() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={IconUsers} label="Users" value={stats.users.total} hint={`${stats.users.new_this_week} new this week`} />
-        <StatCard icon={IconBookOpen} label="Courses" value={stats.courses.total} hint={`${stats.courses.published} published Â· ${stats.courses.drafts} drafts`} tone="accent" />
+        <StatCard icon={IconBookOpen} label="Courses" value={stats.courses.total} hint={`${stats.courses.published} published · ${stats.courses.drafts} drafts`} tone="accent" />
         <StatCard icon={IconGraduationCap} label="Enrollments" value={stats.enrollments.total} hint={`${completionRate}% completion rate`} tone="emerald" />
         <StatCard icon={IconTerminal} label="Lab sessions" value={stats.labs.sessions} hint={`${stats.labs.steps_completed} steps completed`} tone="amber" />
       </div>
@@ -144,7 +144,9 @@ export default function AdminOverview() {
             ].map((item) => (
               <Link key={item.label} to={item.to} className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 transition hover:border-white/20 hover:bg-white/[0.04]">
                 <item.icon size={17} className={item.tone} />
-                <p className="mt-2 font-display text-2xl font-semibold text-white">{item.value}</p>
+                <p className="mt-2 font-display text-2xl font-semibold text-white tabular-nums">
+                  <AnimatedNumber value={item.value} />
+                </p>
                 <p className="text-[11px] text-slate-400">{item.label}</p>
                 <p className="mt-0.5 text-[10px] text-slate-600">{item.hint}</p>
               </Link>
@@ -159,7 +161,9 @@ export default function AdminOverview() {
               <span className="flex items-center gap-2 text-xs text-amber-200">
                 <IconMail size={14} /> New contact messages
               </span>
-              <span className="font-display text-lg font-semibold text-amber-300">{stats.content.new_messages}</span>
+              <span className="font-display text-lg font-semibold text-amber-300 tabular-nums">
+                <AnimatedNumber value={stats.content.new_messages} />
+              </span>
             </Link>
             <Link to="/admin/messages" className="mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-xs text-slate-400 transition hover:text-slate-200">
               Open inbox <IconArrowRight size={12} />
@@ -169,10 +173,10 @@ export default function AdminOverview() {
           <Card className="p-5">
             <h2 className="font-display text-base font-semibold">Platform mix</h2>
             <dl className="mt-3 space-y-2 text-xs">
-              <div className="flex items-center justify-between"><dt className="text-slate-500">Students</dt><dd className="text-slate-300">{stats.users.students}</dd></div>
-              <div className="flex items-center justify-between"><dt className="text-slate-500">Instructors</dt><dd className="text-slate-300">{stats.users.instructors}</dd></div>
-              <div className="flex items-center justify-between"><dt className="text-slate-500">Admins</dt><dd className="text-slate-300">{stats.users.total - stats.users.students - stats.users.instructors}</dd></div>
-              <div className="flex items-center justify-between border-t border-white/10 pt-2"><dt className="text-slate-500">Avg. progress</dt><dd className="text-slate-300">{Math.round(Number(stats.enrollments.avg_progress))}%</dd></div>
+              <div className="flex items-center justify-between"><dt className="text-slate-500">Students</dt><dd className="text-slate-300 tabular-nums"><AnimatedNumber value={stats.users.students} /></dd></div>
+              <div className="flex items-center justify-between"><dt className="text-slate-500">Instructors</dt><dd className="text-slate-300 tabular-nums"><AnimatedNumber value={stats.users.instructors} /></dd></div>
+              <div className="flex items-center justify-between"><dt className="text-slate-500">Admins</dt><dd className="text-slate-300 tabular-nums"><AnimatedNumber value={stats.users.total - stats.users.students - stats.users.instructors} /></dd></div>
+              <div className="flex items-center justify-between border-t border-white/10 pt-2"><dt className="text-slate-500">Avg. progress</dt><dd className="text-slate-300 tabular-nums"><AnimatedNumber value={Math.round(Number(stats.enrollments.avg_progress))} />%</dd></div>
             </dl>
           </Card>
         </div>

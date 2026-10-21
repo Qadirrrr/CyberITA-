@@ -1,5 +1,33 @@
+-- ============================================================
+-- CyberITA+ database schema
+-- PostgreSQL 14+
+--
+-- HOW TO RUN (example):
+--   1. Create the database once (as a superuser or a user with CREATEDB):
+--        CREATE DATABASE cyberita;
+--   2. Point psql at it and run this file:
+--        psql -h localhost -p 5432 -U postgres -d cyberita -f schema.sql
+--      Windows example (PostgreSQL 17 installed in the default location):
+--        & "C:\Program Files\PostgreSQL\17\bin\psql.exe" -h localhost -p 5432 -U postgres -d cyberita -f schema.sql
+--
+-- NOTE: This file is generated from server/src/db/migrations/*.sql.
+--       The project can also create these tables for you with:
+--         npm run db:migrate
+--       Do NOT run both approaches against the same database unless this
+--       script finishes, because it records the migrations as applied.
+-- ============================================================
+
 BEGIN;
 
+-- ============================================================
+-- migration: 001_initial_schema.sql
+-- ============================================================
+
+-- ============================================================
+-- CyberITA+ initial schema (PostgreSQL 14+)
+-- ============================================================
+
+-- ---------- users / auth ----------
 CREATE TABLE users (
   id            BIGSERIAL PRIMARY KEY,
   email         VARCHAR(255) NOT NULL,
@@ -29,6 +57,7 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX refresh_tokens_user_idx ON refresh_tokens(user_id);
 CREATE INDEX refresh_tokens_hash_idx ON refresh_tokens(token_hash);
 
+-- ---------- courses ----------
 CREATE TABLE courses (
   id            BIGSERIAL PRIMARY KEY,
   slug          VARCHAR(160) NOT NULL UNIQUE,
@@ -80,6 +109,7 @@ CREATE TABLE lessons (
 CREATE INDEX lessons_course_idx ON lessons(course_id, position);
 CREATE INDEX lessons_module_idx ON lessons(module_id, position);
 
+-- ---------- enrollment & progress ----------
 CREATE TABLE enrollments (
   id              BIGSERIAL PRIMARY KEY,
   user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -108,6 +138,7 @@ CREATE TABLE lesson_progress (
 );
 CREATE INDEX lesson_progress_course_idx ON lesson_progress(course_id, user_id);
 
+-- ---------- quizzes ----------
 CREATE TABLE quizzes (
   id            BIGSERIAL PRIMARY KEY,
   course_id     BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
@@ -146,6 +177,7 @@ CREATE TABLE quiz_attempts (
 );
 CREATE INDEX quiz_attempts_user_quiz_idx ON quiz_attempts(user_id, quiz_id);
 
+-- ---------- assignments ----------
 CREATE TABLE assignments (
   id          BIGSERIAL PRIMARY KEY,
   course_id   BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
@@ -175,6 +207,7 @@ CREATE TABLE assignment_submissions (
   UNIQUE (assignment_id, user_id)
 );
 
+-- ---------- labs ----------
 CREATE TABLE labs (
   id                 BIGSERIAL PRIMARY KEY,
   slug               VARCHAR(160) NOT NULL UNIQUE,
@@ -260,6 +293,7 @@ CREATE TABLE screenshots (
 );
 CREATE INDEX screenshots_session_idx ON screenshots(session_id);
 
+-- ---------- practical reports ----------
 CREATE TABLE reports (
   id                 BIGSERIAL PRIMARY KEY,
   session_id         BIGINT NOT NULL UNIQUE REFERENCES lab_sessions(id) ON DELETE CASCADE,
@@ -281,6 +315,7 @@ CREATE TABLE reports (
 CREATE INDEX reports_user_idx ON reports(user_id);
 CREATE INDEX reports_status_idx ON reports(status);
 
+-- ---------- blog ----------
 CREATE TABLE posts (
   id              BIGSERIAL PRIMARY KEY,
   slug            VARCHAR(220) NOT NULL UNIQUE,
@@ -305,6 +340,7 @@ ALTER TABLE reports
   ADD CONSTRAINT reports_published_post_fk
   FOREIGN KEY (published_post_id) REFERENCES posts(id) ON DELETE SET NULL;
 
+-- ---------- learning paths ----------
 CREATE TABLE learning_paths (
   id          BIGSERIAL PRIMARY KEY,
   slug        VARCHAR(160) NOT NULL UNIQUE,
@@ -326,6 +362,7 @@ CREATE TABLE learning_path_courses (
   PRIMARY KEY (path_id, course_id)
 );
 
+-- ---------- certificates ----------
 CREATE TABLE certificates (
   id              BIGSERIAL PRIMARY KEY,
   serial          VARCHAR(40) NOT NULL UNIQUE,
@@ -336,6 +373,7 @@ CREATE TABLE certificates (
   UNIQUE (user_id, course_id)
 );
 
+-- ---------- notifications / activity ----------
 CREATE TABLE notifications (
   id         BIGSERIAL PRIMARY KEY,
   user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -359,6 +397,7 @@ CREATE TABLE activity_events (
 );
 CREATE INDEX activity_user_idx ON activity_events(user_id, created_at DESC);
 
+-- ---------- contact ----------
 CREATE TABLE contact_messages (
   id         BIGSERIAL PRIMARY KEY,
   name       VARCHAR(120) NOT NULL,
@@ -372,6 +411,7 @@ CREATE TABLE contact_messages (
   handled_at TIMESTAMPTZ
 );
 
+-- ---------- helpers ----------
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
@@ -393,9 +433,45 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- migration: 002_fix_updated_at_triggers.sql
+-- ============================================================
+
+-- Remove the updated_at trigger from tables that do not have an updated_at column.
 DROP TRIGGER IF EXISTS set_updated_at ON quizzes;
 DROP TRIGGER IF EXISTS set_updated_at ON lab_sessions;
 
+-- ============================================================
+-- migration: 003_course_subcategories.sql
+-- ============================================================
+
+-- Adds a second-level taxonomy to the course catalog.
+-- The navbar groups courses by category -> subcategory -> course.
+
+ALTER TABLE courses
+  ADD COLUMN IF NOT EXISTS subcategory VARCHAR(80) NOT NULL DEFAULT 'General';
+
+CREATE INDEX IF NOT EXISTS courses_taxonomy_idx ON courses (category, subcategory);
+
+-- Give the existing demo catalog a useful starting taxonomy.
+UPDATE courses SET subcategory = CASE category
+  WHEN 'Linux' THEN 'Linux Administration'
+  WHEN 'Networking' THEN 'Network Fundamentals'
+  WHEN 'Cybersecurity' THEN 'Security Fundamentals'
+  WHEN 'Cloud' THEN 'Cloud Platforms'
+  WHEN 'Windows' THEN 'Server Administration'
+  WHEN 'Automation' THEN 'Python Automation'
+  WHEN 'DevOps' THEN 'CI/CD & Automation'
+  WHEN 'Programming' THEN 'Python'
+  WHEN 'Databases' THEN 'SQL & PostgreSQL'
+  WHEN 'Career' THEN 'Career Growth'
+  ELSE 'General'
+END
+WHERE subcategory = 'General';
+
+-- ============================================================
+-- migration tracking (matches server/src/db/migrate.js)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS schema_migrations (
   name       TEXT PRIMARY KEY,
   checksum   TEXT NOT NULL,
@@ -404,7 +480,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 INSERT INTO schema_migrations (name, checksum) VALUES
 ('001_initial_schema.sql', 'f645feac76daa1e116a1e35272956aa5'),
-('002_fix_updated_at_triggers.sql', '99357146903739f594cd92df0b7983a7')
+('002_fix_updated_at_triggers.sql', '99357146903739f594cd92df0b7983a7'),
+('003_course_subcategories.sql', 'e5c27ce03ca07c3a0fe2f58c9275d318')
 ON CONFLICT (name) DO NOTHING;
 
 COMMIT;
