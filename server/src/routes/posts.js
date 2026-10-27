@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, withTransaction } from '../config/db.js';
-import { asyncHandler, badRequest, conflict, forbidden, notFound } from '../utils/errors.js';
+import { asyncHandler, badRequest, conflict, notFound } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
-import { requireAuth, requireRole, isStaff } from '../middleware/auth.js';
+import { requireRole, isStaff } from '../middleware/auth.js';
+import { assertPostManager, canManagePost } from '../services/access.js';
+import { notify, recordActivity } from '../utils/activity.js';
 import { slugify } from '../utils/helpers.js';
 
 const router = Router();
@@ -45,6 +47,20 @@ router.get(
     else {
       params.push(status);
       where.push(`p.status = $${params.length}`);
+    }
+    // Instructors only manage their own articles and articles derived from
+    // reports in their courses. Public listings stay unrestricted above.
+    if (staffView && req.user.role === 'instructor') {
+      params.push(req.user.id);
+      where.push(`(p.author_id = $${params.length} OR (
+        p.source_report_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM reports r
+          JOIN labs l ON l.id = r.lab_id
+          LEFT JOIN courses c ON c.id = l.course_id
+          WHERE r.id = p.source_report_id
+            AND COALESCE(c.instructor_id, l.created_by) = $${params.length}
+        )
+      ))`);
     }
     if (search) {
       params.push(`%${search}%`);
@@ -94,7 +110,9 @@ router.get(
     );
     const post = rows[0];
     if (!post) throw notFound('Article not found.');
-    if (post.status !== 'published' && !isStaff(req.user)) throw notFound('Article not found.');
+    if (post.status !== 'published' && !(await canManagePost(req.user, post))) {
+      throw notFound('Article not found.');
+    }
 
     if (post.status === 'published') {
       await query('UPDATE posts SET view_count = view_count + 1 WHERE id = $1', [post.id]);
@@ -140,10 +158,7 @@ router.put(
     const { rows } = await query('SELECT * FROM posts WHERE id = $1', [req.params.id]);
     const post = rows[0];
     if (!post) throw notFound('Article not found.');
-    if (req.user.role === 'instructor' && post.author_id !== req.user.id && post.source_report_id) {
-      const { rows: reportRows } = await query('SELECT user_id FROM reports WHERE id = $1', [post.source_report_id]);
-      if (reportRows[0] && reportRows[0].user_id !== req.user.id) throw forbidden('Not your article.');
-    }
+    await assertPostManager(req.user, post);
     const b = req.body;
     const { rows: updated } = await query(
       `UPDATE posts SET
@@ -172,11 +187,41 @@ router.post(
     const { rows } = await query('SELECT * FROM posts WHERE id = $1', [req.params.id]);
     const post = rows[0];
     if (!post) throw notFound('Article not found.');
+    await assertPostManager(req.user, post);
+    const publishing = req.body.status === 'published';
     const { rows: updated } = await query(
       `UPDATE posts SET status = $1, published_at = COALESCE(published_at, $3)
        WHERE id = $2 RETURNING id, slug, title, status, published_at`,
-      [req.body.status, post.id, req.body.status === 'published' ? new Date() : null]
+      [req.body.status, post.id, publishing ? new Date() : null]
     );
+
+    if (publishing && post.source_report_id) {
+      const { rows: reportRows } = await query(
+        'SELECT id, user_id, title, status FROM reports WHERE id = $1',
+        [post.source_report_id]
+      );
+      const report = reportRows[0];
+      if (report) {
+        await query(`UPDATE reports SET status = 'published', updated_at = now() WHERE id = $1`, [report.id]);
+        await withTransaction(async (client) => {
+          await notify(client, {
+            userIds: [report.user_id],
+            type: 'blog',
+            title: 'Your report is live on the CyberITA+ blog!',
+            body: `"${updated[0].title}" was published as a technical article.`,
+            link: `/blog/${updated[0].slug}`,
+          });
+          await recordActivity(client, {
+            userId: req.user.id,
+            action: 'report.published',
+            entityType: 'report',
+            entityId: report.id,
+            metadata: { slug: updated[0].slug, studentId: report.user_id },
+          });
+        });
+      }
+    }
+
     res.json({ post: updated[0] });
   })
 );

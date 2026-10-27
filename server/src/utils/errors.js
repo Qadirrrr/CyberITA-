@@ -16,6 +16,8 @@ export const forbidden = (message = 'You do not have permission to perform this 
 export const notFound = (message = 'Resource not found.') => new AppError(message, 404, 'not_found');
 export const conflict = (message, details) => new AppError(message, 409, 'conflict', details);
 export const tooMany = (message = 'Too many requests.') => new AppError(message, 429, 'rate_limited');
+export const serviceUnavailable = (message = 'This service is temporarily unavailable.') =>
+  new AppError(message, 503, 'service_unavailable');
 export const serverError = (message = 'Internal server error.') => new AppError(message, 500, 'server_error');
 
 export function asyncHandler(fn) {

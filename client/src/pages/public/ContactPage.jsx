@@ -3,11 +3,12 @@ import api, { getErrorMessage, getFieldErrors } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import { Alert, Button, Card, Input, Select, Textarea } from '../../components/ui';
 import { IconClock, IconMail, IconMessage, IconSend, IconShield, IconTerminal } from '../../components/icons';
+import { validateContactForm } from '../../lib/validation';
 
 const faqs = [
   {
     q: 'Do I need my own Linux environment?',
-    a: 'No. Every lab runs in a sandboxed browser terminal. You only need a modern browser — nothing to install.',
+    a: 'No. Every lab runs in a sandboxed browser terminal. You only need a modern browser. Nothing to install.',
   },
   {
     q: 'How are certificates verified?',
@@ -35,14 +36,16 @@ export default function ContactPage() {
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
+    const nextErrors = validateContactForm(form);
+    setErrors(nextErrors);
     setError('');
-    setErrors({});
+    if (Object.keys(nextErrors).length) return;
+    setSubmitting(true);
     try {
       await api.post('/contact', form);
       setSent(true);
       setForm({ name: '', email: '', subject: '', message: '' });
-      toast.success('Message sent — we typically reply within one business day.');
+      toast.success('Message sent. We typically reply within one business day.');
     } catch (err) {
       setErrors(getFieldErrors(err));
       setError(getErrorMessage(err, 'Could not send your message.'));
@@ -61,8 +64,8 @@ export default function ContactPage() {
             Questions about the labs, courses or certificates?
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-            Send a message and a real person will reply. Include the course or lab name if your question is specific —
-            it helps us answer faster.
+            Send a message and a real person will reply. Include the course or lab name if your question is specific.
+            It helps us answer faster.
           </p>
         </div>
       </section>
@@ -84,7 +87,7 @@ export default function ContactPage() {
               </Alert>
             )}
 
-            <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Your name" required value={form.name} onChange={update('name')} error={errors.name} placeholder="Alex Rivera" />
                 <Input
@@ -114,6 +117,9 @@ export default function ContactPage() {
                 onChange={update('message')}
                 error={errors.message}
                 placeholder="Tell us what you need help with…"
+                minLength={10}
+                maxLength={5000}
+                hint="At least 10 characters."
               />
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-[11px] leading-5 text-slate-500">
@@ -147,7 +153,7 @@ export default function ContactPage() {
                   </span>
                   <div>
                     <p className="font-medium text-white">Support hours</p>
-                    <p className="text-slate-400">Monday–Friday, 09:00–18:00 (UTC+2)</p>
+                    <p className="text-slate-400">Monday-Friday, 09:00-18:00 (UTC+2)</p>
                   </div>
                 </li>
                 <li className="flex gap-3">

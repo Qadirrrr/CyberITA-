@@ -4,6 +4,7 @@ import { query, withTransaction } from '../config/db.js';
 import { asyncHandler, badRequest, conflict, notFound, forbidden } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
 import { requireAuth, requireRole, isStaff } from '../middleware/auth.js';
+import { canManageCourse } from '../services/access.js';
 import { slugify, percentComplete } from '../utils/helpers.js';
 
 const router = Router();
@@ -30,6 +31,7 @@ const courseCreateSchema = z.object({
   coverImage: z.string().trim().max(500).optional().nullable(),
   tags: z.array(z.string().trim().max(40)).max(12).default([]),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
+  instructorId: z.coerce.number().int().optional().nullable(),
 });
 
 const courseUpdateSchema = courseCreateSchema.partial();
@@ -116,6 +118,12 @@ router.get(
       params.push(status);
       where.push(`c.status = $${params.length}`);
     }
+    // Instructors get their own catalog (drafts included), never another
+    // instructor's unpublished courses.
+    if (staffView && req.user.role === 'instructor') {
+      params.push(req.user.id);
+      where.push(`c.instructor_id = $${params.length}`);
+    }
     if (search) {
       params.push(`%${search}%`);
       where.push(`(c.title ILIKE $${params.length} OR c.summary ILIKE $${params.length} OR c.category ILIKE $${params.length})`);
@@ -175,7 +183,9 @@ router.get(
     );
     const lesson = rows[0];
     if (!lesson) throw notFound('Lesson not found.');
-    if (lesson.course_status !== 'published' && !isStaff(req.user)) throw notFound('Lesson not found.');
+    if (lesson.course_status !== 'published' && !canManageCourse(req.user, lesson)) {
+      throw notFound('Lesson not found.');
+    }
 
     const { rows: enrollmentRows } = await query(
       `SELECT id, status, progress_percent FROM enrollments WHERE user_id = $1 AND course_id = $2`,
@@ -245,7 +255,9 @@ router.get(
     );
     const course = rows[0];
     if (!course) throw notFound('Course not found.');
-    if (course.status !== 'published' && !isStaff(req.user)) throw notFound('Course not found.');
+    if (course.status !== 'published' && !canManageCourse(req.user, course)) {
+      throw notFound('Course not found.');
+    }
 
     const tree = await loadCourseTree(course.id);
 
@@ -290,6 +302,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body;
     const slug = uniqueSlug(body.title);
+    const assignedInstructorId = (req.user.role === 'admin' && body.instructorId) ? body.instructorId : req.user.id;
     const { rows } = await query(
       `INSERT INTO courses (slug, title, summary, description, category, subcategory, level, duration_hours,
          price, cover_image, status, tags, instructor_id, published_at)
@@ -298,7 +311,7 @@ router.post(
       [
         slug, body.title, body.summary, body.description, body.category, body.subcategory, body.level,
         body.durationHours, body.price, body.coverImage ?? null, body.status, body.tags,
-        req.user.id, body.status === 'published' ? new Date() : null,
+        assignedInstructorId, body.status === 'published' ? new Date() : null,
       ]
     );
     res.status(201).json({ course: rows[0] });
@@ -315,6 +328,7 @@ router.put(
       throw forbidden('You can only manage your own courses.');
     }
     const b = req.body;
+    const newInstructorId = (req.user.role === 'admin' && b.instructorId !== undefined) ? b.instructorId : null;
     const { rows } = await query(
       `UPDATE courses SET
          title = COALESCE($1, title),
@@ -328,13 +342,15 @@ router.put(
          cover_image = COALESCE($9, cover_image),
          status = COALESCE($10, status),
          tags = COALESCE($11, tags),
-         published_at = COALESCE(published_at, $13)
+         published_at = COALESCE(published_at, $13),
+         instructor_id = COALESCE($14, instructor_id)
        WHERE id = $12 RETURNING ${courseReturning}`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.category ?? null,
         b.subcategory ?? null, b.level ?? null, b.durationHours ?? null, b.price ?? null,
         b.coverImage ?? null, b.status ?? null, b.tags ?? null, course.id,
         b.status === 'published' && course.published_at == null ? new Date() : null,
+        newInstructorId,
       ]
     );
     res.json({ course: rows[0] });

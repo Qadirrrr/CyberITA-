@@ -55,6 +55,7 @@ export default function ReportEditorPage() {
   const [data, setData] = useState(null);
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
+  const [solutionArticle, setSolutionArticle] = useState('');
   const [sections, setSections] = useState([]);
   const [tab, setTab] = useState('edit');
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,7 @@ export default function ReportEditorPage() {
         setData(res.data);
         setTitle(res.data.report.title);
         setSummary(res.data.report.summary || '');
+        setSolutionArticle(res.data.report.solution_article || '');
         setSections(Array.isArray(res.data.report.sections) ? res.data.report.sections : []);
       })
       .catch((err) => {
@@ -98,7 +100,13 @@ export default function ReportEditorPage() {
   };
 
   const persist = async () => {
-    const { data: response } = await api.put(`/reports/${id}`, { title, summary, sections, content });
+    const { data: response } = await api.put(`/reports/${id}`, {
+      title,
+      summary,
+      solutionArticle,
+      sections,
+      content,
+    });
     setData((current) => ({ ...current, report: response.report }));
     return response.report;
   };
@@ -189,7 +197,7 @@ export default function ReportEditorPage() {
         <Card className="border-rose-400/25 bg-rose-400/[0.05] p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-rose-300">Instructor feedback</p>
           <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-slate-200">{report.instructor_feedback}</p>
-          <p className="mt-2 text-[11px] text-slate-500">Revise the sections below — the report returns to draft as soon as you save.</p>
+          <p className="mt-2 text-[11px] text-slate-500">Revise the sections below. The report returns to draft as soon as you save.</p>
         </Card>
       )}
 
@@ -273,9 +281,44 @@ export default function ReportEditorPage() {
                   <dd className="mt-0.5 text-slate-400">{formatDateTime(report.reviewed_at)}</dd>
                 </div>
               )}
+              {report.score != null && (
+                <div>
+                  <dt className="text-[10px] uppercase tracking-wider text-slate-500">Marks</dt>
+                  <dd className="mt-0.5 font-mono text-sm text-emerald-300">
+                    {Number(report.score)}
+                    {report.max_score != null ? ` / ${Number(report.max_score)}` : ''}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
         </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-base font-semibold">Final solution article</h2>
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">Reviewed with your report</span>
+        </div>
+        <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          Write a short technical article about how you solved the lab. Your instructor reviews it with the step
+          evidence and may turn it into a blog draft.
+        </p>
+        {editable ? (
+          <Textarea
+            className="mt-3 font-mono text-[12px]"
+            rows={10}
+            value={solutionArticle}
+            onChange={(event) => setSolutionArticle(event.target.value)}
+            placeholder={'## Approach\n\nDescribe your plan, the commands you used and what you learned.'}
+          />
+        ) : solutionArticle ? (
+          <div className="mt-3 rounded-xl border border-white/10 bg-night-950/40 p-4">
+            <Markdown>{solutionArticle}</Markdown>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">No solution article was submitted.</p>
+        )}
       </Card>
 
       <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-night-900/60 p-1 sm:w-fit">
@@ -346,7 +389,7 @@ export default function ReportEditorPage() {
                       placeholder="What did this step prove?"
                     />
                   ) : (
-                    <p className="mt-1 text-sm text-slate-300">{section.result || '—'}</p>
+                    <p className="mt-1 text-sm text-slate-300">{section.result || 'N/A'}</p>
                   )}
                 </div>
                 <div className="sm:col-span-2">
@@ -363,7 +406,7 @@ export default function ReportEditorPage() {
                       placeholder="Explain your reasoning, issues you hit, and how you resolved them."
                     />
                   ) : (
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-300">{section.notes || '—'}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-300">{section.notes || 'N/A'}</p>
                   )}
                 </div>
               </div>

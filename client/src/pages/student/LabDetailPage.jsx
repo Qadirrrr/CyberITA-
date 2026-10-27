@@ -7,6 +7,7 @@ import { Alert, Badge, Button, Card, Skeleton } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
+  IconBookOpen,
   IconCheckCircle,
   IconClock,
   IconExternalLink,
@@ -21,6 +22,7 @@ export default function LabDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [data, setData] = useState(null);
+  const [labStatus, setLabStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
@@ -28,10 +30,15 @@ export default function LabDetailPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api
-      .get(`/labs/${id}`)
-      .then((res) => {
-        if (!cancelled) setData(res.data);
+    Promise.all([
+      api.get(`/labs/${id}`),
+      api.get('/labs/status').catch(() => ({ data: { available: false, reason: 'Status check failed' } })),
+    ])
+      .then(([res, statusRes]) => {
+        if (!cancelled) {
+          setData(res.data);
+          setLabStatus(statusRes.data);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(getErrorMessage(err, 'Unable to load this lab.'));
@@ -47,7 +54,7 @@ export default function LabDetailPage() {
   const start = async () => {
     setStarting(true);
     try {
-      const { data: session } = await api.post(`/labs/${id}/sessions`, {});
+      const { data: session } = await api.post(`/labs/${id}/sessions`, {}, { timeout: 300000 });
       navigate(`/labs/session/${session.session.id}`);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not start the lab session.'));
@@ -126,16 +133,32 @@ export default function LabDetailPage() {
                 </Button>
               </>
             ) : (
-              <Button onClick={start} loading={starting} size="lg">
-                <IconTerminal size={17} /> Start lab
+              <Button
+                onClick={start}
+                loading={starting}
+                size="lg"
+                disabled={labStatus && !labStatus.available}
+                title={labStatus && !labStatus.available ? labStatus.reason || 'Docker unavailable' : 'Launch hands-on lab'}
+              >
+                <IconTerminal size={17} /> Start real lab
               </Button>
             )}
+            <Button as={Link} to={`/labs/${lab.id}/practice`} variant="secondary" size="sm">
+              <IconBookOpen size={14} /> Practice mode
+            </Button>
             <p className="max-w-[190px] text-[10px] leading-4 text-slate-500">
-              Sessions run in an isolated mock environment and expire automatically. No installation needed.
+              Practice is simulated and needs no screenshots. Real labs run in an isolated Linux container and expire automatically.
             </p>
           </div>
         </div>
       </Card>
+
+      {labStatus && !labStatus.available && (
+        <Alert tone="amber" title="Real Lab Infrastructure Offline">
+          {labStatus.reason || 'The Docker container runtime is not currently running on this server.'}{' '}
+          Real Hands-on Lab Mode requires active Docker infrastructure. <strong>Practice Mode</strong> is fully available and simulated with guided commands!
+        </Alert>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Card className="p-6">

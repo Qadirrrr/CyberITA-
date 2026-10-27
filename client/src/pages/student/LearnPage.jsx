@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import {
@@ -34,6 +35,7 @@ export default function LearnPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [courseData, setCourseData] = useState(null);
   const [progress, setProgress] = useState([]);
@@ -51,6 +53,7 @@ export default function LearnPage() {
   const course = courseData?.course;
   const modules = courseData?.modules || [];
   const enrollment = courseData?.enrollment;
+  const canPreview = user?.role === 'instructor' || user?.role === 'admin';
   const queryLesson = searchParams.get('lesson');
 
   const allLessons = useMemo(
@@ -60,7 +63,7 @@ export default function LearnPage() {
 
   const progressByLesson = useMemo(() => {
     const map = new Map();
-    for (const item of progress) map.set(item.id, item);
+    for (const item of progress) map.set(item.lesson_id ?? item.id, item);
     return map;
   }, [progress]);
 
@@ -105,7 +108,7 @@ export default function LearnPage() {
   }, [courseData, allLessons, queryLesson, progressByLesson, setSearchParams]);
 
   useEffect(() => {
-    if (!enrollment || !activeLessonId) return undefined;
+    if ((!enrollment && !canPreview) || !activeLessonId) return undefined;
     let active = true;
     setLoadingLesson(true);
     setLessonError('');
@@ -123,7 +126,7 @@ export default function LearnPage() {
     return () => {
       active = false;
     };
-  }, [activeLessonId, enrollment]);
+  }, [activeLessonId, enrollment, canPreview]);
 
   const enroll = async () => {
     setEnrolling(true);
@@ -147,14 +150,14 @@ export default function LearnPage() {
   };
 
   const markComplete = async () => {
-    if (!lesson) return;
+    if (!lesson || !enrollment) return;
     setCompleting(true);
     try {
       const seconds = Math.min(Math.round((Date.now() - startedAt.current) / 1000), 36000);
       const { data } = await api.post(`/lessons/${lesson.id}/progress`, { completed: true, timeSpentSeconds: seconds });
       setProgress((current) => {
         const next = current.filter((item) => item.id !== lesson.id);
-        return [...next, { id: lesson.id, status: 'completed', completed_at: new Date().toISOString() }];
+        return [...next, { lesson_id: lesson.id, status: 'completed', completed_at: new Date().toISOString() }];
       });
       setCourseData((current) =>
         current?.enrollment
@@ -163,7 +166,7 @@ export default function LearnPage() {
       );
       if (data.certificate) {
         setCertificate(data.certificate);
-        toast.success('Course complete — your certificate has been issued!');
+        toast.success('Course complete. Your certificate has been issued!');
       } else {
         toast.success('Lesson marked as complete.');
       }
@@ -199,7 +202,7 @@ export default function LearnPage() {
     );
   }
 
-  if (!enrollment) {
+  if (!enrollment && user?.role !== 'instructor') {
     return (
       <Card className="mx-auto max-w-xl p-8 text-center">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-400/10 text-brand-300">
@@ -222,7 +225,9 @@ export default function LearnPage() {
   }
 
   const level = DIFFICULTIES[course.level] || DIFFICULTIES.beginner;
-  const status = ENROLLMENT_STATUS[enrollment.status] || ENROLLMENT_STATUS.active;
+  const status = enrollment
+    ? ENROLLMENT_STATUS[enrollment.status] || ENROLLMENT_STATUS.active
+    : { label: 'Preview', tone: 'slate' };
 
   return (
     <div className="space-y-5">
@@ -237,7 +242,7 @@ export default function LearnPage() {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone={enrollment.status === 'completed' ? 'emerald' : 'brand'}>{status.label}</Badge>
+          <Badge tone={enrollment?.status === 'completed' ? 'emerald' : 'brand'}>{status.label}</Badge>
           <Badge tone="slate">{level.label}</Badge>
           <Button variant="secondary" size="sm" className="lg:hidden" onClick={() => setOutlineOpen((value) => !value)}>
             <IconLayers size={14} /> Outline
@@ -246,7 +251,7 @@ export default function LearnPage() {
       </div>
 
       {certificate && (
-        <Alert tone="success" title="Course complete — certificate issued">
+        <Alert tone="success" title="Course complete: certificate issued">
           Your certificate serial is <span className="font-mono text-white">{certificate.serial}</span>.{' '}
           <Link to="/student/certificates" className="font-medium text-emerald-200 underline underline-offset-4">
             View and share it
@@ -395,15 +400,17 @@ export default function LearnPage() {
                       </Button>
                     )}
                   </div>
-                  <Button
-                    onClick={markComplete}
-                    loading={completing}
-                    disabled={isCompleted}
-                    variant={isCompleted ? 'secondary' : 'primary'}
-                    size="sm"
-                  >
-                    <IconCheckCircle size={15} /> {isCompleted ? 'Lesson completed' : 'Mark as complete'}
-                  </Button>
+                  {enrollment && (
+                    <Button
+                      onClick={markComplete}
+                      loading={completing}
+                      disabled={isCompleted}
+                      variant={isCompleted ? 'secondary' : 'primary'}
+                      size="sm"
+                    >
+                      <IconCheckCircle size={15} /> {isCompleted ? 'Lesson completed' : 'Mark as complete'}
+                    </Button>
+                  )}
                 </div>
               </Card>
 

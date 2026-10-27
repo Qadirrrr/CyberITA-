@@ -108,6 +108,62 @@ describe('Quizzes', () => {
     expect(quizId).toBeTruthy();
     expect(instructorSession).toBeTruthy();
   });
+
+  it('automatically generates MCQs and Subjective questions based on title and counts', async () => {
+    const instructor = await createUser({ role: 'instructor' });
+    const instructorSession = await loginAs(instructor);
+    const course = await createCourseFor(instructorSession.token, { title: 'Network Security Course' });
+
+    // 1. Generate preview without autoSave
+    const preview = await instructorSession
+      .auth(api().post('/api/quizzes/generate'))
+      .send({
+        title: 'SQL Injection and XSS Remediation',
+        mcqCount: 4,
+        subjectiveCount: 2,
+        difficulty: 'intermediate',
+        courseId: course.id,
+      })
+      .expect(200);
+
+    expect(preview.body.saved).toBe(false);
+    expect(preview.body.quiz.title).toBe('SQL Injection and XSS Remediation');
+    expect(preview.body.quiz.questions).toHaveLength(6);
+    expect(preview.body.quiz.counts.mcq).toBe(4);
+    expect(preview.body.quiz.counts.subjective).toBe(2);
+
+    // Verify questions have valid options and explanations
+    for (const q of preview.body.quiz.questions) {
+      expect(q.options.length).toBeGreaterThanOrEqual(2);
+      expect(typeof q.correctOption).toBe('number');
+      expect(q.explanation).toBeTruthy();
+    }
+
+    // 2. Auto-generate and directly publish with autoSave: true
+    const published = await instructorSession
+      .auth(api().post('/api/quizzes/generate'))
+      .send({
+        title: 'Container & Docker Security',
+        mcqCount: 3,
+        subjectiveCount: 1,
+        difficulty: 'advanced',
+        courseId: course.id,
+        autoSave: true,
+      })
+      .expect(201);
+
+    expect(published.body.saved).toBe(true);
+    expect(published.body.quiz.id).toBeTruthy();
+    expect(published.body.quiz.title).toBe('Container & Docker Security');
+
+    // 3. Ensure student cannot call the generate endpoint
+    const student = await createUser({ role: 'student' });
+    const studentSession = await loginAs(student);
+    await studentSession
+      .auth(api().post('/api/quizzes/generate'))
+      .send({ title: 'Hacking Quiz', mcqCount: 2, subjectiveCount: 1 })
+      .expect(403);
+  });
 });
 
 describe('Assignments', () => {

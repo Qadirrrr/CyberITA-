@@ -25,7 +25,7 @@ const features = [
   {
     icon: IconTerminal,
     title: 'Browser-based Linux labs',
-    body: 'Practice in a sandboxed terminal — no installs, no setup, no risk. Commands are verified as you type them.',
+    body: 'Practice in a sandboxed terminal. No installs, no setup, no risk. Commands are verified as you type them.',
   },
   {
     icon: IconFileText,
@@ -89,7 +89,7 @@ export default function HomePage() {
               <IconSparkles size={14} /> Hands-on IT training, built for the real world
             </div>
             <h1 className="mt-5 text-balance font-display text-4xl font-semibold leading-[1.08] sm:text-5xl xl:text-6xl">
-              Learn IT by doing it —
+              Learn IT by doing it
               <span className="bg-gradient-to-r from-brand-300 via-brand-400 to-accent-400 bg-clip-text text-transparent">
                 {' '}
                 in a real terminal.
@@ -97,7 +97,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-slate-400">
               CyberITA+ pairs focused lessons with sandboxed Linux labs, automatic command verification and
-              instructor-reviewed practical reports — so you graduate with proof of skill, not just a completion badge.
+              instructor-reviewed practical reports, so you graduate with proof of skill, not just a completion badge.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               {user ? (
@@ -146,7 +146,7 @@ export default function HomePage() {
                   </p>
                   <p className="text-slate-400">[sudo] password for student: ********</p>
                   <p className="flex items-center gap-2 text-emerald-300">
-                    <IconCheck size={13} /> Step verified — user account created
+                    <IconCheck size={13} /> Step verified: user account created
                   </p>
                   <p>
                     <span className="text-emerald-400">student@lab</span>
@@ -207,7 +207,7 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Why CyberITA+"
           title="Skills you can demonstrate, not just describe"
-          description="Every part of the platform is built around evidence of practical ability — the thing employers actually ask for."
+          description="Every part of the platform is built around evidence of practical ability, the thing employers actually ask for."
           action={
             <Button as={Link} to="/about" variant="ghost" size="sm">
               Our approach <IconArrowRight size={15} />
@@ -326,7 +326,7 @@ export default function HomePage() {
                 <IconShield size={15} /> Career-ready evidence
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Graduate reports are published as technical articles — a public portfolio that shows exactly how you work.
+                Graduate reports are published as technical articles, a public portfolio that shows exactly how you work.
               </p>
               <Button as={Link} to="/blog" variant="outline" size="sm" className="mt-4">
                 Read learner reports <IconArrowRight size={14} />
@@ -341,7 +341,7 @@ export default function HomePage() {
           <SectionHeading
             eyebrow="From the blog"
             title="Practical write-ups from the lab"
-            description="Approved student reports, instructor guides and walkthroughs — all grounded in real executed commands."
+            description="Approved student reports, instructor guides and walkthroughs, all grounded in real executed commands."
             action={
               <Button as={Link} to="/blog" variant="ghost" size="sm">
                 All articles <IconArrowRight size={15} />

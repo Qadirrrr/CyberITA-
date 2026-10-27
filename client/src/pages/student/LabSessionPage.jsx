@@ -4,6 +4,7 @@ import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
+import LabSubmitCard from '../../components/lab/LabSubmitCard';
 import { Alert, Badge, Button, Card, ProgressBar, Skeleton } from '../../components/ui';
 import {
   IconArrowLeft,
@@ -42,9 +43,11 @@ export default function LabSessionPage() {
   const [stopping, setStopping] = useState(false);
   const [starting, setStarting] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [remaining, setRemaining] = useState(null);
   const fileRef = useRef(null);
   const pendingStep = useRef(null);
+  const replaceTarget = useRef(null);
 
   const load = useCallback(
     async ({ silent = false } = {}) => {
@@ -91,8 +94,9 @@ export default function LabSessionPage() {
     load({ silent: true });
   };
 
-  const openUpload = (stepId) => {
+  const openUpload = (stepId, replaceId = null) => {
     pendingStep.current = stepId;
+    replaceTarget.current = replaceId;
     fileRef.current?.click();
   };
 
@@ -107,14 +111,21 @@ export default function LabSessionPage() {
     const form = new FormData();
     form.append('file', file);
     if (pendingStep.current) form.append('stepId', pendingStep.current);
+    const replacing = replaceTarget.current;
     setUploading(true);
     try {
       await api.post(`/labs/sessions/${sessionId}/screenshots`, form);
-      toast.success('Screenshot uploaded and attached to your report evidence.');
+      if (replacing) {
+        await api.delete(`/labs/screenshots/${replacing}`);
+        toast.success('Screenshot replaced.');
+      } else {
+        toast.success('Screenshot uploaded and attached to your report evidence.');
+      }
       await load({ silent: true });
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not upload that screenshot.'));
+      toast.error(getErrorMessage(err, replacing ? 'Could not replace that screenshot.' : 'Could not upload that screenshot.'));
     } finally {
+      replaceTarget.current = null;
       setUploading(false);
     }
   };
@@ -157,7 +168,7 @@ export default function LabSessionPage() {
   const restart = async () => {
     setStarting(true);
     try {
-      const { data: response } = await api.post(`/labs/${data.session.lab_id}/sessions`, {});
+      const { data: response } = await api.post(`/labs/${data.session.lab_id}/sessions`, {}, { timeout: 300000 });
       toast.success(response.reused ? 'Resumed an existing session.' : 'New lab session started.');
       navigate(`/labs/session/${response.session.id}`);
     } catch (err) {
@@ -205,10 +216,28 @@ export default function LabSessionPage() {
     );
   }
 
-  const { session, steps, progress, report } = data;
+  const { session, steps, progress, report, submission } = data;
   const running = session.status === 'running';
   const reportStatus = report ? REPORT_STATUS[report.status] : null;
   const completedCount = steps.filter((step) => step.completed).length;
+
+  const submitLab = async ({ note, file }) => {
+    setSubmitting(true);
+    try {
+      const form = new FormData();
+      if (note) form.append('note', note);
+      if (file) form.append('file', file);
+      const { data: response } = await api.post(`/labs/sessions/${sessionId}/submit`, form);
+      setData((current) => ({ ...current, submission: response.submission }));
+      toast.success('Lab submitted to your instructor.');
+      return true;
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not submit this lab.'));
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -263,7 +292,7 @@ export default function LabSessionPage() {
             </span>
             <div>
               <p className="text-sm font-semibold text-emerald-200">All required steps verified.</p>
-              <p className="text-[11px] text-emerald-200/60">Generate your practical report, then submit it for instructor review.</p>
+              <p className="text-[11px] text-emerald-200/60">Upload the finished lab below, or generate a full report if your course asks for one.</p>
             </div>
           </div>
           {report ? (
@@ -279,6 +308,16 @@ export default function LabSessionPage() {
         </div>
       )}
 
+      <LabSubmitCard
+        submission={submission}
+        requirements={data.lab?.submission_requirements || ''}
+        allRequiredCompleted={progress.allRequiredCompleted}
+        progressPercent={progress.percent}
+        serverName={session.lab_server_name}
+        onSubmit={submitLab}
+        submitting={submitting}
+      />
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0">
           <LabTerminal
@@ -286,10 +325,17 @@ export default function LabSessionPage() {
             status={session.status}
             initialHistory={session.history || []}
             welcome={data.lab?.terminal_welcome || ''}
+            student={data.student || (session.student_name ? {
+              id: session.student_id,
+              name: session.student_name,
+              shell_user: session.shell_user,
+              hostname: session.hostname,
+            } : null)}
             onProgress={handleProgress}
           />
           <p className="mt-2 flex flex-wrap items-center gap-2 px-1 text-[11px] text-slate-500">
-            <IconTerminal size={11} /> Run the commands from the steps. Verified commands tick off automatically.
+            <IconTerminal size={11} />
+            Run the commands from the steps in your isolated Linux container. Verified commands tick off automatically.
             {steps.some((step) => step.verification === 'manual') && ' Manual steps need confirmation in the panel.'}
           </p>
         </div>
@@ -341,7 +387,7 @@ export default function LabSessionPage() {
                       </span>
                       <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-600">
                         {step.is_optional ? 'Optional' : `${step.points} pts`}
-                        {step.verification === 'manual' ? ' · manual' : ' · auto-verified'}
+                        {step.verification === 'manual' ? ' - confirm in panel' : ' - auto-verified'}
                       </span>
                     </span>
                   </button>
@@ -404,13 +450,13 @@ export default function LabSessionPage() {
                   </p>
                   {stepScreenshots.length === 0 ? (
                     <p className="mt-1.5 text-[11px] text-slate-600">
-                      Attach terminal output screenshots — they are included in your report automatically.
+                      Attach terminal output screenshots, they are included in your report automatically.
                     </p>
                   ) : (
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       {stepScreenshots.map((shot) => (
                         <div key={shot.id} className="group relative overflow-hidden rounded-lg border border-white/10">
-                          <a href={shot.file_path} target="_blank" rel="noreferrer">
+                          <a href={shot.file_path} target="_blank" rel="noreferrer" title="Preview screenshot">
                             <img src={shot.file_path} alt={shot.original_name || 'Lab screenshot'} className="h-20 w-full object-cover" />
                           </a>
                           <button
@@ -420,6 +466,13 @@ export default function LabSessionPage() {
                             aria-label="Delete screenshot"
                           >
                             <IconTrash size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openUpload(activeStep.id, shot.id)}
+                            className="absolute inset-x-1 bottom-1 rounded-md bg-night-950/85 py-1 text-[10px] text-slate-300 opacity-0 transition hover:text-brand-300 group-hover:opacity-100"
+                          >
+                            <IconRefresh size={10} className="mr-1 inline" /> Replace
                           </button>
                         </div>
                       ))}

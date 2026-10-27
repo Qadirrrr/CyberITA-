@@ -5,11 +5,11 @@ const meta = {
   'course.completed': { tone: 'emerald', template: () => 'Completed a course' },
   'lesson.completed': {
     tone: 'emerald',
-    template: (m) => `Completed lesson${m.title ? ` “${m.title}”` : ''}${m.progress != null ? ` — ${m.progress}%` : ''}`,
+    template: (m) => `Completed lesson${m.title ? ` “${m.title}”` : ''}${m.progress != null ? `, ${m.progress}%` : ''}`,
   },
   'quiz.attempted': {
     tone: 'accent',
-    template: (m) => `Attempted quiz${m.title ? ` “${m.title}”` : ''}${m.score != null ? ` — ${m.score}/${m.maxPoints}` : ''}`,
+    template: (m) => `Attempted quiz${m.title ? ` “${m.title}”` : ''}${m.score != null ? `, ${m.score}/${m.maxPoints}` : ''}`,
   },
   'lab.started': { tone: 'brand', template: (m) => `Started lab${m.title ? ` “${m.title}”` : ''}` },
   'lab.stopped': { tone: 'slate', template: () => 'Stopped a lab session' },
@@ -17,7 +17,7 @@ const meta = {
   'lab.screenshot_uploaded': { tone: 'accent', template: (m) => `Uploaded screenshot${m.name ? ` ${m.name}` : ''}` },
   'lab.completed': { tone: 'emerald', template: (m) => `Completed lab${m.title ? ` “${m.title}”` : ''}` },
   'assignment.submitted': { tone: 'amber', template: (m) => `Submitted assignment${m.title ? ` “${m.title}”` : ''}` },
-  'assignment.graded': { tone: 'emerald', template: (m) => `Assignment graded${m.grade != null ? ` — ${m.grade} points` : ''}` },
+  'assignment.graded': { tone: 'emerald', template: (m) => `Assignment graded${m.grade != null ? `, ${m.grade} points` : ''}` },
   'report.generated': { tone: 'brand', template: (m) => `Generated a practical report${m.steps ? ` (${m.steps} steps)` : ''}` },
   'report.submitted': { tone: 'amber', template: (m) => `Submitted report${m.title ? ` “${m.title}”` : ''} for review` },
   'report.approved': { tone: 'emerald', template: () => 'Practical report approved' },

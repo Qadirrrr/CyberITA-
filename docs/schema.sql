@@ -223,6 +223,8 @@ CREATE TABLE labs (
   terminal_welcome   TEXT NOT NULL DEFAULT 'Welcome to your CyberITA+ lab environment.',
   initial_files      JSONB NOT NULL DEFAULT '{}',
   initial_cwd        VARCHAR(300) NOT NULL DEFAULT '/home/student',
+  container_image    VARCHAR(255),
+  network_enabled    BOOLEAN NOT NULL DEFAULT FALSE,
   status             VARCHAR(20) NOT NULL DEFAULT 'published'
                      CHECK (status IN ('draft', 'published')),
   created_by         BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -470,6 +472,42 @@ END
 WHERE subcategory = 'General';
 
 -- ============================================================
+-- migration: 004_lab_container_runtime.sql
+-- ============================================================
+
+-- Per-lab Docker runtime configuration.
+ALTER TABLE labs
+  ADD COLUMN IF NOT EXISTS container_image VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS network_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ============================================================
+-- migration: 005_practice_mode.sql
+-- ============================================================
+
+-- Practice mode content and per-learner simulated terminal state.
+ALTER TABLE lab_steps
+  ADD COLUMN IF NOT EXISTS practice_command TEXT,
+  ADD COLUMN IF NOT EXISTS practice_output TEXT,
+  ADD COLUMN IF NOT EXISTS practice_explanation TEXT;
+
+CREATE TABLE IF NOT EXISTS lab_practice_sessions (
+  id               BIGSERIAL PRIMARY KEY,
+  lab_id           BIGINT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+  user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  cwd              VARCHAR(300) NOT NULL DEFAULT '/home/student',
+  fs_state         JSONB NOT NULL DEFAULT '{}',
+  history          JSONB NOT NULL DEFAULT '[]',
+  completed_steps  JSONB NOT NULL DEFAULT '[]',
+  started_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_activity_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reset_at         TIMESTAMPTZ,
+  UNIQUE (lab_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS lab_practice_sessions_user_idx
+  ON lab_practice_sessions(user_id, lab_id);
+
+-- ============================================================
 -- migration tracking (matches server/src/db/migrate.js)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -481,7 +519,9 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 INSERT INTO schema_migrations (name, checksum) VALUES
 ('001_initial_schema.sql', 'f645feac76daa1e116a1e35272956aa5'),
 ('002_fix_updated_at_triggers.sql', '99357146903739f594cd92df0b7983a7'),
-('003_course_subcategories.sql', 'e5c27ce03ca07c3a0fe2f58c9275d318')
+('003_course_subcategories.sql', 'e5c27ce03ca07c3a0fe2f58c9275d318'),
+('004_lab_container_runtime.sql', 'a82c98ddfb33f99796e4d68a4aee3351'),
+('005_practice_mode.sql', '43296dfd2a64ab4a674ea7d6f9990bb2')
 ON CONFLICT (name) DO NOTHING;
 
 COMMIT;

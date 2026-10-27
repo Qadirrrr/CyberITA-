@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   Alert,
   Badge,
@@ -52,6 +53,7 @@ const emptyDetails = {
   coverImage: '',
   tags: '',
   status: 'draft',
+  instructorId: '',
 };
 
 function toLocalInput(value) {
@@ -71,13 +73,24 @@ export default function CourseEditorPage() {
   const isNew = !id;
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [details, setDetails] = useState(emptyDetails);
   const [data, setData] = useState(null);
+  const [instructors, setInstructors] = useState([]);
   const [tab, setTab] = useState('details');
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/users', { params: { role: 'instructor', limit: 100 } })
+        .then((res) => setInstructors(res.data.users || []))
+        .catch(() => {});
+    }
+  }, [isAdmin]);
 
   const [moduleModal, setModuleModal] = useState(null);
   const [lessonModal, setLessonModal] = useState(null);
@@ -107,6 +120,7 @@ export default function CourseEditorPage() {
         coverImage: course.cover_image || '',
         tags: Array.isArray(course.tags) ? course.tags.join(', ') : '',
         status: course.status || 'draft',
+        instructorId: course.instructor_id || '',
       });
       setError('');
     } catch (err) {
@@ -148,6 +162,9 @@ export default function CourseEditorPage() {
       tags: details.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
       status: details.status,
     };
+    if (isAdmin && details.instructorId) {
+      payload.instructorId = Number(details.instructorId);
+    }
     try {
       if (isNew) {
         const { data: response } = await api.post('/courses', payload);
@@ -620,6 +637,21 @@ export default function CourseEditorPage() {
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </Select>
+            {isAdmin && (
+              <Select
+                label="Assigned Instructor (Admin Control)"
+                value={details.instructorId || ''}
+                onChange={updateDetail('instructorId')}
+                hint="Assign or reassign teaching and evaluation authority for this course to an instructor."
+              >
+                <option value="">Default (Current Staff / Self)</option>
+                {instructors.map((inst) => (
+                  <option key={inst.id} value={inst.id}>
+                    {inst.full_name} ({inst.email})
+                  </option>
+                ))}
+              </Select>
+            )}
             <div className="flex justify-end">
               <Button type="submit" loading={saving}>
                 {isNew ? 'Create course' : 'Save details'}
@@ -741,7 +773,7 @@ export default function CourseEditorPage() {
       {!isNew && tab === 'assignments' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Written work graded by instructors. Submissions appear in the grading queue.</p>
+            <p className="text-xs text-slate-500">Written work graded by instructors. Submissions appear in submission review.</p>
             <Button size="sm" variant="secondary" onClick={() => openAssignment(null)}>
               <IconPlus size={13} /> New assignment
             </Button>
@@ -950,7 +982,7 @@ export default function CourseEditorPage() {
               <Select label="Attach to lesson" value={quizModal.lessonId} onChange={(event) => setQuizModal((current) => ({ ...current, lessonId: event.target.value }))}>
                 <option value="">Course-wide</option>
                 {lessons.map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle} — {lesson.title}</option>
+                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle}, {lesson.title}</option>
                 ))}
               </Select>
             </div>
@@ -1060,7 +1092,7 @@ export default function CourseEditorPage() {
               <Select label="Attach to lesson" value={assignmentModal.lessonId} onChange={(event) => setAssignmentModal((current) => ({ ...current, lessonId: event.target.value }))}>
                 <option value="">Course-wide</option>
                 {lessons.map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle} — {lesson.title}</option>
+                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle}, {lesson.title}</option>
                 ))}
               </Select>
               <div className="flex items-end pb-2">
@@ -1103,7 +1135,7 @@ export default function CourseEditorPage() {
             <Select label="Attach to lesson" value={labModal.lessonId} onChange={(event) => setLabModal((current) => ({ ...current, lessonId: event.target.value }))}>
               <option value="">Course-wide</option>
               {lessons.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle} — {lesson.title}</option>
+                <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle}, {lesson.title}</option>
               ))}
             </Select>
             <p className="text-[11px] leading-5 text-slate-500">After creating the lab you'll be taken to the step editor to add commands and verification rules.</p>

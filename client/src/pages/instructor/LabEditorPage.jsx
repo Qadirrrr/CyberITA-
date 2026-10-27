@@ -21,6 +21,7 @@ import {
   IconEdit,
   IconEye,
   IconPlus,
+  IconServer,
   IconTerminal,
   IconTrash,
 } from '../../components/icons';
@@ -35,6 +36,9 @@ const emptyStep = {
   verification: 'command',
   expectedCommand: '',
   expectedOutputPattern: '',
+  practiceCommand: '',
+  practiceOutput: '',
+  practiceExplanation: '',
   points: 10,
   isOptional: false,
 };
@@ -62,10 +66,14 @@ export default function LabEditorPage() {
         title: response.lab.title || '',
         summary: response.lab.summary || '',
         description: response.lab.description || '',
+        objectives: response.lab.objectives || '',
+        submissionRequirements: response.lab.submission_requirements || '',
         difficulty: response.lab.difficulty || 'beginner',
         estimatedMinutes: response.lab.estimated_minutes ?? 30,
         terminalWelcome: response.lab.terminal_welcome || 'Welcome to your CyberITA+ lab environment.',
         initialCwd: response.lab.initial_cwd || '/home/student',
+        containerImage: response.lab.container_image || '',
+        networkEnabled: Boolean(response.lab.network_enabled),
         status: response.lab.status || 'draft',
       });
       setError('');
@@ -91,10 +99,14 @@ export default function LabEditorPage() {
         title: form.title,
         summary: form.summary,
         description: form.description,
+        objectives: form.objectives,
+        submissionRequirements: form.submissionRequirements,
         difficulty: form.difficulty,
         estimatedMinutes: Number(form.estimatedMinutes) || 30,
         terminalWelcome: form.terminalWelcome,
         initialCwd: form.initialCwd,
+        containerImage: form.containerImage.trim() || null,
+        networkEnabled: Boolean(form.networkEnabled),
         status: form.status,
       });
       toast.success('Lab saved.');
@@ -142,6 +154,9 @@ export default function LabEditorPage() {
             verification: step.verification,
             expectedCommand: step.expected_command || '',
             expectedOutputPattern: step.expected_output_pattern || '',
+            practiceCommand: step.practice_command || '',
+            practiceOutput: step.practice_output || '',
+            practiceExplanation: step.practice_explanation || '',
             points: step.points,
             isOptional: Boolean(step.is_optional),
           }
@@ -158,6 +173,9 @@ export default function LabEditorPage() {
       verification: stepModal.verification,
       expectedCommand: stepModal.expectedCommand || null,
       expectedOutputPattern: stepModal.expectedOutputPattern || null,
+      practiceCommand: stepModal.practiceCommand || null,
+      practiceOutput: stepModal.practiceOutput || null,
+      practiceExplanation: stepModal.practiceExplanation || null,
       points: Number(stepModal.points) || 0,
       isOptional: Boolean(stepModal.isOptional),
     };
@@ -237,8 +255,22 @@ export default function LabEditorPage() {
             {lab.title}
             <Badge tone={lab.status === 'published' ? 'emerald' : 'amber'}>{lab.status}</Badge>
           </h1>
-          <p className="mt-1 text-[11px] text-slate-500">
-            {lab.course_id ? `Course #${lab.course_id}` : 'Standalone lab'} · slug <span className="font-mono">{lab.slug}</span>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+            <span>
+              {lab.course_id ? `Course #${lab.course_id}` : 'Standalone lab'} · slug{' '}
+              <span className="font-mono">{lab.slug}</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <IconServer size={11} />
+              {lab.lab_server_name ? (
+                <>
+                  Server: <span className="text-slate-300">{lab.lab_server_name}</span>
+                  <span className="text-slate-600">(assigned by admin)</span>
+                </>
+              ) : (
+                <>Default lab host (no server assigned)</>
+              )}
+            </span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -281,6 +313,24 @@ export default function LabEditorPage() {
           <Input label="Title" value={form.title} onChange={update('title')} required />
           <Textarea label="Summary" rows={2} value={form.summary} onChange={update('summary')} />
           <Textarea label="Description (markdown)" rows={5} value={form.description} onChange={update('description')} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Textarea
+              label="Learning objectives"
+              rows={4}
+              value={form.objectives}
+              onChange={update('objectives')}
+              placeholder={'- Navigate the Linux filesystem\n- Inspect file permissions\n- Explain the principle of least privilege'}
+              hint="One objective per line. Shown to learners before they start the lab."
+            />
+            <Textarea
+              label="Submission requirements"
+              rows={4}
+              value={form.submissionRequirements}
+              onChange={update('submissionRequirements')}
+              placeholder={'- Screenshot proving each step\n- A short solution article explaining your approach'}
+              hint="What learners must include in the practical report for this lab."
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Select label="Difficulty" value={form.difficulty} onChange={update('difficulty')}>
               {Object.entries(DIFFICULTIES).map(([key, value]) => (
@@ -296,6 +346,23 @@ export default function LabEditorPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Textarea label="Terminal welcome message" rows={2} value={form.terminalWelcome} onChange={update('terminalWelcome')} />
             <Input label="Initial working directory" value={form.initialCwd} onChange={update('initialCwd')} className="font-mono text-xs" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Container image"
+              value={form.containerImage}
+              onChange={update('containerImage')}
+              className="font-mono text-xs"
+              placeholder="ubuntu:22.04"
+              hint="Leave blank to use the server default. The image must provide /bin/sh and coreutils."
+            />
+            <div className="flex items-end pb-2">
+              <Checkbox
+                label="Allow outbound network access in this lab's container"
+                checked={form.networkEnabled}
+                onChange={(event) => setForm((current) => ({ ...current, networkEnabled: event.target.checked }))}
+              />
+            </div>
           </div>
           <div className="flex justify-end">
             <Button type="submit" loading={saving}>Save lab settings</Button>
@@ -346,6 +413,11 @@ export default function LabEditorPage() {
                   {step.expected_output_pattern && (
                     <code className="mt-1.5 ml-1.5 inline-block rounded border border-white/5 bg-night-950/70 px-2 py-0.5 font-mono text-[10px] text-brand-300">
                       /{step.expected_output_pattern}/i
+                    </code>
+                  )}
+                  {step.practice_command && (
+                    <code className="mt-1.5 ml-1.5 inline-block rounded border border-amber-400/10 bg-amber-400/[0.04] px-2 py-0.5 font-mono text-[10px] text-amber-300">
+                      practice: {step.practice_command}
                     </code>
                   )}
                 </div>
@@ -406,6 +478,37 @@ export default function LabEditorPage() {
                 hint="Case-insensitive JavaScript regular expression tested against the command output."
               />
             )}
+            <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.03] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">Practice mode (simulated)</p>
+              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
+                Learners practise this step in a local simulated terminal before the real lab. Nothing here runs on a server.
+              </p>
+              <div className="mt-3 space-y-3">
+                <Input
+                  label="Example command"
+                  value={stepModal.practiceCommand}
+                  onChange={(event) => setStepModal((current) => ({ ...current, practiceCommand: event.target.value }))}
+                  className="font-mono text-xs"
+                  placeholder="e.g. pwd"
+                  hint="Running this exact command in practice mode marks the step as practised."
+                />
+                <Textarea
+                  label="Expected simulated output"
+                  rows={3}
+                  value={stepModal.practiceOutput}
+                  onChange={(event) => setStepModal((current) => ({ ...current, practiceOutput: event.target.value }))}
+                  className="font-mono text-xs"
+                  placeholder={'/home/student'}
+                />
+                <Textarea
+                  label="Explanation"
+                  rows={2}
+                  value={stepModal.practiceExplanation}
+                  onChange={(event) => setStepModal((current) => ({ ...current, practiceExplanation: event.target.value }))}
+                  placeholder="Why this command works and what to look for."
+                />
+              </div>
+            </div>
             <Checkbox label="Optional step (doesn't block lab completion)" checked={stepModal.isOptional} onChange={(event) => setStepModal((current) => ({ ...current, isOptional: event.target.checked }))} />
             {stepModal.verification === 'command' && !stepModal.expectedCommand && (
               <p className="text-[11px] text-amber-300/80">Without an expected command this step can never auto-complete.</p>

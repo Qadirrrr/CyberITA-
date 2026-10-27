@@ -3,14 +3,35 @@ import api, { setAccessToken } from '../lib/api';
 
 const AuthContext = createContext(null);
 
+function hasSessionMarker() {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some((part) => part.trim().startsWith('cyberita_session='));
+}
+
+let bootstrapPromise = null;
+
+function bootstrapSession() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = api.post('/auth/refresh').finally(() => {
+      bootstrapPromise = null;
+    });
+  }
+  return bootstrapPromise;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    api
-      .post('/auth/refresh')
+    if (!hasSessionMarker()) {
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+    bootstrapSession()
       .then(({ data }) => {
         if (!active) return;
         setAccessToken(data.accessToken);

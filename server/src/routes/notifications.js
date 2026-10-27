@@ -40,6 +40,31 @@ router.post(
 );
 
 router.post(
+  '/read-category',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { category } = req.body || {};
+    if (!category) {
+      return res.json({ ok: true });
+    }
+    await query(
+      `UPDATE notifications
+       SET read_at = now()
+       WHERE user_id = $1
+         AND read_at IS NULL
+         AND (
+           type = $2
+           OR ($2 = 'quiz' AND (link LIKE '%quiz%' OR LOWER(title) LIKE '%quiz%'))
+           OR ($2 = 'assignment' AND (link LIKE '%assignment%' OR LOWER(title) LIKE '%assignment%'))
+           OR ($2 = 'submission' AND (link LIKE '%submission%' OR LOWER(title) LIKE '%submission%'))
+         )`,
+      [req.user.id, category]
+    );
+    res.json({ ok: true });
+  })
+);
+
+router.post(
   '/:id/read',
   requireAuth,
   asyncHandler(async (req, res) => {
@@ -57,8 +82,8 @@ router.post(
   '/broadcast',
   requireRole('admin'),
   validateBody(z.object({
-    title: z.string().trim().min(3).max(200),
-    body: z.string().trim().max(2000).default(''),
+    title: z.string().trim().min(3, 'Title must be at least 3 characters.').max(200),
+    body: z.string().trim().max(2000, 'Message must be at most 2000 characters.').default(''),
     link: z.string().trim().max(300).optional().nullable(),
     role: z.enum(['all', 'student', 'instructor', 'admin']).default('all'),
     userIds: z.array(z.coerce.number().int()).max(500).optional(),

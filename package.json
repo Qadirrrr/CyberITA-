@@ -2,7 +2,7 @@
   "name": "cyberita-plus",
   "version": "1.0.0",
   "private": true,
-  "description": "CyberITA+ — professional IT learning platform with practical labs, reports and certificates",
+  "description": "CyberITA+, professional IT learning platform with practical labs, reports and certificates",
   "type": "module",
   "workspaces": [
     "server",
@@ -16,9 +16,9 @@
     "test:server": "npm run test -w server",
     "test:client": "npm run test -w client",
     "db:migrate": "npm run db:migrate -w server",
-    "db:seed": "npm run db:seed -w server",
-    "db:seed:extra": "npm run db:seed:extra -w server",
-    "db:reset": "npm run db:reset -w server"
+    "db:reset": "npm run db:reset -w server",
+    "user:create": "npm run user:create -w server --",
+    "lab:smoke": "npm run lab:smoke -w server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

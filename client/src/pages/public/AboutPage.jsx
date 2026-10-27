@@ -29,7 +29,7 @@ const values = [
   {
     icon: IconShield,
     title: 'Safety by default',
-    body: 'Labs run in isolated, disposable sandboxes. Break things, reset, try again — with zero risk to your own machine.',
+    body: 'Labs run in isolated, disposable sandboxes. Break things, reset, try again, with zero risk to your own machine.',
   },
   {
     icon: IconUsers,
@@ -106,14 +106,14 @@ export default function AboutPage() {
         <SectionHeading
           eyebrow="Our approach"
           title="A loop that actually builds skill"
-          description="Learn, execute, document, review. Each stage reinforces the last — and produces something you can show."
+          description="Learn, execute, document, review. Each stage reinforces the last, and produces something you can show."
         />
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: IconBookOpen, step: '01', title: 'Learn the concept', body: 'Short, focused lessons written by practitioners — no filler, no 40-minute videos.' },
+            { icon: IconBookOpen, step: '01', title: 'Learn the concept', body: 'Short, focused lessons written by practitioners, no filler, no 40-minute videos.' },
             { icon: IconTerminal, step: '02', title: 'Run it for real', body: 'Apply it immediately in a sandboxed terminal. Commands are checked as you go.' },
             { icon: IconFileText, step: '03', title: 'Document the work', body: 'Your verified commands, output and screenshots become a structured practical report.' },
-            { icon: IconAward, step: '04', title: 'Get it recognised', body: 'Instructor feedback, a verifiable certificate and — if you choose — a published article.' },
+            { icon: IconAward, step: '04', title: 'Get it recognised', body: 'Instructor feedback, a verifiable certificate and, if you choose, a published article.' },
           ].map((item) => {
             const IconComponent = item.icon;
             return (
@@ -156,7 +156,7 @@ export default function AboutPage() {
         <SectionHeading
           eyebrow="Who teaches here"
           title="Practitioners who still use the tools"
-          description="Our instructors have operated the systems they teach — and they review the work you submit."
+          description="Our instructors have operated the systems they teach, and they review the work you submit."
         />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {team.map((member) => (

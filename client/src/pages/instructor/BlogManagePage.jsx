@@ -137,8 +137,8 @@ export default function BlogManagePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Blog</h1>
-          <p className="mt-1 text-sm text-slate-400">Write technical articles or publish approved student reports.</p>
+          <h1 className="font-display text-2xl font-semibold">Articles</h1>
+          <p className="mt-1 text-sm text-slate-400">Write technical articles or refine drafts created from approved practical reports.</p>
         </div>
         <Button size="sm" onClick={() => openPost(null)}>
           <IconPlus size={14} /> New article
@@ -171,7 +171,7 @@ export default function BlogManagePage() {
         <EmptyState
           icon={IconBookOpen}
           title="No articles here"
-          message={status === 'draft' ? 'Draft articles you create will appear here. Approved student reports can also be published to the blog.' : 'Nothing published yet.'}
+          message={status === 'draft' ? 'Draft articles you create will appear here. Approved reports become drafts you can edit before publishing.' : 'Nothing published yet.'}
           action={<Button size="sm" onClick={() => openPost(null)}><IconPlus size={13} /> New article</Button>}
         />
       ) : (

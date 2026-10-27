@@ -5,6 +5,7 @@ import { createApp } from './app.js';
 import { initWebSocket } from './websocket/index.js';
 import { checkDbConnection } from './config/db.js';
 import { purgeExpiredTokens } from './services/authService.js';
+import { cleanupExpiredLabSessions } from './services/labService.js';
 
 async function main() {
   const app = createApp();
@@ -23,8 +24,14 @@ async function main() {
   const tokenPurge = setInterval(() => purgeExpiredTokens().catch(() => {}), 60 * 60 * 1000);
   tokenPurge.unref();
 
+  const runLabCleanup = () =>
+    cleanupExpiredLabSessions().catch((error) => logger.warn('Lab cleanup failed', { error: error.message }));
+  runLabCleanup();
+  const labCleanup = setInterval(runLabCleanup, Math.max(1, env.labs.cleanupIntervalMinutes) * 60 * 1000);
+  labCleanup.unref();
+
   server.listen(env.port, () => {
-    logger.info(`CyberITA+ API listening on http://43.204.246.241:${env.port}`, {
+    logger.info(`CyberITA+ API listening on http://localhost:${env.port}`, {
       env: env.nodeEnv,
       labProvider: env.labs.provider,
     });

@@ -23,6 +23,12 @@ import certificateRoutes from './routes/certificates.js';
 import statsRoutes from './routes/stats.js';
 import learningPathRoutes from './routes/learningPaths.js';
 import navRoutes from './routes/nav.js';
+import adminRoutes from './routes/admin.js';
+import messageRoutes from './routes/messages.js';
+import studentRoutes from './routes/student.js';
+import instructorRoutes from './routes/instructor.js';
+import contentReportRoutes from './routes/contentReports.js';
+import labSubmissionRoutes from './routes/labSubmissions.js';
 
 export function createApp() {
   const app = express();
@@ -51,7 +57,7 @@ export function createApp() {
     res.json({ status: 'ok', name: 'CyberITA+ API', env: env.nodeEnv, time: new Date().toISOString() });
   });
 
-  // Global (optional) authentication — req.user is set when a valid token exists
+  // Global (optional) authentication, req.user is set when a valid token exists
   app.use('/api', authenticate);
 
   app.use('/api/auth', authRoutes);
@@ -61,6 +67,7 @@ export function createApp() {
   app.use('/api/quizzes', quizRoutes);
   app.use('/api/assignments', assignmentRoutes);
   app.use('/api/labs', labRoutes);
+app.use('/api/lab-submissions', labSubmissionRoutes);
   app.use('/api/reports', reportRoutes);
   app.use('/api/posts', postRoutes);
   app.use('/api/notifications', notificationRoutes);
@@ -68,6 +75,11 @@ export function createApp() {
   app.use('/api/certificates', certificateRoutes);
   app.use('/api/learning-paths', learningPathRoutes);
   app.use('/api/nav', navRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/content-reports', contentReportRoutes);
+  app.use('/api/messages', messageRoutes);
+  app.use('/api/instructor', instructorRoutes);
+  app.use('/api', studentRoutes);
   app.use('/api', statsRoutes);
 
   // Serve the built frontend in production (single-origin deployment)

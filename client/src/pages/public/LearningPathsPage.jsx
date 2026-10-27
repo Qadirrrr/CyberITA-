@@ -129,7 +129,7 @@ export default function LearningPathsPage() {
               <div>
                 <h3 className="font-display text-lg font-semibold">Not sure where to start?</h3>
                 <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">
-                  Tell us your goal — a helpdesk role, cloud operations, or security fundamentals — and we'll recommend a
+                  Tell us your goal (a helpdesk role, cloud operations, or security fundamentals) and we'll recommend a
                   route with the right labs and assessments.
                 </p>
               </div>

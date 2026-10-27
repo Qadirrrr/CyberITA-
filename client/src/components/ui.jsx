@@ -46,13 +46,13 @@ export const Button = forwardRef(function Button(
   );
 });
 
-export function Field({ label, htmlFor, error, hint, required, children, className = '' }) {
+export function Field({ label, htmlFor, error, hint, required, showRequired = true, children, className = '' }) {
   return (
     <div className={className}>
       {label && (
         <label htmlFor={htmlFor} className="label">
           {label}
-          {required && <span className="ml-1 text-rose-400">*</span>}
+          {required && showRequired && <span className="ml-1 text-rose-400">*</span>}
         </label>
       )}
       {children}
@@ -65,11 +65,11 @@ export function Field({ label, htmlFor, error, hint, required, children, classNa
   );
 }
 
-export const Input = forwardRef(function Input({ label, error, hint, required, className = '', id, ...props }, ref) {
+export const Input = forwardRef(function Input({ label, error, hint, required, showRequired = true, className = '', id, ...props }, ref) {
   const autoId = useId();
   const inputId = id || autoId;
   return (
-    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required}>
+    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required} showRequired={showRequired}>
       <input
         ref={ref}
         id={inputId}
@@ -80,11 +80,11 @@ export const Input = forwardRef(function Input({ label, error, hint, required, c
   );
 });
 
-export const Textarea = forwardRef(function Textarea({ label, error, hint, required, className = '', id, rows = 4, ...props }, ref) {
+export const Textarea = forwardRef(function Textarea({ label, error, hint, required, showRequired = true, className = '', id, rows = 4, ...props }, ref) {
   const autoId = useId();
   const inputId = id || autoId;
   return (
-    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required}>
+    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required} showRequired={showRequired}>
       <textarea
         ref={ref}
         id={inputId}
@@ -96,11 +96,11 @@ export const Textarea = forwardRef(function Textarea({ label, error, hint, requi
   );
 });
 
-export const Select = forwardRef(function Select({ label, error, hint, required, className = '', id, children, ...props }, ref) {
+export const Select = forwardRef(function Select({ label, error, hint, required, showRequired = true, className = '', id, children, ...props }, ref) {
   const autoId = useId();
   const inputId = id || autoId;
   return (
-    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required}>
+    <Field label={label} htmlFor={inputId} error={error} hint={hint} required={required} showRequired={showRequired}>
       <select ref={ref} id={inputId} className={cx('input', error && 'border-rose-500/60', className)} {...props}>
         {children}
       </select>
@@ -422,7 +422,7 @@ export function Pagination({ page = 1, limit = 12, total = 0, onPageChange, clas
   return (
     <div className={cx('flex flex-wrap items-center justify-between gap-3 pt-4', className)}>
       <p className="text-xs text-slate-500">
-        Showing <span className="text-slate-300">{start}</span>–<span className="text-slate-300">{end}</span> of{' '}
+        Showing <span className="text-slate-300">{start}</span>-<span className="text-slate-300">{end}</span> of{' '}
         <span className="text-slate-300">{total}</span>
       </p>
       <div className="flex items-center gap-2">

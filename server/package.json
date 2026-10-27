@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "CyberITA+ backend — Express, PostgreSQL, WebSockets, lab providers",
+  "description": "CyberITA+ backend, Express, PostgreSQL, WebSockets, lab providers",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:seed": "node src/db/seed.js",
-    "db:seed:extra": "node src/db/seedExtra.js",
     "db:reset": "node src/db/reset.js",
+    "user:create": "node src/scripts/createUser.js",
+    "lab:smoke": "node src/scripts/dockerSmoke.js",
+    "lab:image:build": "docker build -t cyberita/lab-runtime:1.0 ../docker/lab-image",
     "test": "vitest run --reporter=basic --no-file-parallelism",
     "test:watch": "vitest --no-file-parallelism"
   },
@@ -30,7 +31,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "supertest": "^7.0.0",
+    "supertest": "^7.3.1",
     "vitest": "^2.1.8"
   }
 }

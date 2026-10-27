@@ -4,38 +4,38 @@ import AuthShell from '../../components/AuthShell';
 import { Alert, Button, Checkbox, Input } from '../../components/ui';
 import { dashboardPath, useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { getErrorMessage } from '../../lib/api';
-import { IconArrowRight, IconEye, IconEyeOff, IconLock, IconMail } from '../../components/icons';
-
-const demoAccounts = [
-  { role: 'Student', email: 'alex.rivera@cyberita.plus' },
-  { role: 'Instructor', email: 'sarah.chen@cyberita.plus' },
-  { role: 'Admin', email: 'admin@cyberita.plus' },
-];
+import { getErrorMessage, getFieldErrors } from '../../lib/api';
+import { validateLoginForm } from '../../lib/validation';
+import { IconArrowRight, IconEye, IconEyeOff, IconMail } from '../../components/icons';
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const registered = Boolean(location.state?.registered);
+  const [form, setForm] = useState({ email: location.state?.email || '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
 
   const from = location.state?.from;
-  const target = from || (user ? dashboardPath(user.role) : '/student');
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    const nextErrors = validateLoginForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     setLoading(true);
     setError('');
     try {
-      const account = await login(form);
+      const account = await login({ ...form, remember });
       toast.success(`Welcome back, ${account.full_name.split(' ')[0]}.`);
-      navigate(target, { replace: true });
+      navigate(from || dashboardPath(account.role), { replace: true });
     } catch (err) {
+      setErrors(getFieldErrors(err));
       setError(getErrorMessage(err, 'Unable to sign in. Check your details and try again.'));
     } finally {
       setLoading(false);
@@ -55,13 +55,19 @@ export default function LoginPage() {
         </>
       }
     >
+      {registered && (
+        <Alert tone="success" title="Account created" className="mb-5">
+          Your account is ready. Sign in to continue.
+        </Alert>
+      )}
+
       {error && (
         <Alert tone="error" className="mb-5">
           {error}
         </Alert>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div className="relative">
           <Input
             label="Email address"
@@ -70,6 +76,7 @@ export default function LoginPage() {
             required
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            error={errors.email}
             placeholder="you@example.com"
             className="pr-10"
           />
@@ -83,6 +90,7 @@ export default function LoginPage() {
             required
             value={form.password}
             onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+            error={errors.password}
             placeholder="••••••••"
             className="pr-10"
           />
@@ -105,30 +113,6 @@ export default function LoginPage() {
           Sign in <IconArrowRight size={17} />
         </Button>
       </form>
-
-      <div className="mt-6 border-t border-white/10 pt-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <IconLock size={12} className="text-brand-400" /> Demo access
-          </div>
-          <span className="text-[10px] text-slate-600">Passw0rd!</span>
-        </div>
-        <div className="mt-2.5 grid gap-1.5 sm:grid-cols-3">
-          {demoAccounts.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              onClick={() => setForm({ email: account.email, password: 'Passw0rd!' })}
-              className="group rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-left transition hover:border-brand-400/30 hover:bg-brand-400/[0.06]"
-            >
-              <span className="block text-[11px] font-semibold text-slate-200 group-hover:text-brand-200">
-                {account.role}
-              </span>
-              <span className="block truncate text-[10px] text-slate-500">{account.email}</span>
-            </button>
-          ))}
-        </div>
-      </div>
     </AuthShell>
   );
 }

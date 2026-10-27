@@ -20,7 +20,7 @@ export default function LabsPage() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [DIFFICULTIES, setDIFFICULTIES] = useState('all');
+  const [difficulty, setDifficulty] = useState('all');
   const [mineOnly, setMineOnly] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,12 +52,12 @@ export default function LabsPage() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return labs.filter((lab) => {
-      if (DIFFICULTIES !== 'all' && lab.DIFFICULTIES !== DIFFICULTIES) return false;
+      if (difficulty !== 'all' && lab.difficulty !== difficulty) return false;
       if (mineOnly && !lab.last_started_at) return false;
       if (!term) return true;
       return `${lab.title} ${lab.summary} ${lab.course_title || ''}`.toLowerCase().includes(term);
     });
-  }, [labs, search, DIFFICULTIES, mineOnly]);
+  }, [labs, search, difficulty, mineOnly]);
 
   const started = labs.filter((lab) => lab.last_started_at).length;
 
@@ -79,9 +79,9 @@ export default function LabsPage() {
               <IconCheckCircle size={12} /> {started} started
             </Badge>
           )}
-          {status && (
-            <Badge tone={status.available ? 'emerald' : 'rose'}>
-              {status.available ? `Provider ready · ${status.provider}` : 'Provider unavailable'}
+          {status?.available && (
+            <Badge tone="emerald">
+              <IconCheckCircle size={12} /> Labs online
             </Badge>
           )}
         </div>
@@ -101,8 +101,8 @@ export default function LabsPage() {
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setDIFFICULTIES('all')}
-            className={`chip ${DIFFICULTIES === 'all' ? 'chip-active' : ''}`}
+            onClick={() => setDifficulty('all')}
+            className={`chip ${difficulty === 'all' ? 'chip-active' : ''}`}
           >
             All levels
           </button>
@@ -110,8 +110,8 @@ export default function LabsPage() {
             <button
               key={key}
               type="button"
-              onClick={() => setDIFFICULTIES(key)}
-              className={`chip ${DIFFICULTIES === key ? 'chip-active' : ''}`}
+              onClick={() => setDifficulty(key)}
+              className={`chip ${difficulty === key ? 'chip-active' : ''}`}
             >
               {DIFFICULTIES[key].label}
             </button>
@@ -145,14 +145,14 @@ export default function LabsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((lab) => {
-            const tone = difficultyTone[lab.DIFFICULTIES] || 'brand';
+            const tone = difficultyTone[lab.difficulty] || 'brand';
             return (
               <Card key={lab.id} className="group flex flex-col p-5 transition hover:border-brand-400/30">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/20 bg-brand-400/10 text-brand-300">
                     <IconTerminal size={18} />
                   </div>
-                  <Badge tone={tone}>{DIFFICULTIES[lab.DIFFICULTIES]?.label || lab.DIFFICULTIES}</Badge>
+                  <Badge tone={tone}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
                 </div>
                 <h2 className="mt-3 font-display text-base font-semibold leading-snug text-white">{lab.title}</h2>
                 {lab.summary && <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-400">{lab.summary}</p>}

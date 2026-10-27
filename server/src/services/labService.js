@@ -1,10 +1,14 @@
 import { query, withTransaction } from '../config/db.js';
 import env from '../config/env.js';
+import logger from '../config/logger.js';
 import { getProvider } from '../labs/providers/index.js';
 import { normalizeCommand, matchesPattern } from '../utils/helpers.js';
 import { notFound, forbidden, badRequest } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import { recomputeCourseProgress } from '../routes/enrollment.js';
+import { assertSessionAccess } from './access.js';
+import { hostForSession, resolveServerForNewSession } from './labServers.js';
+import { studentIdentity } from '../labs/identity.js';
 
 const MAX_HISTORY_LINES = 400;
 
@@ -20,6 +24,7 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
   const { rows } = await query(
     `SELECT id, position, title, instruction, hint, verification,
        ${includeAnswers ? 'expected_command, expected_output_pattern,' : ''}
+       practice_command, practice_output, practice_explanation,
        points, is_optional
      FROM lab_steps WHERE lab_id = $1 ORDER BY position, id`,
     [labId]
@@ -29,8 +34,15 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
 
 async function loadSession(sessionId) {
   const { rows } = await query(
-    `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id, l.title AS lab_title
-     FROM lab_sessions s JOIN labs l ON l.id = s.lab_id WHERE s.id = $1`,
+    `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id,
+            l.created_by, l.status AS lab_status, l.title AS lab_title,
+            srv.name AS lab_server_name,
+            u.full_name AS student_name
+     FROM lab_sessions s
+     JOIN labs l ON l.id = s.lab_id
+     JOIN users u ON u.id = s.user_id
+     LEFT JOIN lab_servers srv ON srv.id = s.lab_server_id
+     WHERE s.id = $1`,
     [sessionId]
   );
   return rows[0] || null;
@@ -39,33 +51,43 @@ async function loadSession(sessionId) {
 export async function getSessionOr404(sessionId, user) {
   const session = await loadSession(sessionId);
   if (!session) throw notFound('Lab session not found.');
-  const isOwner = session.user_id === user.id;
-  const isStaff = user.role === 'admin' || user.role === 'instructor';
-  if (!isOwner && !isStaff) throw forbidden('You do not have access to this lab session.');
+  await assertSessionAccess(user, session);
   return session;
 }
 
 /** Provisions (or reuses) a lab session for a user. */
 export async function startSession(user, lab) {
+  const provider = getProvider();
   const { rows: existing } = await query(
     `SELECT * FROM lab_sessions
-     WHERE user_id = $1 AND lab_id = $2 AND status = 'running'
+     WHERE user_id = $1 AND lab_id = $2 AND provider = $3 AND status = 'running'
        AND (expires_at IS NULL OR expires_at > now())
      ORDER BY id DESC LIMIT 1`,
-    [user.id, lab.id]
+    [user.id, lab.id, provider.name]
   );
-  if (existing[0]) return { session: existing[0], reused: true };
+  if (existing[0]) {
+    const fullExisting = await loadSession(existing[0].id);
+    return { session: fullExisting || existing[0], reused: true };
+  }
 
-  const provider = getProvider();
-  const descriptor = await provider.provision({ lab, user });
+  // Route the session to the lab's assigned server (or the default host).
+  const { host, server } = await resolveServerForNewSession(lab);
+
+  const descriptor = await provider.provision({ lab, user, host, serverId: server?.id ?? null });
   const expiresAt = new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
-  const { rows } = await query(
-    `INSERT INTO lab_sessions
-       (lab_id, user_id, provider, instance_id, status, fs_state, cwd, expires_at)
-     VALUES ($1, $2, $3, $4, 'running', $5, $6, $7)
-     RETURNING *`,
-    [lab.id, user.id, descriptor.provider, descriptor.instanceId, JSON.stringify(descriptor.fsState), descriptor.cwd, expiresAt]
-  );
+  let rows;
+  try {
+    ({ rows } = await query(
+      `INSERT INTO lab_sessions
+         (lab_id, user_id, provider, instance_id, status, fs_state, cwd, expires_at, lab_server_id)
+       VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8)
+       RETURNING *`,
+      [lab.id, user.id, descriptor.provider, descriptor.instanceId, JSON.stringify(descriptor.fsState || {}), descriptor.cwd, expiresAt, server?.id ?? null]
+    ));
+  } catch (error) {
+    await provider.deprovision({ instance_id: descriptor.instanceId, provider: descriptor.provider }, { host }).catch(() => {});
+    throw error;
+  }
   const session = rows[0];
 
   await withTransaction(async (client) => {
@@ -80,18 +102,20 @@ export async function startSession(user, lab) {
       userIds: [user.id],
       type: 'lab',
       title: `Lab started: ${lab.title}`,
-      body: 'Your practice environment is ready in the browser terminal.',
+      body: 'Your isolated lab environment is ready in the browser terminal.',
       link: `/labs/${lab.id}`,
     });
   });
 
-  return { session, reused: false, welcome: descriptor.welcome };
+  const fullSession = await loadSession(session.id);
+  return { session: fullSession || session, reused: false, welcome: descriptor.welcome };
 }
 
 export async function stopSession(session, user) {
   if (session.status === 'stopped') return session;
   const provider = getProvider(session.provider);
-  await provider.deprovision(session);
+  const server = await hostForSession(session);
+  await provider.deprovision(session, { host: server?.host || null });
   const { rows } = await query(
     `UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1 RETURNING *`,
     [session.id]
@@ -164,7 +188,7 @@ export async function verifyStepsAfterCommand({ session, command, output }) {
 /** Marks a manual step as complete (self-reported, recorded in history). */
 export async function completeManualStep(session, step, user) {
   if (step.verification !== 'manual') {
-    throw badRequest('This step is verified automatically — run the expected command in the terminal.');
+    throw badRequest('This step is verified automatically, run the expected command in the terminal.');
   }
   const marked = await markStepCompleted({ session, step, command: '(manual confirmation)', output: '' });
   if (!marked) return { alreadyCompleted: true };
@@ -225,7 +249,7 @@ export async function checkLabCompletion(session) {
           await notify(client, {
             userIds: [session.user_id],
             type: 'certificate',
-            title: 'Course completed — certificate issued!',
+            title: 'Course completed, certificate issued!',
             body: `Certificate serial: ${progress.certificate?.serial || ''}`,
             link: '/student/certificates',
           });
@@ -243,14 +267,21 @@ export async function checkLabCompletion(session) {
  */
 export async function executeInSession(session, lab, command) {
   if (session.status !== 'running') throw badRequest('This lab session is not running. Start it again.');
+  const provider = getProvider(session.provider);
   if (session.expires_at && new Date(session.expires_at) < new Date()) {
-    await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1`, [session.id]);
+    try {
+      const server = await hostForSession(session);
+      await provider.deprovision(session, { host: server?.host || null });
+      await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1`, [session.id]);
+    } catch (error) {
+      await query(`UPDATE lab_sessions SET status = 'error' WHERE id = $1`, [session.id]).catch(() => {});
+      logger.warn('Expired lab session cleanup failed', { sessionId: session.id, error: error.message });
+    }
     throw badRequest('This lab session has expired. Start a new session.');
   }
 
-  const provider = getProvider(session.provider);
   const terminal = provider.createTerminal(session, lab);
-  const result = terminal.execute(command);
+  const result = await terminal.execute(command);
   const { events = [], ...exec } = result;
 
   const historyEntry = [
@@ -297,9 +328,58 @@ export async function executeInSession(session, lab, command) {
   };
 }
 
+/** Tears down expired lab instances and reconciles their session rows. */
+export async function cleanupExpiredLabSessions({ limit = 100 } = {}) {
+  const { rows } = await query(
+    `SELECT * FROM lab_sessions
+     WHERE status IN ('running', 'provisioning', 'error')
+       AND expires_at IS NOT NULL AND expires_at <= now()
+     ORDER BY expires_at
+     LIMIT $1`,
+    [limit]
+  );
+  let stopped = 0;
+  for (const session of rows) {
+    try {
+      try {
+        const server = await hostForSession(session);
+        await getProvider(session.provider).deprovision(session, { host: server?.host || null });
+      } catch (provErr) {
+        logger.warn('Provider deprovision skipped or failed during cleanup', {
+          sessionId: session.id,
+          provider: session.provider,
+          error: provErr.message,
+        });
+      }
+      const result = await query(
+        `UPDATE lab_sessions SET status = 'stopped', ended_at = now()
+         WHERE id = $1 AND status IN ('running', 'provisioning', 'error')`,
+        [session.id]
+      );
+      stopped += result.rowCount;
+    } catch (error) {
+      await query(
+        `UPDATE lab_sessions SET status = 'stopped', ended_at = now()
+         WHERE id = $1 AND status IN ('running', 'provisioning', 'error')`,
+        [session.id]
+      ).catch(() => {});
+      logger.warn('Expired lab cleanup failed', { sessionId: session.id, provider: session.provider, error: error.message });
+    }
+  }
+  return { scanned: rows.length, stopped };
+}
+
 /** Full state of a session for the lab UI (steps, progress, screenshots). */
 export async function getSessionOverview(session, { includeAnswers = false } = {}) {
   const steps = await getLabSteps(session.lab_id, { includeAnswers });
+  const fsState = session.fs_state && typeof session.fs_state === 'object' ? session.fs_state : {};
+  const identity = studentIdentity({ id: session.user_id, full_name: session.student_name });
+  const student = {
+    id: identity.studentId,
+    name: session.student_name || identity.displayName,
+    shell_user: fsState.shellUser || identity.shellUser,
+    hostname: fsState.hostname || identity.hostname,
+  };
   const { rows: progressRows } = await query(
     `SELECT step_id, command_used, output_excerpt, completed_at FROM lab_step_progress WHERE session_id = $1`,
     [session.id]
@@ -313,6 +393,16 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
   const { rows: reportRows } = await query(
     `SELECT id, status, title FROM reports WHERE session_id = $1`,
     [session.id]
+  );
+  const { rows: submissionRows } = await query(
+    `SELECT id, status, student_note, instructor_feedback, submitted_at, reviewed_at,
+            attachment_name, attachment_size
+     FROM lab_submissions WHERE session_id = $1`,
+    [session.id]
+  );
+  const { rows: labRows } = await query(
+    'SELECT id, title, submission_requirements FROM labs WHERE id = $1',
+    [session.lab_id]
   );
 
   const stepViews = steps.map((step) => {
@@ -342,10 +432,19 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
       started_at: session.started_at,
       expires_at: session.expires_at,
       ended_at: session.ended_at,
+      lab_server_id: session.lab_server_id || null,
+      lab_server_name: session.lab_server_name || null,
+      student_id: student.id,
+      student_name: student.name,
+      shell_user: student.shell_user,
+      hostname: student.hostname,
     },
+    student,
     steps: stepViews,
     screenshots,
+    lab: labRows[0] || null,
     report: reportRows[0] || null,
+    submission: submissionRows[0] || null,
     progress: {
       completedRequired,
       requiredTotal: required.length,

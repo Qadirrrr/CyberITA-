@@ -153,7 +153,7 @@ export default function CourseDetailPage() {
     } catch (err) {
       const message = getErrorMessage(err);
       if (err.response?.status === 409) {
-        toast.info('You are already enrolled — opening the course.');
+        toast.info('You are already enrolled. Opening the course.');
         navigate(`/learn/${course.slug}`);
         return;
       }

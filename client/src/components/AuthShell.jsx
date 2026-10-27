@@ -1,7 +1,7 @@
 import Logo from './Logo';
 import { IconLock } from './icons';
 
-export default function AuthShell({ title, subtitle, children, footer, compact = false }) {
+export default function AuthShell({ title, subtitle, children, footer, compact = false, wide = false }) {
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-80" />
@@ -13,7 +13,7 @@ export default function AuthShell({ title, subtitle, children, footer, compact =
           compact ? 'py-4 sm:py-6' : 'py-10'
         }`}
       >
-        <div className={`w-full ${compact ? 'max-w-[430px]' : 'max-w-[460px]'}`}>
+        <div className={`w-full ${compact ? (wide ? 'max-w-[500px]' : 'max-w-[430px]') : 'max-w-[460px]'}`}>
           <div
             className={`relative overflow-hidden border border-white/10 bg-night-900/75 shadow-[0_30px_90px_-45px_rgba(0,0,0,0.95)] backdrop-blur-xl ${
               compact ? 'rounded-2xl p-4 sm:p-6' : 'rounded-[28px] p-6 sm:p-9'

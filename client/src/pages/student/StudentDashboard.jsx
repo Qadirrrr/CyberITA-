@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import CourseCard from '../../components/CourseCard';
 import { Alert, AnimatedNumber, Badge, Button, Card, EmptyState, ProgressBar, Skeleton, StatCard } from '../../components/ui';
 import {
   IconArrowRight,
   IconAward,
-  IconBarChart,
   IconBookOpen,
-  IconCheckCircle,
+  IconChatBubble,
+  IconClipboard,
   IconClock,
   IconFileText,
   IconFlame,
@@ -19,14 +18,23 @@ import {
   IconZap,
 } from '../../components/icons';
 import { describeActivity, activityToneClasses } from '../../lib/activity';
-import { formatDate, timeAgo } from '../../lib/format';
+import { formatDate, formatDateTime, timeAgo } from '../../lib/format';
 
 const quickLinks = [
   { to: '/student/courses', label: 'My courses', icon: IconBookOpen, hint: 'Continue where you left off' },
+  { to: '/student/lessons', label: 'My lessons', icon: IconPlay, hint: 'Every lesson in one place' },
+  { to: '/student/quizzes', label: 'Quizzes', icon: IconZap, hint: 'Check your understanding' },
+  { to: '/student/assignments', label: 'Assignments', icon: IconClipboard, hint: 'Submit work and track grades' },
   { to: '/student/labs', label: 'Open a lab', icon: IconTerminal, hint: 'Practice in the terminal' },
-  { to: '/student/reports', label: 'Lab reports', icon: IconFileText, hint: 'Draft, submit, publish' },
-  { to: '/student/certificates', label: 'Certificates', icon: IconAward, hint: 'Share verified proof' },
+  { to: '/student/chat', label: 'Chat', icon: IconChatBubble, hint: 'Ask your instructor a question' },
 ];
+
+function assignmentState(assignment) {
+  if (!assignment.submission_id) return 'pending';
+  if (assignment.submission_status === 'returned') return 'pending';
+  if (assignment.submission_status === 'graded') return 'graded';
+  return 'submitted';
+}
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -34,6 +42,9 @@ export default function StudentDashboard() {
   const [enrollments, setEnrollments] = useState([]);
   const [events, setEvents] = useState([]);
   const [reports, setReports] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -44,13 +55,19 @@ export default function StudentDashboard() {
       api.get('/my-courses'),
       api.get('/me/history', { params: { limit: 8 } }),
       api.get('/reports/mine'),
+      api.get('/me/quizzes'),
+      api.get('/me/assignments'),
+      api.get('/messages/unread-count'),
     ])
-      .then(([statsRes, coursesRes, historyRes, reportsRes]) => {
+      .then(([statsRes, coursesRes, historyRes, reportsRes, quizzesRes, assignmentsRes, unreadRes]) => {
         if (!active) return;
         setStats(statsRes.data);
-        setEnrollments(coursesRes.data.enrollments);
-        setEvents(historyRes.data.events);
-        setReports(reportsRes.data.reports);
+        setEnrollments(coursesRes.data.enrollments || []);
+        setEvents(historyRes.data.events || []);
+        setReports(reportsRes.data.reports || []);
+        setQuizzes(quizzesRes.data.quizzes || []);
+        setAssignments(assignmentsRes.data.assignments || []);
+        setUnreadMessages(Number(unreadRes.data.unread) || 0);
       })
       .catch((err) => active && setError(getErrorMessage(err, 'Unable to load your dashboard.')))
       .finally(() => active && setLoading(false));
@@ -63,6 +80,16 @@ export default function StudentDashboard() {
   const completed = enrollments.filter((item) => item.status === 'completed');
   const feedback = reports.filter((report) => report.status === 'rejected' && report.instructor_feedback);
   const awaitingReview = reports.filter((report) => report.status === 'submitted');
+
+  const pendingAssignments = assignments.filter((assignment) => assignmentState(assignment) === 'pending');
+  const overdueAssignments = pendingAssignments.filter((assignment) => assignment.is_overdue);
+  const returnedAssignments = pendingAssignments.filter((assignment) => assignment.submission_status === 'returned');
+  const upcomingAssignments = pendingAssignments
+    .filter((assignment) => assignment.due_at)
+    .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
+    .slice(0, 4);
+  const unpassedQuizCount = quizzes.filter((quiz) => !quiz.has_passed).length;
+  const quizzesToTake = quizzes.filter((quiz) => !quiz.has_passed).slice(0, 3);
 
   if (loading) {
     return (
@@ -79,6 +106,7 @@ export default function StudentDashboard() {
   }
 
   const firstName = user?.full_name?.split(' ')[0] || 'learner';
+  const attentionCount = returnedAssignments.length + overdueAssignments.length;
 
   return (
     <div className="space-y-6">
@@ -98,7 +126,12 @@ export default function StudentDashboard() {
                 : 'Ready to start something new? Pick a course and open your first lab.'}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {unreadMessages > 0 && (
+              <Button as={Link} to="/student/chat" variant="secondary" size="sm">
+                <IconChatBubble size={15} /> {unreadMessages} unread {unreadMessages === 1 ? 'reply' : 'replies'}
+              </Button>
+            )}
             <Button as={Link} to="/student/labs" variant="secondary" size="sm">
               <IconTerminal size={15} /> Open a lab
             </Button>
@@ -113,7 +146,7 @@ export default function StudentDashboard() {
         <StatCard
           icon={IconBookOpen}
           label="Active courses"
-          value={stats?.enrollments.active ?? 0}
+          value={stats?.enrollments.active ?? active.length}
           hint={`${completed.length} completed`}
         />
         <StatCard
@@ -124,20 +157,51 @@ export default function StudentDashboard() {
           tone="accent"
         />
         <StatCard
-          icon={IconCheckCircle}
-          label="Avg. progress"
-          value={`${Math.round(Number(stats?.enrollments.avg_progress || 0))}%`}
-          hint={`${stats?.quizzes.passed ?? 0} quizzes passed`}
+          icon={IconZap}
+          label="Quizzes passed"
+          value={quizzes.filter((quiz) => quiz.has_passed).length}
+          hint={`${quizzes.length} available · ${unpassedQuizCount} to try`}
           tone="emerald"
         />
         <StatCard
-          icon={IconAward}
-          label="Certificates"
-          value={stats?.certificates ?? 0}
-          hint={`${stats?.activeDays30 ?? 0} active days this month`}
+          icon={IconClipboard}
+          label="Assignments to do"
+          value={pendingAssignments.length}
+          hint={
+            overdueAssignments.length > 0
+              ? `${overdueAssignments.length} overdue`
+              : `${assignments.length} assigned in total`
+          }
           tone="amber"
         />
       </div>
+
+      {attentionCount > 0 && (
+        <Card className="border-amber-400/25 bg-amber-400/[0.04] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300">
+                <IconClipboard size={19} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {returnedAssignments.length > 0
+                    ? `${returnedAssignments.length} assignment${returnedAssignments.length === 1 ? '' : 's'} need${returnedAssignments.length === 1 ? 's' : ''} attention`
+                    : `${overdueAssignments.length} overdue assignment${overdueAssignments.length === 1 ? '' : 's'}`}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {returnedAssignments.length > 0
+                    ? 'Your instructor returned work with feedback. Revise it and resubmit.'
+                    : 'These deadlines have passed. Submit as soon as you can so your instructor can grade your work.'}
+                </p>
+              </div>
+            </div>
+            <Button as={Link} to="/student/assignments" variant="secondary" size="sm">
+              Open assignments <IconArrowRight size={14} />
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {(feedback.length > 0 || awaitingReview.length > 0) && (
         <Card className="border-amber-400/25 bg-amber-400/[0.04] p-5">
@@ -179,7 +243,7 @@ export default function StudentDashboard() {
             <EmptyState
               icon={IconTarget}
               title="No active courses yet"
-              message="Enroll in a course to unlock lessons, labs and instructor-reviewed reports."
+              message="Enroll in a course to unlock lessons, labs, quizzes and instructor-reviewed reports."
               action={
                 <Button as={Link} to="/courses">
                   Find your first course
@@ -226,6 +290,69 @@ export default function StudentDashboard() {
             </div>
           )}
 
+          {(pendingAssignments.length > 0 || quizzesToTake.length > 0) && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-display text-base font-semibold">Coming up next</h2>
+                <div className="flex items-center gap-2">
+                  {pendingAssignments.length > 0 && (
+                    <Link to="/student/assignments" className="text-[11px] text-slate-400 hover:text-brand-300">
+                      {pendingAssignments.length} assignment{pendingAssignments.length === 1 ? '' : 's'}
+                    </Link>
+                  )}
+                  {quizzesToTake.length > 0 && (
+                    <Link to="/student/quizzes" className="text-[11px] text-slate-400 hover:text-brand-300">
+                      {quizzesToTake.length} quiz{quizzesToTake.length === 1 ? '' : 'zes'}
+                    </Link>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                {pendingAssignments.slice(0, 2).map((assignment) => (
+                  <Link
+                    key={assignment.id}
+                    to={`/learn/assignments/${assignment.id}`}
+                    className="group rounded-xl border border-white/10 bg-white/[0.02] p-3 transition hover:border-amber-400/30 hover:bg-white/[0.04]"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                        <IconClipboard size={15} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-slate-100 group-hover:text-white">{assignment.title}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-slate-500">{assignment.course_title}</p>
+                        <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
+                          <IconClock size={10} />
+                          {assignment.due_at ? formatDateTime(assignment.due_at) : 'No deadline'}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+                {quizzesToTake.slice(0, 2).map((quiz) => (
+                  <Link
+                    key={quiz.id}
+                    to={`/learn/quizzes/${quiz.id}`}
+                    className="group rounded-xl border border-white/10 bg-white/[0.02] p-3 transition hover:border-brand-400/30 hover:bg-white/[0.04]"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 text-brand-300">
+                        <IconZap size={15} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-slate-100 group-hover:text-white">{quiz.title}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-slate-500">{quiz.course_title}</p>
+                        <p className="mt-1 text-[10px] text-slate-500">
+                          {quiz.question_count} questions · pass at {Math.round(Number(quiz.pass_score))}%
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2">
             {quickLinks.map((link) => {
               const IconComponent = link.icon;
@@ -250,6 +377,76 @@ export default function StudentDashboard() {
         </div>
 
         <div className="space-y-6">
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-base font-semibold">Upcoming deadlines</h2>
+              <Link to="/student/calendar" className="text-[11px] text-slate-500 hover:text-brand-300">
+                Calendar
+              </Link>
+            </div>
+            {upcomingAssignments.length === 0 ? (
+              <p className="mt-6 text-center text-xs leading-5 text-slate-500">
+                No pending assignment deadlines. You are all caught up.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {upcomingAssignments.map((assignment) => {
+                  const due = new Date(assignment.due_at);
+                  const overdue = due.getTime() < Date.now();
+                  return (
+                    <li key={assignment.id}>
+                      <Link
+                        to={`/learn/assignments/${assignment.id}`}
+                        className="group flex items-start gap-2.5 rounded-xl border border-white/5 bg-white/[0.02] p-3 transition hover:border-brand-400/25 hover:bg-white/[0.04]"
+                      >
+                        <span
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg text-[9px] font-semibold uppercase leading-none ${
+                            overdue ? 'bg-rose-400/10 text-rose-300' : 'bg-white/5 text-slate-400'
+                          }`}
+                        >
+                          <span>{due.toLocaleDateString('en-US', { month: 'short' })}</span>
+                          <span className="text-[11px] text-slate-200">{due.getDate()}</span>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-medium text-slate-200 transition group-hover:text-white">
+                            {assignment.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[10px] text-slate-500">{assignment.course_title}</span>
+                          <span className={`mt-1 flex items-center gap-1 text-[10px] ${overdue ? 'text-rose-300' : 'text-slate-500'}`}>
+                            <IconClock size={10} /> {overdue ? 'Overdue' : 'Due'} {formatDateTime(assignment.due_at)}
+                          </span>
+                        </span>
+                        <IconArrowRight size={13} className="mt-1 shrink-0 text-slate-600 group-hover:text-brand-300" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
+          <Card className={`p-5 ${unreadMessages > 0 ? 'border-brand-400/25 bg-brand-400/[0.035]' : ''}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-400/10 text-brand-300">
+                  <IconChatBubble size={19} />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-semibold">Instructor chat</h2>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-400">
+                    {unreadMessages > 0
+                      ? `You have ${unreadMessages} unread ${unreadMessages === 1 ? 'reply' : 'replies'}.`
+                      : 'Ask a question or share a document with your instructor.'}
+                  </p>
+                </div>
+              </div>
+              {unreadMessages > 0 && <Badge tone="brand">{unreadMessages}</Badge>}
+            </div>
+            <Button as={Link} to="/student/chat" size="sm" variant={unreadMessages > 0 ? 'primary' : 'secondary'} className="mt-4 w-full">
+              Open chat <IconArrowRight size={14} />
+            </Button>
+          </Card>
+
           <Card className="p-5">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-semibold">Recent activity</h2>
@@ -292,7 +489,7 @@ export default function StudentDashboard() {
               </div>
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                 <p className="font-display text-xl font-semibold text-white tabular-nums">
-                  <AnimatedNumber value={stats?.quizzes.passed ?? 0} />
+                  <AnimatedNumber value={stats?.quizzes?.passed ?? 0} />
                 </p>
                 <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-500">Quizzes passed</p>
               </div>

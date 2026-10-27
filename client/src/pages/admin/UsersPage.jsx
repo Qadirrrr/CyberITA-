@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -15,15 +16,33 @@ import {
   Select,
   Skeleton,
 } from '../../components/ui';
-import { IconEdit, IconSearch, IconShield, IconUsers } from '../../components/icons';
+import { IconCheckCircle, IconCopy, IconEdit, IconPlus, IconSearch, IconShield, IconUsers } from '../../components/icons';
 import { ROLES } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
+import { emailError, nameError, passwordError } from '../../lib/validation';
 
 const roleTone = { admin: 'rose', instructor: 'accent', student: 'brand' };
+
+const EMPTY_CREATE_FORM = { fullName: '', email: '', role: 'instructor', password: '', headline: '' };
+
+function CredentialRow({ label, value, onCopy }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-night-900/60 px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+        <p className="truncate font-mono text-xs text-slate-200">{value}</p>
+      </div>
+      <Button type="button" size="sm" variant="secondary" onClick={() => onCopy(value)} className="shrink-0">
+        <IconCopy size={13} /> Copy
+      </Button>
+    </div>
+  );
+}
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -35,6 +54,34 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [editErrors, setEditErrors] = useState({});
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
+  const [createErrors, setCreateErrors] = useState({});
+  const [createdCredentials, setCreatedCredentials] = useState(null);
+
+  const openCreate = () => {
+    setEditing(null);
+    setCreateForm(EMPTY_CREATE_FORM);
+    setCreateErrors({});
+    setCreatedCredentials(null);
+    setCreating(true);
+  };
+
+  const closeCreate = () => {
+    setCreating(false);
+    setCreatedCredentials(null);
+    setCreateErrors({});
+  };
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    openCreate();
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(search.trim()), 300);
@@ -74,6 +121,15 @@ export default function UsersPage() {
 
   const saveUser = async (event) => {
     event.preventDefault();
+    const nextErrors = {};
+    const nextName = nameError(editing?.full_name, { label: 'Name' });
+    if (nextName) nextErrors.fullName = nextName;
+    if (editing?.password) {
+      const nextPassword = passwordError(editing.password, { label: 'Password' });
+      if (nextPassword) nextErrors.password = nextPassword;
+    }
+    setEditErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     setSaving(true);
     try {
       const payload = {
@@ -95,6 +151,63 @@ export default function UsersPage() {
 
   const isSelf = editing?.id === currentUser?.id;
 
+  const createUser = async (event) => {
+    event.preventDefault();
+    const nextErrors = {};
+    const nextName = nameError(createForm.fullName, { label: 'Full name' });
+    if (nextName) nextErrors.fullName = nextName;
+    const nextEmail = emailError(createForm.email);
+    if (nextEmail) nextErrors.email = nextEmail;
+    if (createForm.password) {
+      const nextPassword = passwordError(createForm.password, { label: 'Password' });
+      if (nextPassword) nextErrors.password = nextPassword;
+    }
+    if (createForm.headline.trim().length > 160) nextErrors.headline = 'Headline must be at most 160 characters.';
+    setCreateErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        fullName: createForm.fullName.trim(),
+        email: createForm.email.trim().toLowerCase(),
+        role: createForm.role,
+        headline: createForm.headline.trim() || undefined,
+      };
+      if (createForm.password) payload.password = createForm.password;
+      const { data } = await api.post('/users', payload);
+      setCreatedCredentials({
+        fullName: data.user.full_name,
+        email: data.user.email,
+        role: data.user.role,
+        temporaryPassword: data.temporaryPassword,
+      });
+      toast.success(`${ROLES[data.user.role]} account created.`);
+      setPage(1);
+      await load();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not create the account.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyValue = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success('Copied to clipboard.');
+    } catch {
+      toast.error('Could not copy. Select the value manually.');
+    }
+  };
+
+  const hasFilters = Boolean(debounced) || role !== 'all' || status !== 'all';
+  const clearFilters = () => {
+    setSearch('');
+    setRole('all');
+    setStatus('all');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -102,9 +215,14 @@ export default function UsersPage() {
           <h1 className="font-display text-2xl font-semibold">User management</h1>
           <p className="mt-1 text-sm text-slate-400">Roles, account status and access across the platform.</p>
         </div>
-        <Badge tone="brand">
-          <IconUsers size={12} /> {total} accounts
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="brand">
+            <IconUsers size={12} /> {total} accounts
+          </Badge>
+          <Button size="sm" onClick={openCreate}>
+            <IconPlus size={14} /> Create account
+          </Button>
+        </div>
       </div>
 
       <Card className="space-y-3 p-4">
@@ -139,7 +257,24 @@ export default function UsersPage() {
           ))}
         </div>
       ) : users.length === 0 ? (
-        <EmptyState icon={IconShield} title="No users match" message="Adjust the role, status or search filters." />
+        <EmptyState
+          icon={IconShield}
+          title={hasFilters ? 'No users match' : 'No accounts yet'}
+          message={
+            hasFilters
+              ? 'Adjust the role, status or search filters.'
+              : 'Create the first admin, instructor or student account to get started.'
+          }
+          action={
+            hasFilters ? (
+              <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>
+            ) : (
+              <Button onClick={openCreate}>
+                <IconPlus size={14} /> Create account
+              </Button>
+            )
+          }
+        />
       ) : (
         <>
           <Card className="overflow-hidden">
@@ -175,10 +310,10 @@ export default function UsersPage() {
                       <td className="px-3 py-3"><Badge tone={roleTone[user.role]}>{ROLES[user.role]}</Badge></td>
                       <td className="px-3 py-3 text-[11px] text-slate-300">{user.enrolled_courses}</td>
                       <td className="px-3 py-3 text-[11px] text-slate-300">{user.lab_sessions}</td>
-                      <td className="px-3 py-3 text-[11px] text-slate-500">{user.last_login_at ? formatDate(user.last_login_at) : '—'}</td>
+                      <td className="px-3 py-3 text-[11px] text-slate-500">{user.last_login_at ? formatDate(user.last_login_at) : 'N/A'}</td>
                       <td className="px-3 py-3 text-[11px] text-slate-500">{formatDate(user.created_at)}</td>
                       <td className="px-5 py-3 text-right">
-                        <Button size="sm" variant="secondary" onClick={() => setEditing({ ...user, password: '' })}>
+                        <Button size="sm" variant="secondary" onClick={() => { setEditErrors({}); setEditing({ ...user, password: '' }); }}>
                           <IconEdit size={13} /> Edit
                         </Button>
                       </td>
@@ -205,8 +340,8 @@ export default function UsersPage() {
         }
       >
         {editing && (
-          <form onSubmit={saveUser} className="space-y-4">
-            <Input label="Full name" value={editing.full_name} onChange={(event) => setEditing((current) => ({ ...current, full_name: event.target.value }))} required />
+          <form onSubmit={saveUser} noValidate className="space-y-4">
+            <Input label="Full name" value={editing.full_name} onChange={(event) => setEditing((current) => ({ ...current, full_name: event.target.value }))} required error={editErrors.fullName} />
             <Select
               label="Role"
               value={editing.role}
@@ -233,11 +368,102 @@ export default function UsersPage() {
               autoComplete="new-password"
               value={editing.password}
               onChange={(event) => setEditing((current) => ({ ...current, password: event.target.value }))}
-              hint="Minimum 8 characters with at least one number. Leave blank to keep the current password."
+              hint="Leave blank to keep the current password. New passwords need 8+ characters, a letter and a number."
+              error={editErrors.password}
             />
             {editing.last_login_at && (
               <p className="text-[10px] text-slate-500">Last sign-in {formatDateTime(editing.last_login_at)}</p>
             )}
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={creating}
+        onClose={closeCreate}
+        title={createdCredentials ? 'Account created' : 'Create account'}
+        description={createdCredentials ? 'Share these sign-in details securely.' : 'Provision an admin, instructor or student account.'}
+        footer={
+          createdCredentials ? (
+            <Button onClick={closeCreate}>Done</Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={closeCreate}>Cancel</Button>
+              <Button onClick={createUser} loading={saving}>Create account</Button>
+            </>
+          )
+        }
+      >
+        {createdCredentials ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                <IconCheckCircle size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-emerald-100">{createdCredentials.fullName} can now sign in.</p>
+                <p className="mt-0.5 text-[11px] text-emerald-200/70">
+                  {ROLES[createdCredentials.role]} access is active immediately.
+                </p>
+              </div>
+            </div>
+            <CredentialRow label="Email" value={createdCredentials.email} onCopy={copyValue} />
+            {createdCredentials.temporaryPassword ? (
+              <>
+                <CredentialRow label="Temporary password" value={createdCredentials.temporaryPassword} onCopy={copyValue} />
+                <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[11px] text-amber-200">
+                  Copy this password now. It will not be shown again.
+                </p>
+              </>
+            ) : (
+              <p className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[11px] text-slate-400">
+                The password you entered is ready to share securely.
+              </p>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={createUser} noValidate className="space-y-4">
+            <Input
+              label="Full name"
+              autoFocus
+              value={createForm.fullName}
+              onChange={(event) => setCreateForm((current) => ({ ...current, fullName: event.target.value }))}
+              error={createErrors.fullName}
+            />
+            <Input
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={createForm.email}
+              onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
+              error={createErrors.email}
+            />
+            <Select
+              label="Role"
+              value={createForm.role}
+              onChange={(event) => setCreateForm((current) => ({ ...current, role: event.target.value }))}
+              hint="Admins manage accounts, messages and platform settings. Instructors manage courses and labs."
+            >
+              <option value="instructor">Instructor</option>
+              <option value="admin">Admin</option>
+              <option value="student">Student</option>
+            </Select>
+            <Input
+              label="Temporary password (optional)"
+              type="password"
+              autoComplete="new-password"
+              value={createForm.password}
+              onChange={(event) => setCreateForm((current) => ({ ...current, password: event.target.value }))}
+              hint="Leave blank to generate a secure password. Passwords need 8+ characters, a letter and a number."
+              error={createErrors.password}
+            />
+            <Input
+              label="Headline (optional)"
+              value={createForm.headline}
+              onChange={(event) => setCreateForm((current) => ({ ...current, headline: event.target.value }))}
+              hint="A short role or specialty shown on their profile."
+              error={createErrors.headline}
+            />
           </form>
         )}
       </Modal>

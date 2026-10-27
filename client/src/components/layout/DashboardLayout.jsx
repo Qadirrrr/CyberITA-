@@ -1,66 +1,136 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../Logo';
-import UserMenu from './UserMenu';
+import SidebarProfile from './SidebarProfile';
 import NotificationBell from './NotificationBell';
+import useClickOutside from '../../hooks/useClickOutside';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useToast } from '../../context/ToastContext';
-import { cx } from '../ui';
+import api from '../../lib/api';
+import { ROLES } from '../../lib/constants';
+import { Avatar, cx } from '../ui';
 import {
   IconAward,
   IconBarChart,
   IconBookOpen,
   IconClipboard,
+  IconClock,
   IconFileText,
-  IconGraduationCap,
   IconLayout,
   IconLogOut,
   IconMail,
   IconMenu,
   IconSend,
+  IconSettings,
   IconShield,
   IconTerminal,
   IconUsers,
   IconX,
   IconZap,
+  // Student sidebar custom icons
+  IconGrid,
+  IconBookWifi,
+  IconLessons,
+  IconCalendarGrid,
+  IconChatBubble,
+  IconHeadphones,
+  IconBell,
+  IconCheckCircle,
+  IconChevronDown,
+  IconChevronLeft,
 } from '../icons';
 
-const studentNav = [
-  { to: '/student', label: 'Dashboard', icon: IconLayout, end: true },
-  { to: '/student/courses', label: 'My Courses', icon: IconBookOpen },
-  { to: '/student/labs', label: 'Practical Labs', icon: IconTerminal },
-  { to: '/student/reports', label: 'Lab Reports', icon: IconFileText },
+
+const studentNavPrimary = [
+  { to: '/student', label: 'Dashboard', icon: IconGrid, end: true },
+  { to: '/student/courses', label: 'My courses', icon: IconBookWifi },
+  { to: '/student/lessons', label: 'My lessons', icon: IconLessons },
+  { to: '/student/labs', label: 'Labs', icon: IconTerminal },
+  { to: '/student/quizzes', label: 'Quizzes', icon: IconZap, badge: 'quizzes' },
+  { to: '/student/assignments', label: 'Assignments', icon: IconClipboard, badge: 'assignments' },
+  { to: '/student/calendar', label: 'Calendar', icon: IconCalendarGrid },
+  { to: '/student/chat', label: 'Chat', icon: IconChatBubble, badge: 'chat' },
+];
+
+const studentNavProgress = [
+  { to: '/student/reports', label: 'Lab reports', icon: IconFileText },
   { to: '/student/certificates', label: 'Certificates', icon: IconAward },
-  { to: '/student/history', label: 'Learning History', icon: IconBarChart },
+  { to: '/student/history', label: 'Learning history', icon: IconClock },
+];
+
+const studentNavSecondary = [
+  { to: '/student/support', label: 'Support', icon: IconHeadphones },
+  { to: '/student/notifications', label: 'Notifications', icon: IconBell, badge: 'notifications' },
+  { to: '/student/settings', label: 'Settings', icon: IconSettings },
 ];
 
 const instructorNav = [
   { to: '/instructor', label: 'Overview', icon: IconLayout, end: true },
-  { to: '/instructor/courses', label: 'Courses', icon: IconBookOpen },
-  { to: '/instructor/labs', label: 'Labs', icon: IconTerminal },
-  { to: '/instructor/submissions', label: 'Assignments', icon: IconClipboard },
-  { to: '/instructor/reports', label: 'Lab Reports', icon: IconFileText },
-  { to: '/instructor/blog', label: 'Blog', icon: IconZap },
-  { to: '/instructor/students', label: 'Students', icon: IconUsers },
+  { to: '/instructor/courses', label: 'Assigned courses', icon: IconBookOpen },
+  { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
+  { to: '/instructor/quizzes', label: 'Quizzes', icon: IconZap },
+  { to: '/instructor/assignments', label: 'Assignments', icon: IconClipboard },
+  { to: '/instructor/submissions', label: 'Submission review', icon: IconCheckCircle, badge: 'submissions' },
+  { to: '/instructor/lab-submissions', label: 'Lab submissions', icon: IconTerminal, badge: 'labSubmissions' },
+  { to: '/instructor/reports', label: 'Practical reports', icon: IconFileText },
+  { to: '/instructor/students', label: 'My students', icon: IconUsers },
+  { to: '/instructor/messages', label: 'Student chat', icon: IconChatBubble, badge: 'chat' },
+  { to: '/instructor/announcements', label: 'Announcements', icon: IconBell },
+  { to: '/instructor/blog', label: 'Articles', icon: IconBookOpen },
+  { to: '/instructor/settings', label: 'Settings', icon: IconSettings },
 ];
 
-const adminNav = [
-  { to: '/admin', label: 'Overview', icon: IconLayout, end: true },
-  { to: '/instructor/courses', label: 'Courses', icon: IconBookOpen },
-  { to: '/instructor/labs', label: 'Labs', icon: IconTerminal },
-  { to: '/instructor/submissions', label: 'Assignments', icon: IconClipboard },
-  { to: '/instructor/reports', label: 'Lab Reports', icon: IconFileText },
-  { to: '/instructor/blog', label: 'Blog', icon: IconZap },
-  { to: '/instructor/students', label: 'Students', icon: IconGraduationCap },
-  { to: '/admin/users', label: 'Users & Roles', icon: IconShield },
-  { to: '/admin/messages', label: 'Messages', icon: IconMail },
-  { to: '/admin/broadcast', label: 'Broadcast', icon: IconSend },
+const adminNavGroups = [
+  {
+    label: 'Platform',
+    items: [
+      { to: '/admin', label: 'Overview', icon: IconLayout, end: true },
+    ],
+  },
+  {
+    label: 'Users & Access',
+    items: [
+      { to: '/admin/users', label: 'Users & Roles', icon: IconShield },
+    ],
+  },
+  {
+    label: 'Courses & Content',
+    items: [
+      { to: '/admin/courses', label: 'Courses & Enrollment', icon: IconBookOpen },
+      { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
+      { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
+      { to: '/instructor/submissions', label: 'Submission Review', icon: IconCheckCircle },
+      { to: '/instructor/blog', label: 'Blog Publication', icon: IconBookOpen },
+    ],
+  },
+  {
+    label: 'Infrastructure',
+    items: [
+      { to: '/admin/labs', label: 'Lab Infrastructure', icon: IconTerminal },
+      { to: '/instructor/labs', label: 'All Labs', icon: IconTerminal },
+    ],
+  },
+  {
+    label: 'Communication',
+    items: [
+      { to: '/admin/messages', label: 'Contact Messages', icon: IconMail },
+      { to: '/admin/broadcast', label: 'Broadcast Alerts', icon: IconSend },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { to: '/admin/system', label: 'System & Analytics', icon: IconBarChart },
+      { to: '/admin/logs', label: 'Audit & Security Logs', icon: IconBarChart },
+      { to: '/admin/settings', label: 'Platform Settings', icon: IconSettings },
+    ],
+  },
 ];
 
 function navFor(role) {
-  if (role === 'admin') return adminNav;
   if (role === 'instructor') return instructorNav;
-  return studentNav;
+  return studentNavPrimary;
 }
 
 export default function DashboardLayout() {
@@ -68,8 +138,101 @@ export default function DashboardLayout() {
   const toast = useToast();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('cyberita.sidebar.collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const profileRef = useRef(null);
+  useClickOutside(profileRef, () => setProfileOpen(false), profileOpen);
+  const [chatUnread, setChatUnread] = useState(0);
+  const [pendingQuizzes, setPendingQuizzes] = useState(0);
+  const location = useLocation();
+  const { notifications = [], unread = 0, markCategoryRead } = useNotifications() || {};
+
+  // Close the profile menu whenever the route changes
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [location.pathname]);
+
+  // Remember the desktop sidebar visibility across page loads
+  useEffect(() => {
+    try {
+      localStorage.setItem('cyberita.sidebar.collapsed', sidebarCollapsed ? '1' : '0');
+    } catch {
+      // ignore storage errors
+    }
+  }, [sidebarCollapsed]);
+
   const items = navFor(user?.role);
   const title = user?.role === 'admin' ? 'Admin workspace' : user?.role === 'instructor' ? 'Instructor workspace' : 'Learning workspace';
+
+  // Calculate unread notification counts per category
+  const quizNotifs = useMemo(() => {
+    return (notifications || []).filter(
+      (n) => !n.read_at && (n.type === 'quiz' || n.link?.includes('quiz') || n.title?.toLowerCase().includes('quiz'))
+    ).length;
+  }, [notifications]);
+
+  const assignmentNotifs = useMemo(() => {
+    return (notifications || []).filter(
+      (n) => !n.read_at && (n.type === 'assignment' || n.link?.includes('assignment') || n.title?.toLowerCase().includes('assignment'))
+    ).length;
+  }, [notifications]);
+
+  const submissionNotifs = useMemo(() => {
+    return (notifications || []).filter(
+      (n) =>
+        !n.read_at &&
+        !n.link?.includes('lab-submissions') &&
+        (n.type === 'submission' || n.link?.includes('submission'))
+    ).length;
+  }, [notifications]);
+
+  const labSubmissionNotifs = useMemo(() => {
+    return (notifications || []).filter(
+      (n) => !n.read_at && n.link?.includes('/instructor/lab-submissions')
+    ).length;
+  }, [notifications]);
+
+  // When student or instructor visits a section, automatically mark notifications for that section as read
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/student/quizzes') || path.startsWith('/quizzes')) {
+      if (quizNotifs > 0) markCategoryRead?.('quiz');
+    } else if (path.startsWith('/student/assignments') || path.startsWith('/assignments')) {
+      if (assignmentNotifs > 0) markCategoryRead?.('assignment');
+    } else if (path.startsWith('/instructor/submissions')) {
+      if (submissionNotifs > 0) markCategoryRead?.('submission');
+    }
+  }, [location.pathname, quizNotifs, assignmentNotifs, submissionNotifs, markCategoryRead]);
+
+  useEffect(() => {
+    if (!user || !['student', 'instructor'].includes(user.role)) {
+      setChatUnread(0);
+      return undefined;
+    }
+    let active = true;
+    const load = () => {
+      api
+        .get('/messages/unread-count')
+        .then(({ data }) => {
+          if (active) setChatUnread(Number(data.unread) || 0);
+        })
+        .catch(() => {});
+    };
+    load();
+    const timer = window.setInterval(load, 30000);
+    window.addEventListener('chat:read', load);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('chat:read', load);
+    };
+  }, [user]);
 
   const onLogout = async () => {
     await logout();
@@ -77,64 +240,258 @@ export default function DashboardLayout() {
     navigate('/');
   };
 
-  const sidebar = (
+  const isStudent = user?.role === 'student';
+
+  const renderNavItem = (item, mini = false) => {
+    const IconComponent = item.icon;
+    let badgeCount = 0;
+    let badgeTone = 'brand';
+
+    if (item.badge === 'chat') {
+      badgeCount = chatUnread;
+      badgeTone = 'brand';
+    } else if (item.badge === 'quizzes') {
+      badgeCount = quizNotifs;
+      badgeTone = 'amber';
+    } else if (item.badge === 'assignments') {
+      badgeCount = assignmentNotifs;
+      badgeTone = 'emerald';
+    } else if (item.badge === 'notifications') {
+      badgeCount = unread;
+      badgeTone = 'brand';
+    } else if (item.badge === 'submissions') {
+      badgeCount = submissionNotifs;
+      badgeTone = 'rose';
+    } else if (item.badge === 'labSubmissions') {
+      badgeCount = labSubmissionNotifs;
+      badgeTone = 'amber';
+    }
+
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        title={mini ? item.label : undefined}
+        onClick={() => {
+          setMobileOpen(false);
+          if (item.badge === 'quizzes') markCategoryRead?.('quiz');
+          if (item.badge === 'assignments') markCategoryRead?.('assignment');
+          if (item.badge === 'submissions') markCategoryRead?.('submission');
+          if (item.badge === 'labSubmissions') markCategoryRead?.('lab');
+        }}
+        className={({ isActive }) =>
+          cx(
+            'group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150',
+            mini ? 'mx-auto h-10 w-10 justify-center' : 'gap-3 px-3 py-2.5',
+            isActive
+              ? 'bg-brand-400/10 text-brand-200 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
+              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+          )
+        }
+      >
+        <IconComponent size={18} className="shrink-0" />
+        {!mini && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+        {badgeCount > 0 &&
+          (mini ? (
+            <span
+              className={cx(
+                'absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full',
+                badgeTone === 'amber'
+                  ? 'bg-amber-400'
+                  : badgeTone === 'emerald'
+                    ? 'bg-emerald-400'
+                    : badgeTone === 'rose'
+                      ? 'bg-rose-500'
+                      : 'bg-brand-400'
+              )}
+            />
+          ) : (
+            <span
+              className={cx(
+                'flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold shadow-sm',
+                badgeTone === 'amber'
+                  ? 'bg-amber-400 text-night-950 shadow-amber-400/30'
+                  : badgeTone === 'emerald'
+                    ? 'bg-emerald-400 text-night-950 shadow-emerald-400/30'
+                    : badgeTone === 'rose'
+                      ? 'bg-rose-500 text-white shadow-rose-500/30'
+                      : 'bg-brand-400 text-night-950 shadow-brand-400/30'
+              )}
+            >
+              {badgeCount > 9 ? '9+' : badgeCount}
+            </span>
+          ))}
+      </NavLink>
+    );
+  };
+
+  const renderSidebar = (mini = false) => (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center justify-between border-b border-white/5 px-5">
-        <Logo />
-        <button
-          type="button"
-          onClick={() => setMobileOpen(false)}
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
-          aria-label="Close menu"
-        >
-          <IconX size={18} />
-        </button>
+      {/* Header */}
+      <div
+        className={cx(
+          'flex h-16 items-center border-b border-white/5',
+          mini ? 'justify-center px-2' : 'justify-between px-4'
+        )}
+      >
+        {mini ? <Logo compact /> : <Logo />}
+        {!mini && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(true)}
+              className="hidden rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:inline-flex"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <IconChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+              aria-label="Close menu"
+            >
+              <IconX size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="px-4 pt-5">
-        <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">{title}</p>
-        <nav className="mt-2 space-y-0.5">
-          {items.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  cx(
-                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                    isActive
-                      ? 'bg-brand-400/10 text-brand-200 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
-                  )
-                }
+      {isStudent ? (
+        /* ── STUDENT SIDEBAR LAYOUT ── */
+        <>
+          <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
+            {!mini && (
+              <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">Learning</p>
+            )}
+            <nav className={cx('space-y-0.5', mini && 'space-y-1')}>
+              {studentNavPrimary.map((item) => renderNavItem(item, mini))}
+            </nav>
+
+            {mini ? (
+              <div className="my-3 h-px bg-white/5" />
+            ) : (
+              <p className="mt-5 px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">Progress</p>
+            )}
+            <nav className={cx('space-y-0.5', mini && 'space-y-1')}>
+              {studentNavProgress.map((item) => renderNavItem(item, mini))}
+            </nav>
+          </div>
+
+          <div
+            ref={profileRef}
+            className={cx('shrink-0 border-t border-white/5 py-3', mini ? 'relative px-2' : 'px-3')}
+          >
+            {profileOpen && (
+              <div
+                className={cx(
+                  'overflow-hidden rounded-xl border border-white/10 bg-night-850 shadow-2xl',
+                  mini ? 'absolute bottom-full left-2 z-50 mb-2 w-56' : 'mb-2'
+                )}
               >
-                <IconComponent size={18} className="shrink-0" />
-                {item.label}
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className="mt-auto p-4">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300"
-        >
-          <IconLogOut size={18} /> Sign out
-        </button>
-      </div>
+                <nav className="space-y-0.5 p-1.5" onClick={() => setProfileOpen(false)}>
+                  {studentNavSecondary.map((item) => renderNavItem(item))}
+                </nav>
+                <div className="border-t border-white/10 p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onLogout();
+                    }}
+                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-300"
+                  >
+                    <IconLogOut size={18} className="shrink-0" />
+                    Log out
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setProfileOpen((value) => !value)}
+              aria-expanded={profileOpen}
+              aria-haspopup="true"
+              aria-label="Profile menu"
+              title={mini ? user?.full_name || 'Profile' : undefined}
+              className={cx(
+                'group flex w-full items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-left transition hover:border-white/15 hover:bg-white/[0.06]',
+                mini ? 'justify-center p-1.5' : 'gap-2.5 p-2'
+              )}
+            >
+              <Avatar name={user?.full_name} src={user?.avatar_url} size="sm" />
+              {!mini && (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-slate-200">
+                      {user?.full_name || 'Profile'}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                      {ROLES[user?.role] || 'Profile'}
+                    </span>
+                  </span>
+                  <IconChevronDown
+                    size={14}
+                    className={`shrink-0 text-slate-500 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
+                  />
+                </>
+              )}
+            </button>
+          </div>
+        </>
+      ) : (
+        /* ── INSTRUCTOR / ADMIN SIDEBAR LAYOUT ── */
+        <>
+          <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
+            {user?.role === 'admin' ? (
+              /* Grouped admin nav */
+              adminNavGroups.map((group, index) => (
+                <div
+                  key={group.label}
+                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
+                >
+                  {!mini && (
+                    <p className="px-2 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      {group.label}
+                    </p>
+                  )}
+                  <nav className="space-y-0.5">
+                    {group.items.map((item) => renderNavItem(item, mini))}
+                  </nav>
+                </div>
+              ))
+            ) : (
+              /* Flat instructor nav */
+              <>
+                {!mini && (
+                  <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">{title}</p>
+                )}
+                <nav className={cx('space-y-0.5', !mini && 'mt-2')}>
+                  {items.map((item) => renderNavItem(item, mini))}
+                </nav>
+              </>
+            )}
+          </div>
+          <div className={cx('mt-auto border-t border-white/5', mini ? 'p-2' : 'p-3')}>
+            <SidebarProfile compact={mini} />
+          </div>
+        </>
+      )}
     </div>
   );
 
+
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="fixed inset-y-0 left-0 hidden w-[264px] border-r border-white/5 bg-night-900/70 lg:block">
-        {sidebar}
+      <aside
+        className={cx(
+          'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-white/5 bg-night-900/70 transition-[width] duration-300 lg:block',
+          sidebarCollapsed ? 'w-[76px]' : 'w-[248px]'
+        )}
+      >
+        {renderSidebar(sidebarCollapsed)}
       </aside>
 
       {mobileOpen && (
@@ -145,11 +502,18 @@ export default function DashboardLayout() {
             className="absolute inset-0 bg-night-950/80 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative z-10 h-full w-[280px] border-r border-white/10 bg-night-900">{sidebar}</aside>
+          <aside className="no-scrollbar relative z-10 h-full w-[268px] border-r border-white/10 bg-night-900">
+            {renderSidebar(false)}
+          </aside>
         </div>
       )}
 
-      <div className="flex min-h-screen flex-1 flex-col lg:pl-[264px]">
+      <div
+        className={cx(
+          'flex min-h-screen flex-1 flex-col transition-[padding] duration-300',
+          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'
+        )}
+      >
         <header className="sticky top-0 z-30 border-b border-white/5 bg-night-950/80 backdrop-blur-xl">
           <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
@@ -161,6 +525,16 @@ export default function DashboardLayout() {
               >
                 <IconMenu size={21} />
               </button>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((value) => !value)}
+                className="hidden rounded-lg p-2 text-slate-300 transition hover:bg-white/5 hover:text-white lg:inline-flex"
+                aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+                aria-expanded={!sidebarCollapsed}
+                title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+              >
+                <IconMenu size={21} />
+              </button>
               <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
                 <IconLayout size={15} />
                 <span>{title}</span>
@@ -169,9 +543,18 @@ export default function DashboardLayout() {
               </div>
               <Logo compact className="lg:hidden" />
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <NotificationBell />
-              <UserMenu />
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                aria-label="Log out"
+                title="Log out"
+              >
+                <IconLogOut size={16} className="shrink-0" />
+                <span className="hidden sm:inline">Log out</span>
+              </button>
             </div>
           </div>
         </header>

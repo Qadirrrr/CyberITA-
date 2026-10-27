@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -21,14 +21,14 @@ import { formatDateTime } from '../../lib/format';
 export default function SubmissionsPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState('');
-  const [assignments, setAssignments] = useState([]);
+  const [allAssignments, setAllAssignments] = useState([]);
   const [assignmentId, setAssignmentId] = useState('');
   const [assignment, setAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [error, setError] = useState('');
   const [grading, setGrading] = useState(null);
@@ -37,13 +37,33 @@ export default function SubmissionsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .get('/courses', { params: { all: true, limit: 60 } })
-      .then((res) => {
+    const requested = searchParams.get('assignment');
+    setLoadingCourses(true);
+    Promise.all([
+      api.get('/courses', { params: { all: true, limit: 60 } }),
+      api.get('/instructor/assignments'),
+    ])
+      .then(([coursesResponse, assignmentsResponse]) => {
         if (cancelled) return;
-        const list = (res.data.courses || []).filter((course) => user?.role === 'admin' || course.instructor_id === user?.id);
+        const list = (coursesResponse.data.courses || []).filter(
+          (course) => user?.role === 'admin' || course.instructor_id === user?.id
+        );
+        const assignmentsList = assignmentsResponse.data.assignments || [];
         setCourses(list);
-        if (list[0]) setCourseId(String(list[0].id));
+        setAllAssignments(assignmentsList);
+
+        const target = requested
+          ? assignmentsList.find((item) => String(item.id) === String(requested))
+          : null;
+        const targetCourseId = target?.course_id || list[0]?.id;
+        setCourseId(targetCourseId ? String(targetCourseId) : '');
+
+        if (target) {
+          setAssignmentId(String(target.id));
+        } else {
+          const first = assignmentsList.find((item) => String(item.course_id) === String(targetCourseId));
+          setAssignmentId(first ? String(first.id) : '');
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(getErrorMessage(err, 'Could not load your courses.'));
@@ -54,38 +74,51 @@ export default function SubmissionsPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const assignments = useMemo(
+    () => allAssignments.filter((item) => String(item.course_id) === String(courseId)),
+    [allAssignments, courseId]
+  );
 
   useEffect(() => {
     if (!courseId) {
-      setAssignments([]);
+      setSubmissions([]);
+      setAssignment(null);
       setAssignmentId('');
       return;
     }
-    let cancelled = false;
-    setLoadingAssignments(true);
-    api
-      .get(`/assignments/courses/${courseId}`)
-      .then((res) => {
-        if (cancelled) return;
-        const list = res.data.assignments || [];
-        setAssignments(list);
-        setAssignmentId(list[0] ? String(list[0].id) : '');
-        if (!list[0]) {
-          setSubmissions([]);
-          setAssignment(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getErrorMessage(err, 'Could not load assignments.'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingAssignments(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId]);
+    if (assignments.some((item) => String(item.id) === String(assignmentId))) return;
+    setAssignmentId(assignments[0] ? String(assignments[0].id) : '');
+    if (!assignments[0]) {
+      setSubmissions([]);
+      setAssignment(null);
+    }
+  }, [courseId, assignments, assignmentId]);
+
+  // Keep deep links from notifications (?assignment=id) in sync, even when the
+  // page is already mounted.
+  useEffect(() => {
+    const requested = searchParams.get('assignment');
+    if (!requested || allAssignments.length === 0) return;
+    const target = allAssignments.find((item) => String(item.id) === String(requested));
+    if (!target) return;
+    setCourseId(String(target.course_id));
+    setAssignmentId(String(target.id));
+  }, [searchParams, allAssignments]);
+
+  const selectCourse = (value) => {
+    setCourseId(value);
+    const first = allAssignments.find((item) => String(item.course_id) === String(value));
+    setAssignmentId(first ? String(first.id) : '');
+    setSearchParams({}, { replace: true });
+  };
+
+  const selectAssignment = (value) => {
+    setAssignmentId(value);
+    setSearchParams(value ? { assignment: value } : {}, { replace: true });
+  };
 
   const loadSubmissions = async (id) => {
     if (!id) return;
@@ -140,8 +173,8 @@ export default function SubmissionsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Assignment submissions</h1>
-          <p className="mt-1 text-sm text-slate-400">Review written work, assign points and send feedback.</p>
+          <h1 className="font-display text-2xl font-semibold">Submission review</h1>
+          <p className="mt-1 text-sm text-slate-400">Review written work from your courses, assign points and send feedback.</p>
         </div>
         {!loadingSubmissions && assignmentId && (
           <Badge tone={pending ? 'amber' : 'emerald'}>
@@ -153,7 +186,7 @@ export default function SubmissionsPage() {
       <Card className="grid gap-3 p-4 sm:grid-cols-2">
         <div>
           <label htmlFor="course-select" className="label">Course</label>
-          <Select id="course-select" value={courseId} onChange={(event) => setCourseId(event.target.value)} disabled={loadingCourses}>
+          <Select id="course-select" value={courseId} onChange={(event) => selectCourse(event.target.value)} disabled={loadingCourses}>
             {courses.length === 0 && <option value="">No courses</option>}
             {courses.map((course) => (
               <option key={course.id} value={course.id}>{course.title}</option>
@@ -162,7 +195,7 @@ export default function SubmissionsPage() {
         </div>
         <div>
           <label htmlFor="assignment-select" className="label">Assignment</label>
-          <Select id="assignment-select" value={assignmentId} onChange={(event) => setAssignmentId(event.target.value)} disabled={!assignments.length || loadingAssignments}>
+          <Select id="assignment-select" value={assignmentId} onChange={(event) => selectAssignment(event.target.value)} disabled={!assignments.length}>
             {assignments.length === 0 && <option value="">No assignments</option>}
             {assignments.map((item) => (
               <option key={item.id} value={item.id}>
@@ -234,7 +267,7 @@ export default function SubmissionsPage() {
                       <td className="px-3 py-3 text-[11px] text-slate-400">{formatDateTime(submission.submitted_at)}</td>
                       <td className="px-3 py-3"><Badge tone={status.tone}>{status.label}</Badge></td>
                       <td className="px-3 py-3 text-[11px] text-slate-300">
-                        {submission.grade != null ? `${submission.grade}/${assignment?.points ?? '—'}` : '—'}
+                        {submission.grade != null ? `${submission.grade}/${assignment?.points ?? 'N/A'}` : 'N/A'}
                       </td>
                       <td className="px-5 py-3 text-right">
                         <Button size="sm" variant={submission.status === 'submitted' ? 'primary' : 'secondary'} onClick={() => openGrade(submission)}>

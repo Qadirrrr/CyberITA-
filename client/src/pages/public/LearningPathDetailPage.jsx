@@ -146,7 +146,7 @@ export default function LearningPathDetailPage() {
             <Card className="border-brand-400/20 bg-brand-400/[0.04] p-6">
               <h3 className="text-sm font-semibold text-white">Prefer flexibility?</h3>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                You can take any course in this path individually — the order is a recommendation, not a requirement.
+                You can take any course in this path individually. The order is a recommendation, not a requirement.
               </p>
               <Button as={Link} to="/courses" variant="outline" size="sm" className="mt-4 w-full">
                 Browse all courses

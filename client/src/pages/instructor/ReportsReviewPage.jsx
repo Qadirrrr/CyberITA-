@@ -54,8 +54,11 @@ export default function ReportsReviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Practical reports</h1>
-        <p className="mt-1 text-sm text-slate-400">Review evidence from student labs, give feedback, and publish standout work.</p>
+        <h1 className="font-display text-2xl font-semibold">Submission review</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Grade step evidence, screenshots and solution articles from your labs, then turn standout work into
+          instructor-authored articles.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -91,6 +94,12 @@ export default function ReportsReviewPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge tone={status.tone}>{status.label}</Badge>
+                        {report.score != null && (
+                          <span className="font-mono text-[11px] text-emerald-300">
+                            {Number(report.score)}
+                            {report.max_score != null ? ` / ${Number(report.max_score)}` : ''} marks
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
                           <IconTerminal size={11} /> {report.lab_title}
                         </span>

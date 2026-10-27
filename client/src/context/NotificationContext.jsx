@@ -97,9 +97,37 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
+  const markCategoryRead = useCallback(async (category) => {
+    if (!category) return;
+    let countToReduce = 0;
+    setNotifications((current) =>
+      current.map((item) => {
+        const matches =
+          !item.read_at &&
+          (item.type === category ||
+            (category === 'quiz' && (item.link?.includes('quiz') || item.title?.toLowerCase().includes('quiz'))) ||
+            (category === 'assignment' && (item.link?.includes('assignment') || item.title?.toLowerCase().includes('assignment'))) ||
+            (category === 'submission' && (item.link?.includes('submission') || item.title?.toLowerCase().includes('submission'))));
+        if (matches) {
+          countToReduce += 1;
+          return { ...item, read_at: new Date().toISOString() };
+        }
+        return item;
+      })
+    );
+    if (countToReduce > 0) {
+      setUnread((current) => Math.max(0, current - countToReduce));
+      try {
+        await api.post('/notifications/read-category', { category });
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ notifications, unread, total, loading, refresh, markRead, markAllRead }),
-    [notifications, unread, total, loading, refresh, markRead, markAllRead]
+    () => ({ notifications, unread, total, loading, refresh, markRead, markAllRead, markCategoryRead }),
+    [notifications, unread, total, loading, refresh, markRead, markAllRead, markCategoryRead]
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

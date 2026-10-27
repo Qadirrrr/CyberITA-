@@ -2,17 +2,15 @@
  * ============================================================
  * Lab provider contract
  * ============================================================
- * Every provider (mock, and later NOVA VPS / AWS / DigitalOcean /
- * Vultr) implements this interface so the rest of CyberITA+ never
- * needs to know where a lab actually runs.
+ * Every provider (Docker for real labs, mock for tests) implements this
+ * interface so the rest of CyberITA+ never needs to know where a lab runs.
  *
  *   const session = await provider.provision({ lab, user })
  *   const terminal = provider.createTerminal(session)   // duplex command executor
  *   await provider.deprovision(session)
  *
  * Providers are registered in ./index.js and selected through the
- * LAB_PROVIDER environment variable — switching to a real cloud
- * provider later requires no changes outside the provider module.
+ * LAB_PROVIDER environment variable.
  */
 export class LabProvider {
   static providerName = 'base';
@@ -26,7 +24,7 @@ export class LabProvider {
     return this.constructor.providerName;
   }
 
-  /** Returns {ok, reason} — used by /api/labs/status. */
+  /** Returns {ok, reason}, used by /api/labs/status. */
   async isAvailable() {
     return { ok: false, reason: 'Base provider is abstract.' };
   }

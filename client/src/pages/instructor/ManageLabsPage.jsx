@@ -63,12 +63,12 @@ export default function ManageLabsPage() {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return labs.filter((lab) => {
-      if (user?.role !== 'admin' && lab.course_id && !courseIds.has(lab.course_id)) return false;
+      if (user?.role !== 'admin' && ((lab.course_id && !courseIds.has(lab.course_id)) || (!lab.course_id && lab.created_by && lab.created_by !== user?.id))) return false;
       if (status !== 'all' && lab.status !== status) return false;
       if (!term) return true;
       return `${lab.title} ${lab.summary} ${lab.course_title || ''}`.toLowerCase().includes(term);
     });
-  }, [labs, status, search, user?.role, courseIds]);
+  }, [labs, status, search, user?.role, user?.id, courseIds]);
 
   const createLab = async (event) => {
     event.preventDefault();
@@ -96,8 +96,12 @@ export default function ManageLabsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Practical labs</h1>
-          <p className="mt-1 text-sm text-slate-400">Author guided terminal exercises with automatic step verification.</p>
+          <h1 className="font-display text-2xl font-semibold">
+            {user?.role === 'admin' ? 'All labs' : 'Lab builder'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Author guided terminal exercises with objectives, expected outputs and automatic step verification.
+          </p>
         </div>
         <Button
           size="sm"

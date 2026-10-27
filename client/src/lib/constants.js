@@ -62,6 +62,12 @@ export const SUBMISSION_STATUS = {
   returned: { label: 'Returned', tone: 'rose' },
 };
 
+export const LAB_SUBMISSION_STATUS = {
+  submitted: { label: 'Pending review', tone: 'amber' },
+  changes_requested: { label: 'Changes requested', tone: 'rose' },
+  approved: { label: 'Approved', tone: 'emerald' },
+};
+
 export const ENROLLMENT_STATUS = {
   active: { label: 'In progress', tone: 'brand' },
   completed: { label: 'Completed', tone: 'emerald' },

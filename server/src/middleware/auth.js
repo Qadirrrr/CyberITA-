@@ -13,7 +13,7 @@ function extractToken(req) {
 }
 
 /**
- * Optional authentication — populates req.user when a valid token is present.
+ * Optional authentication, populates req.user when a valid token is present.
  * Tokens can arrive as a Bearer header or an httpOnly cookie (used by the browser,
  * including WebSocket upgrades).
  */

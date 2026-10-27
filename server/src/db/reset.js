@@ -7,7 +7,7 @@ import logger from '../config/logger.js';
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
-  const dbName = process.env.NODE_ENV === 'test' ? env.db.testDbName : env.db.name;
+  const dbName = env.db.name;
   resetDatabase(dbName)
     .then(() => runMigrations({ dbName, silent: true }))
     .then(() => {

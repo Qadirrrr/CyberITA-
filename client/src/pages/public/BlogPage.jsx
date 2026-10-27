@@ -66,7 +66,7 @@ export default function BlogPage() {
             Practical write-ups, walkthroughs and learner reports
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-            Articles are grounded in work actually performed in the lab — approved reports, instructor guides and
+            Articles are grounded in work actually performed in the lab: approved reports, instructor guides and
             technical explainers you can follow along with.
           </p>
 
@@ -204,7 +204,7 @@ export default function BlogPage() {
               <h2 className="font-display text-xl font-semibold">Your lab report could be featured here</h2>
               <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">
                 Complete a lab, generate your practical report and submit it for review. Approved reports are published
-                under your name — a public portfolio of verified work.
+                under your name as a public portfolio of verified work.
               </p>
             </div>
             <Button as={Link} to="/register">

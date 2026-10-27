@@ -62,8 +62,8 @@ export default function QuizPage() {
       setResult(response);
       toast[response.passed ? 'success' : 'info'](
         response.passed
-          ? `Quiz passed — ${response.score}/${response.maxPoints}.`
-          : `Attempt saved — ${response.score}/${response.maxPoints}. Review the explanations below.`
+          ? `Quiz passed: ${response.score}/${response.maxPoints}.`
+          : `Attempt saved: ${response.score}/${response.maxPoints}. Review the explanations below.`
       );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -157,7 +157,7 @@ export default function QuizPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`font-display text-xl font-semibold ${result.passed ? 'text-emerald-300' : 'text-amber-300'}`}>
-                  {result.passed ? 'Passed — well done.' : 'Not passed yet.'}
+                  {result.passed ? 'Passed. Well done.' : 'Not passed yet.'}
                 </p>
                 <p className="mt-1 text-sm text-slate-400">
                   You scored {result.score} of {result.maxPoints} points. Pass mark is {Math.round(Number(result.passScore))}%.

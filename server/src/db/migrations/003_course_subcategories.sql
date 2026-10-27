@@ -6,7 +6,7 @@ ALTER TABLE courses
 
 CREATE INDEX IF NOT EXISTS courses_taxonomy_idx ON courses (category, subcategory);
 
--- Give the existing demo catalog a useful starting taxonomy.
+-- Give existing courses a useful starting taxonomy.
 UPDATE courses SET subcategory = CASE category
   WHEN 'Linux' THEN 'Linux Administration'
   WHEN 'Networking' THEN 'Network Fundamentals'

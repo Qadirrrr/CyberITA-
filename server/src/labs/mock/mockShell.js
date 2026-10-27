@@ -91,14 +91,14 @@ export class MockShell {
 
   cmdHelp() {
     const lines = [
-      'CyberITA+ simulated shell — available commands:',
+      'CyberITA+ simulated shell, available commands:',
       '  Filesystem : pwd cd ls cat head tail touch mkdir rm cp mv find grep wc file chmod',
       '  Text       : echo grep wc head tail',
       '  System     : whoami id uname hostname date history env ps top df free uptime lsb_release',
       '  Network    : ifconfig ip ping traceroute netstat ss curl wget nmap',
       '  Packages   : apt / apt-get   Services: systemctl service   Elevated: sudo',
       '  Misc       : man which clear exit',
-      'All commands are simulated locally — no real system is modified.',
+      'All commands are simulated locally, no real system is modified.',
     ];
     return lines.join('\n');
   }
@@ -365,7 +365,7 @@ export class MockShell {
   }
   cmdMan(args) {
     if (!args[0]) return 'What manual page do you want?';
-    return `${args[0].toUpperCase()}(1) — simulated manual page.\nSee the lab instructions for the expected usage of this command.`;
+    return `${args[0].toUpperCase()}(1), simulated manual page.\nSee the lab instructions for the expected usage of this command.`;
   }
   cmdLsbRelease() {
     return 'Distributor ID:\tCyberITA\nDescription:\tCyberITA Linux 1.0 (Mock Lab)\nRelease:\t1.0\nCodename:\tcyberita';
@@ -540,7 +540,7 @@ export class MockShell {
       ].join('\n');
     }
     if (action === 'start' || action === 'stop' || action === 'restart' || action === 'enable' || action === 'disable') {
-      return `${action === 'enable' || action === 'disable' ? '' : action === 'stop' ? 'Removed symlink' : ''}${action} ${unit} (simulated) — done.`;
+      return `${action === 'enable' || action === 'disable' ? '' : action === 'stop' ? 'Removed symlink' : ''}${action} ${unit} (simulated), done.`;
     }
     return { output: `Unknown command verb ${action}.`, exitCode: 1 };
   }
@@ -555,7 +555,7 @@ export class MockShell {
     const command = inner.join(' ');
     if (!command) return { output: 'usage: sudo command', exitCode: 1 };
     return {
-      output: `[sudo] password for ${this.user}:\nsudo: password accepted (simulation) — running as root\n${command}`,
+      output: `[sudo] password for ${this.user}:\nsudo: password accepted (simulation), running as root\n${command}`,
       exitCode: 0,
       events: [{ type: 'sudo', command }],
     };

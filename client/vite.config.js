@@ -6,9 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://43.204.246.241:4000', changeOrigin: true },
-      '/uploads': { target: 'http://43.204.246.241:4000', changeOrigin: true },
-      '/ws': { target: 'ws://43.204.246.241:4000', ws: true },
+      '/api': { target: 'http://127.0.0.1:4000', changeOrigin: true },
+      '/uploads': { target: 'http://127.0.0.1:4000', changeOrigin: true },
+      '/ws': { target: 'ws://127.0.0.1:4000', ws: true },
     },
   },
   build: {

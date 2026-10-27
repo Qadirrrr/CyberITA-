@@ -257,7 +257,7 @@ router.post(
           await notify(client, {
             userIds: [req.user.id],
             type: 'certificate',
-            title: 'Course completed — certificate issued!',
+            title: 'Course completed, certificate issued!',
             body: `Congratulations, you completed the course. Your certificate serial is ${result.certificate?.serial || ''}.`,
             link: '/student/certificates',
           });

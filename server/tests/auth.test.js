@@ -48,6 +48,7 @@ describe('Authentication', () => {
     const user = await createUser({ email: 'login@test.cyberita.plus', fullName: 'Login User' });
     const session = await loginAs(user);
     expect(session.user.full_name).toBe('Login User');
+    expect(session.refreshCookie.join(';')).toContain('cyberita_session');
 
     const me = await session.auth(api().get('/api/auth/me')).expect(200);
     expect(me.body.user.email).toBe(user.email);
@@ -107,6 +108,48 @@ describe('Authentication', () => {
     const adminSession = await loginAs(admin);
     const overview = await adminSession.auth(api().get('/api/admin/overview')).expect(200);
     expect(overview.body.users.total).toBeGreaterThan(0);
+    expect(overview.body.users.admins).toBeGreaterThan(0);
+    expect(Array.isArray(overview.body.topCourses)).toBe(true);
+    expect(Array.isArray(overview.body.recentUsers)).toBe(true);
+    expect(overview.body.engagement.active_learners_7d).toBeGreaterThanOrEqual(0);
+  });
+
+  it('lets admins provision instructors and admins', async () => {
+    const admin = await createUser({ role: 'admin', email: 'provision.admin@test.cyberita.plus' });
+    const adminSession = await loginAs(admin);
+
+    const instructorRes = await adminSession
+      .auth(api().post('/api/users'))
+      .send({ fullName: 'Provisioned Instructor', email: 'provisioned.instructor@test.cyberita.plus', role: 'instructor' })
+      .expect(201);
+    expect(instructorRes.body.user.role).toBe('instructor');
+    expect(instructorRes.body.temporaryPassword).toBeTruthy();
+
+    const instructorLogin = await api()
+      .post('/api/auth/login')
+      .send({ email: instructorRes.body.user.email, password: instructorRes.body.temporaryPassword })
+      .expect(200);
+    expect(instructorLogin.body.user.role).toBe('instructor');
+
+    await adminSession
+      .auth(api().post('/api/users'))
+      .send({ fullName: 'Second Admin', email: 'provisioned.admin@test.cyberita.plus', role: 'admin', password: 'AdminPass123' })
+      .expect(201);
+    await api()
+      .post('/api/auth/login')
+      .send({ email: 'provisioned.admin@test.cyberita.plus', password: 'AdminPass123' })
+      .expect(200);
+
+    await adminSession
+      .auth(api().post('/api/users'))
+      .send({ fullName: 'Duplicate', email: 'provisioned.admin@test.cyberita.plus', role: 'instructor' })
+      .expect(409);
+
+    const instructorSession = await loginAs({ email: 'provisioned.instructor@test.cyberita.plus', password: instructorRes.body.temporaryPassword });
+    await instructorSession
+      .auth(api().post('/api/users'))
+      .send({ fullName: 'Forbidden', email: 'forbidden@test.cyberita.plus', role: 'instructor' })
+      .expect(403);
   });
 
   it('updates the profile of the current user', async () => {

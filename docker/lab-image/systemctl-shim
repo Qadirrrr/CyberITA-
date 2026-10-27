@@ -1,0 +1,5 @@
+#!/bin/sh
+# Labs run in disposable containers without systemd; print the authentic
+# message instead of failing with "command not found".
+echo 'System has not been booted with systemd (labs run in isolated, disposable containers) and cannot be invoked.' >&2
+exit 1

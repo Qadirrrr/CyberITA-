@@ -17,9 +17,42 @@ function promptLabel(cwd = '/home/student') {
   return short || '/';
 }
 
-export default function LabTerminal({ sessionId, status, initialHistory = [], welcome = '', onProgress, onServerState }) {
+function normalizeIdentity(student) {
+  const name = student?.name || student?.displayName || student?.full_name || '';
+  const id = student?.id != null && student.id !== '' ? String(student.id) : '';
+  const shellUser =
+    student?.shell_user ||
+    student?.shellUser ||
+    (name ? String(name).toLowerCase().trim().split(' ')[0].replace(/[^a-z0-9_-]/g, '').slice(0, 24) : '') ||
+    (id ? `student-${id}` : 'student');
+
+  return {
+    id,
+    name,
+    shellUser: shellUser || 'student',
+    hostname: student?.hostname || 'cyberita-lab',
+  };
+}
+
+function identityBanner(identity) {
+  const displayName = identity.name || identity.shellUser || 'Student';
+  const id = identity.id ? ` (student #${identity.id})` : '';
+  return `Signed in as ${displayName}${id} \u2014 full root access in your private container. Type help for commands.`;
+}
+
+export default function LabTerminal({ sessionId, status, initialHistory = [], welcome = '', student, onProgress, onServerState }) {
+  const [identity, setIdentity] = useState(() => normalizeIdentity(student));
+
+  useEffect(() => {
+    if (student) {
+      setIdentity(normalizeIdentity(student));
+    }
+  }, [student]);
+
   const [lines, setLines] = useState(() => {
     const initial = [];
+    const banner = identityBanner(normalizeIdentity(student));
+    if (banner) initial.push({ type: 'system', text: banner });
     if (welcome) initial.push({ type: 'system', text: welcome });
     return [...initial, ...historyToLines(initialHistory)];
   });
@@ -86,8 +119,11 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
         window.clearTimeout(fallbackTimer);
         setConnectionMode('ws');
         setCwd(message.cwd || '/home/student');
+        if (message.student) setIdentity(normalizeIdentity(message.student));
         setLines(() => {
           const next = [];
+          const banner = identityBanner(normalizeIdentity(message.student || student));
+          if (banner) next.push({ type: 'system', text: banner });
           if (message.welcome) next.push({ type: 'system', text: message.welcome });
           return [...next, ...historyToLines(message.history || [])];
         });
@@ -209,7 +245,7 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
 
   const copyOutput = async () => {
     const text = lines
-      .map((line) => (line.type === 'command' ? `$ ${line.text}` : line.text))
+      .map((line) => (line.type === 'command' ? `# ${line.text}` : line.text))
       .join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -228,7 +264,7 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
         </span>
         <span className="ml-1.5 flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
-          <IconTerminal size={12} /> student@cyberita-lab
+          <IconTerminal size={12} /> {identity.shellUser}@{identity.hostname}
         </span>
         <span className={`ml-auto hidden items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium sm:flex ${modeBadge.className}`}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -260,10 +296,10 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
           if (line.type === 'command') {
             return (
               <div key={index} className="break-words">
-                <span className="text-emerald-400">student@cyberita</span>
+                <span className="text-emerald-400">{identity.shellUser}@{identity.hostname}</span>
                 <span className="text-slate-600">:</span>
                 <span className="text-sky-300">{promptLabel(cwd)}</span>
-                <span className="text-slate-500">$ </span>
+                <span className="text-slate-500"># </span>
                 <span className="text-slate-100">{line.text}</span>
               </div>
             );
@@ -302,10 +338,10 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
             className="mt-0.5 flex items-center gap-0"
           >
             <label htmlFor="terminal-input" className="shrink-0 select-none">
-              <span className="text-emerald-400">student@cyberita</span>
+              <span className="text-emerald-400">{identity.shellUser}@{identity.hostname}</span>
               <span className="text-slate-600">:</span>
               <span className="text-sky-300">{promptLabel(cwd)}</span>
-              <span className="text-slate-500">$&nbsp;</span>
+              <span className="text-slate-500">#&nbsp;</span>
             </label>
             <input
               id="terminal-input"
@@ -329,7 +365,9 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
       </div>
 
       <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-night-900/60 px-3 py-1.5 text-[10px] text-slate-600">
-        <span className="font-mono">session #{sessionId}</span>
+        <span className="font-mono">
+          {identity.name ? `${identity.name}${identity.id ? ` · student #${identity.id}` : ''} · ` : ''}session #{sessionId}
+        </span>
         <span className="hidden sm:block">
           <span className="kbd">↑</span> history · <span className="kbd">Ctrl</span>+<span className="kbd">L</span> clear
         </span>

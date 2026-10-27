@@ -12,7 +12,13 @@ export async function hashPassword(plain) {
 }
 
 export async function verifyPassword(plain, hash) {
-  return bcrypt.compare(plain, hash);
+  if (typeof plain !== 'string' || typeof hash !== 'string' || hash.length === 0) return false;
+  try {
+    return await bcrypt.compare(plain, hash);
+  } catch {
+    // A malformed or missing hash must never turn a bad login into a 500.
+    return false;
+  }
 }
 
 export function signAccessToken(user) {

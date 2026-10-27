@@ -19,17 +19,25 @@ import NotFoundPage from './pages/NotFoundPage';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import MyCoursesPage from './pages/student/MyCoursesPage';
+import StudentLessonsPage from './pages/student/StudentLessonsPage';
 import LearnPage from './pages/student/LearnPage';
+import StudentQuizzesPage from './pages/student/StudentQuizzesPage';
 import QuizPage from './pages/student/QuizPage';
+import StudentAssignmentsPage from './pages/student/StudentAssignmentsPage';
 import AssignmentPage from './pages/student/AssignmentPage';
+import StudentCalendarPage from './pages/student/StudentCalendarPage';
 import LabsPage from './pages/student/LabsPage';
 import LabDetailPage from './pages/student/LabDetailPage';
 import LabSessionPage from './pages/student/LabSessionPage';
+import PracticeLabPage from './pages/student/PracticeLabPage';
 import ReportsPage from './pages/student/ReportsPage';
 import ReportEditorPage from './pages/student/ReportEditorPage';
 import CertificatesPage from './pages/student/CertificatesPage';
 import HistoryPage from './pages/student/HistoryPage';
 import ProfilePage from './pages/student/ProfilePage';
+import StudentSupportPage from './pages/student/StudentSupportPage';
+import StudentNotificationsPage from './pages/student/StudentNotificationsPage';
+import ChatPage from './pages/chat/ChatPage';
 
 import StaffDashboard from './pages/instructor/StaffDashboard';
 import ManageCoursesPage from './pages/instructor/ManageCoursesPage';
@@ -37,15 +45,25 @@ import CourseEditorPage from './pages/instructor/CourseEditorPage';
 import ManageLabsPage from './pages/instructor/ManageLabsPage';
 import LabEditorPage from './pages/instructor/LabEditorPage';
 import SubmissionsPage from './pages/instructor/SubmissionsPage';
+import LabSubmissionsPage from './pages/instructor/LabSubmissionsPage';
 import ReportsReviewPage from './pages/instructor/ReportsReviewPage';
 import ReportReviewDetailPage from './pages/instructor/ReportReviewDetailPage';
 import BlogManagePage from './pages/instructor/BlogManagePage';
 import StudentsPage from './pages/instructor/StudentsPage';
+import InstructorQuizzesPage from './pages/instructor/InstructorQuizzesPage';
+import InstructorAssignmentsPage from './pages/instructor/InstructorAssignmentsPage';
+import InstructorAnnouncementsPage from './pages/instructor/InstructorAnnouncementsPage';
 
 import AdminOverview from './pages/admin/AdminOverview';
 import UsersPage from './pages/admin/UsersPage';
 import MessagesPage from './pages/admin/MessagesPage';
 import BroadcastPage from './pages/admin/BroadcastPage';
+import AdminLabsPage from './pages/admin/AdminLabsPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminCoursesPage from './pages/admin/AdminCoursesPage';
+import AdminContentPage from './pages/admin/AdminContentPage';
+import AdminSystemPage from './pages/admin/AdminSystemPage';
 
 export default function App() {
   return (
@@ -71,17 +89,26 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route path="student" element={<StudentDashboard />} />
           <Route path="student/courses" element={<MyCoursesPage />} />
+          <Route path="student/lessons" element={<StudentLessonsPage />} />
           <Route path="student/labs" element={<LabsPage />} />
+          <Route path="student/quizzes" element={<StudentQuizzesPage />} />
+          <Route path="student/assignments" element={<StudentAssignmentsPage />} />
+          <Route path="student/calendar" element={<StudentCalendarPage />} />
+          <Route path="student/chat" element={<ChatPage />} />
           <Route path="student/reports" element={<ReportsPage />} />
           <Route path="student/reports/:id" element={<ReportEditorPage />} />
           <Route path="student/certificates" element={<CertificatesPage />} />
           <Route path="student/history" element={<HistoryPage />} />
+          <Route path="student/support" element={<StudentSupportPage />} />
+          <Route path="student/notifications" element={<StudentNotificationsPage />} />
+          <Route path="student/settings" element={<ProfilePage />} />
           <Route path="student/profile" element={<ProfilePage />} />
 
           <Route path="learn/:slug" element={<LearnPage />} />
           <Route path="learn/quizzes/:id" element={<QuizPage />} />
           <Route path="learn/assignments/:id" element={<AssignmentPage />} />
           <Route path="labs/:id" element={<LabDetailPage />} />
+          <Route path="labs/:id/practice" element={<PracticeLabPage />} />
           <Route path="labs/session/:sessionId" element={<LabSessionPage />} />
 
           <Route element={<ProtectedRoute roles={['instructor', 'admin']} />}>
@@ -91,16 +118,28 @@ export default function App() {
             <Route path="instructor/courses/:id" element={<CourseEditorPage />} />
             <Route path="instructor/labs" element={<ManageLabsPage />} />
             <Route path="instructor/labs/:id" element={<LabEditorPage />} />
+            <Route path="instructor/quizzes" element={<InstructorQuizzesPage />} />
+            <Route path="instructor/assignments" element={<InstructorAssignmentsPage />} />
             <Route path="instructor/submissions" element={<SubmissionsPage />} />
+            <Route path="instructor/lab-submissions" element={<LabSubmissionsPage />} />
+            <Route path="instructor/announcements" element={<InstructorAnnouncementsPage />} />
             <Route path="instructor/reports" element={<ReportsReviewPage />} />
             <Route path="instructor/reports/:id" element={<ReportReviewDetailPage />} />
             <Route path="instructor/blog" element={<BlogManagePage />} />
             <Route path="instructor/students" element={<StudentsPage />} />
+            <Route path="instructor/messages" element={<ChatPage />} />
+            <Route path="instructor/settings" element={<ProfilePage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="admin" element={<AdminOverview />} />
             <Route path="admin/users" element={<UsersPage />} />
+            <Route path="admin/courses" element={<AdminCoursesPage />} />
+            <Route path="admin/labs" element={<AdminLabsPage />} />
+            <Route path="admin/content" element={<AdminContentPage />} />
+            <Route path="admin/system" element={<AdminSystemPage />} />
+            <Route path="admin/logs" element={<AdminAuditLogsPage />} />
+            <Route path="admin/settings" element={<AdminSettingsPage />} />
             <Route path="admin/messages" element={<MessagesPage />} />
             <Route path="admin/broadcast" element={<BroadcastPage />} />
           </Route>

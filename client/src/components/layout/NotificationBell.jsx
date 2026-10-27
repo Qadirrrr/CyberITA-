@@ -15,6 +15,9 @@ const typeTone = {
   certificate: 'bg-emerald-400/15 text-emerald-300',
   message: 'bg-sky-400/15 text-sky-300',
   announcement: 'bg-rose-400/15 text-rose-300',
+  quiz: 'bg-amber-400/15 text-amber-300',
+  assignment: 'bg-emerald-400/15 text-emerald-300',
+  submission: 'bg-purple-400/15 text-purple-300',
 };
 
 export default function NotificationBell({ align = 'right' }) {
@@ -110,11 +113,11 @@ export default function NotificationBell({ align = 'right' }) {
           </div>
 
           <Link
-            to={user.role === 'student' ? '/student/history' : dashboardPath(user.role)}
+            to={user.role === 'student' ? '/student/notifications' : dashboardPath(user.role)}
             onClick={() => setOpen(false)}
             className="flex items-center justify-between border-t border-white/10 px-4 py-3 text-xs font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
           >
-            View learning history
+            View all notifications
             <IconChevronRight size={14} />
           </Link>
         </div>

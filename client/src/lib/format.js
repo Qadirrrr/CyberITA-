@@ -1,7 +1,7 @@
 export function formatDate(value, options = {}) {
-  if (!value) return '—';
+  if (!value) return 'N/A';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return 'N/A';
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -11,9 +11,9 @@ export function formatDate(value, options = {}) {
 }
 
 export function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return 'N/A';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return 'N/A';
   return date.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -24,9 +24,9 @@ export function formatDateTime(value) {
 }
 
 export function timeAgo(value) {
-  if (!value) return '—';
+  if (!value) return 'N/A';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return 'N/A';
   const seconds = Math.round((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return 'just now';
   const minutes = Math.round(seconds / 60);

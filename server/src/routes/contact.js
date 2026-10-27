@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
-import { query, withTransaction } from '../config/db.js';
+import { query } from '../config/db.js';
 import env from '../config/env.js';
 import { asyncHandler } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
@@ -18,10 +18,14 @@ const contactLimiter = rateLimit({
 });
 
 const contactSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(255),
-  subject: z.string().trim().min(3).max(200),
-  message: z.string().trim().min(10).max(5000),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(120, 'Name must be at most 120 characters.'),
+  email: z.string().trim().email('Enter a valid email address.').max(255),
+  subject: z.string().trim().min(3, 'Select a topic.').max(200),
+  message: z
+    .string()
+    .trim()
+    .min(10, 'Message must be at least 10 characters.')
+    .max(5000, 'Message must be at most 5000 characters.'),
 });
 
 router.post(
@@ -41,7 +45,7 @@ router.post(
 
 router.get(
   '/',
-  requireRole('admin', 'instructor'),
+  requireRole('admin'),
   asyncHandler(async (req, res) => {
     const status = ['new', 'read', 'replied'].includes(req.query.status) ? req.query.status : null;
     const { rows } = await query(

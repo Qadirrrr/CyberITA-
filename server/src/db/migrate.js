@@ -99,7 +99,7 @@ const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURL
 if (isDirectRun) {
   runMigrations()
     .then((applied) => {
-      if (applied.length === 0) logger.info('No pending migrations — database is up to date.');
+      if (applied.length === 0) logger.info('No pending migrations, database is up to date.');
       else logger.info(`Applied ${applied.length} migration(s).`);
       process.exit(0);
     })

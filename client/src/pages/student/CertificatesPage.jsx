@@ -51,7 +51,7 @@ export default function CertificatesPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold">Certificates</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Verifiable proof of completion. Share the serial or link with employers — no account needed to verify.
+          Verifiable proof of completion. Share the serial or link with employers. No account is needed to verify.
         </p>
       </div>
 
@@ -67,7 +67,7 @@ export default function CertificatesPage() {
         <EmptyState
           icon={IconAward}
           title="No certificates yet"
-          message="Complete every lesson in a course — including its quizzes, assignments and labs — to earn a verifiable certificate."
+          message="Complete every lesson in a course, including its quizzes, assignments and labs, to earn a verifiable certificate."
           action={
             <Button as={Link} to="/student/courses" size="sm">
               Continue learning <IconArrowRight size={14} />

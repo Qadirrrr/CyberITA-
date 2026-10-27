@@ -88,8 +88,14 @@ export default function ManageCoursesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Courses</h1>
-          <p className="mt-1 text-sm text-slate-400">Create, publish and maintain your catalog.</p>
+          <h1 className="font-display text-2xl font-semibold">
+            {user?.role === 'admin' ? 'All courses' : 'Assigned courses'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            {user?.role === 'admin'
+              ? 'Create, publish and maintain every course on the platform.'
+              : 'Create, publish and maintain the courses assigned to you.'}
+          </p>
         </div>
         <Button as={Link} to="/instructor/courses/new" size="sm">
           <IconPlus size={14} /> New course
@@ -172,6 +178,12 @@ export default function ManageCoursesPage() {
                     <span className="inline-flex items-center gap-1">
                       <IconUsers size={11} /> {course.enrolled_count ?? 0} learners
                     </span>
+                    {course.instructor_name && (
+                      <>
+                        <span>·</span>
+                        <span className="text-accent-300 font-medium">Instructor: {course.instructor_name}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 

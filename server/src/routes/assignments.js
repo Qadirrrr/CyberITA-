@@ -1,12 +1,51 @@
+import path from 'node:path';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
 import { query, withTransaction } from '../config/db.js';
 import { asyncHandler, badRequest, forbidden, notFound } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
 import { requireAuth, requireRole, isStaff } from '../middleware/auth.js';
+import { canManageCourse } from '../services/access.js';
 import { notify, recordActivity } from '../utils/activity.js';
 
 const router = Router();
+
+const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
+    cb(null, `assignment-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.pdf'}`);
+  },
+});
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.doc', '.docx', '.txt', '.zip'
+]);
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error('Unsupported file format. Please upload a PDF, image (PNG, JPG, WEBP), or document of your handwritten work.'));
+    }
+    return cb(null, true);
+  },
+});
+
+const uploadMiddleware = (req, res, next) => {
+  upload.single('file')(req, res, (error) => {
+    if (error) return next(badRequest(error.message));
+    return next();
+  });
+};
 
 const assignmentSchema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -28,6 +67,7 @@ async function getAssignment(assignmentId, { staffUser = null } = {}) {
   if (staffUser?.role === 'instructor' && assignment.instructor_id !== staffUser.id) {
     throw forbidden('You can only manage your own course content.');
   }
+  if (!staffUser && !assignment.is_published) throw notFound('Assignment not found.');
   return assignment;
 }
 
@@ -39,7 +79,15 @@ router.get(
       `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2`,
       [req.user.id, req.params.courseId]
     );
-    if (!enrollment[0] && !isStaff(req.user)) throw badRequest('You are not enrolled in this course.');
+    const { rows: courseRows } = await query('SELECT id, instructor_id FROM courses WHERE id = $1', [
+      req.params.courseId,
+    ]);
+    if (!courseRows[0]) throw notFound('Course not found.');
+    const canManage = canManageCourse(req.user, courseRows[0]);
+    if (!enrollment[0] && !canManage) {
+      if (isStaff(req.user)) throw forbidden('You can only view assignments for courses assigned to you.');
+      throw badRequest('You are not enrolled in this course.');
+    }
     const { rows } = await query(
       `SELECT a.id, a.title, a.description, a.due_at, a.points, a.is_published, a.lesson_id,
               s.id AS submission_id, s.status AS submission_status, s.grade, s.submitted_at, s.feedback
@@ -47,7 +95,7 @@ router.get(
        LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.user_id = $1
        WHERE a.course_id = $2 AND (a.is_published = TRUE OR $3)
        ORDER BY a.id`,
-      [req.user.id, req.params.courseId, isStaff(req.user)]
+      [req.user.id, req.params.courseId, canManage]
     );
     res.json({ assignments: rows });
   })
@@ -69,34 +117,47 @@ router.get(
 router.post(
   '/:id/submit',
   requireAuth,
-  validateBody(z.object({
-    content: z.string().trim().max(20000).default(''),
-  })),
+  uploadMiddleware,
   asyncHandler(async (req, res) => {
     const assignment = await getAssignment(req.params.id, { staffUser: isStaff(req.user) ? req.user : null });
     const { rows: enrollment } = await query(
       `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2`,
       [req.user.id, assignment.course_id]
     );
-    if (!enrollment[0]) throw badRequest('You must be enrolled in the course to submit.');
-    if (!req.body.content.trim()) throw badRequest('Submission content cannot be empty.');
+    if (!enrollment[0]) {
+      if (req.file) fs.unlink(req.file.path, () => {});
+      throw badRequest('You must be enrolled in the course to submit.');
+    }
+
+    const content = (req.body?.content || '').trim();
+    const filePath = req.file ? `/uploads/${req.file.filename}` : (req.body?.filePath || null);
+
+    if (!content && !filePath) {
+      throw badRequest('Please provide written answer content or upload a handwritten assignment file.');
+    }
 
     const { rows } = await query(
-      `INSERT INTO assignment_submissions (assignment_id, user_id, content, status, submitted_at)
-       VALUES ($1, $2, $3, 'submitted', now())
+      `INSERT INTO assignment_submissions (assignment_id, user_id, content, file_path, status, submitted_at)
+       VALUES ($1, $2, $3, $4, 'submitted', now())
        ON CONFLICT (assignment_id, user_id) DO UPDATE SET
-         content = EXCLUDED.content, status = 'submitted', grade = NULL, feedback = NULL,
-         submitted_at = now(), graded_at = NULL
+         content = EXCLUDED.content,
+         file_path = COALESCE(EXCLUDED.file_path, assignment_submissions.file_path),
+         status = 'submitted',
+         grade = NULL,
+         feedback = NULL,
+         submitted_at = now(),
+         graded_at = NULL
        RETURNING *`,
-      [assignment.id, req.user.id, req.body.content]
+      [assignment.id, req.user.id, content, filePath]
     );
+
     await withTransaction(async (client) => {
       await recordActivity(client, {
         userId: req.user.id,
         action: 'assignment.submitted',
         entityType: 'assignment',
         entityId: assignment.id,
-        metadata: { title: assignment.title },
+        metadata: { title: assignment.title, hasFile: Boolean(filePath) },
       });
       await notify(client, {
         userIds: [assignment.instructor_id],
@@ -106,6 +167,7 @@ router.post(
         link: `/instructor/submissions?assignment=${assignment.id}`,
       });
     });
+
     res.status(201).json({ submission: rows[0] });
   })
 );
@@ -117,7 +179,7 @@ router.post(
   requireRole('admin', 'instructor'),
   validateBody(assignmentSchema),
   asyncHandler(async (req, res) => {
-    const { rows: courseRows } = await query(`SELECT id, instructor_id FROM courses WHERE id = $1`, [req.params.courseId]);
+    const { rows: courseRows } = await query(`SELECT id, instructor_id, title FROM courses WHERE id = $1`, [req.params.courseId]);
     if (!courseRows[0]) throw notFound('Course not found.');
     if (req.user.role === 'instructor' && courseRows[0].instructor_id !== req.user.id) {
       throw forbidden('You can only manage your own courses.');
@@ -128,7 +190,25 @@ router.post(
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [courseRows[0].id, b.lessonId ?? null, b.title, b.description, b.dueAt ?? null, b.points, b.isPublished]
     );
-    res.status(201).json({ assignment: rows[0] });
+    const assignment = rows[0];
+
+    if (b.isPublished !== false) {
+      const { rows: enrolled } = await query(
+        `SELECT user_id FROM enrollments WHERE course_id = $1 AND status <> 'dropped'`,
+        [courseRows[0].id]
+      );
+      if (enrolled.length > 0) {
+        await notify(null, {
+          userIds: enrolled.map((r) => r.user_id),
+          type: 'assignment',
+          title: `New assignment: ${b.title}`,
+          body: `A new assignment "${b.title}" was published in ${courseRows[0].title}.`,
+          link: `/student/assignments`,
+        });
+      }
+    }
+
+    res.status(201).json({ assignment });
   })
 );
 

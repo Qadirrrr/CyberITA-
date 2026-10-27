@@ -22,6 +22,11 @@ export function certificateSerial() {
   return `CYB-${new Date().getFullYear()}-${part}`;
 }
 
+/** Generates a one-time password that satisfies the shared password policy. */
+export function generateTemporaryPassword() {
+  return `${crypto.randomBytes(15).toString('base64url')}1a`;
+}
+
 /** Case/whitespace insensitive command comparison for lab step verification. */
 export function normalizeCommand(command) {
   return String(command || '')

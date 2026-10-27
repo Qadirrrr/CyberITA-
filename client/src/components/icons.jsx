@@ -91,3 +91,63 @@ export const IconPaperclip = make(<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49
 export const IconMore = make(<><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></>);
 export const IconFlag = make(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22v-7" /></>);
 export const IconFlame = make(<><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></>);
+export const IconCpu = make(<><rect width="16" height="16" x="4" y="4" rx="2" /><rect width="6" height="6" x="9" y="9" rx="1" /><path d="M15 2v2M9 2v2M20 15h2M20 9h2M9 20v2M15 20v2M2 9h2M2 15h2" /></>);
+export const IconStop = make(<rect width="16" height="16" x="4" y="4" rx="2" />);
+
+// Student sidebar icons matching screenshot
+export const IconGrid = make(
+  <>
+    <rect width="6.5" height="6.5" x="3" y="3" rx="2" strokeWidth="2" />
+    <rect width="6.5" height="6.5" x="14.5" y="3" rx="2" strokeWidth="2" />
+    <rect width="6.5" height="6.5" x="14.5" y="14.5" rx="2" strokeWidth="2" />
+    <rect width="6.5" height="6.5" x="3" y="14.5" rx="2" strokeWidth="2" />
+  </>
+);
+
+export const IconBookWifi = make(
+  <>
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    <path d="M9.5 7.5a4 4 0 0 1 5 0" strokeWidth="1.6" />
+    <path d="M10.8 10a2 2 0 0 1 2.4 0" strokeWidth="1.6" />
+    <circle cx="12" cy="12.5" r="0.75" fill="currentColor" />
+  </>
+);
+
+export const IconLessons = make(
+  <>
+    <path d="M2 5h6a3.5 3.5 0 0 1 3.5 3.5V21A3 3 0 0 0 8 19H2z" />
+    <path d="M22 5h-6a3.5 3.5 0 0 0-3.5 3.5V21A3 3 0 0 1 16 19h6z" />
+    <path d="M9.5 2.5a3.5 3.5 0 0 1 5 0" strokeWidth="1.6" />
+    <path d="M10.8 4.5a1.8 1.8 0 0 1 2.4 0" strokeWidth="1.6" />
+  </>
+);
+
+export const IconCalendarGrid = make(
+  <>
+    <rect width="18" height="18" x="3" y="4" rx="2.5" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+    <path d="M7.5 14h1M11.5 14h1M15.5 14h1M7.5 17.5h1M11.5 17.5h1M15.5 17.5h1" strokeWidth="2" strokeLinecap="round" />
+  </>
+);
+
+export const IconChatBubble = make(
+  <>
+    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z" strokeWidth="1.9" strokeLinejoin="round" />
+  </>
+);
+
+export const IconHeadphones = make(
+  <>
+    <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+  </>
+);
+
+export const IconExitDoor = make(
+  <>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </>
+);

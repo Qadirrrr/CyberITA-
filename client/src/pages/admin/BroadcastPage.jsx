@@ -3,6 +3,7 @@ import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import { Alert, Button, Card, Input, Select, Textarea } from '../../components/ui';
 import { IconBell, IconSend, IconUsers } from '../../components/icons';
+import { validateBroadcastForm } from '../../lib/validation';
 
 const audience = [
   { value: 'all', label: 'Everyone' },
@@ -17,9 +18,13 @@ export default function BroadcastPage() {
   const [sending, setSending] = useState(false);
   const [delivered, setDelivered] = useState(null);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
 
   const submit = async (event) => {
     event.preventDefault();
+    const nextErrors = validateBroadcastForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     setSending(true);
     setDelivered(null);
     setError('');
@@ -56,7 +61,7 @@ export default function BroadcastPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="p-6">
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={submit} noValidate className="space-y-4">
             <Input
               label="Title"
               value={form.title}
@@ -64,6 +69,7 @@ export default function BroadcastPage() {
               placeholder="e.g. New Linux hardening lab is live"
               required
               maxLength={200}
+              error={errors.title}
             />
             <Textarea
               label="Message"
@@ -73,6 +79,7 @@ export default function BroadcastPage() {
               placeholder="Keep it short and actionable. Mention what changed and where to find it."
               maxLength={2000}
               hint={`${form.body.length}/2000 characters`}
+              error={errors.body}
             />
             <Input
               label="Link (optional)"
@@ -81,6 +88,7 @@ export default function BroadcastPage() {
               placeholder="/student/labs"
               hint="An in-app path like /student/labs or a full URL."
               maxLength={300}
+              error={errors.link}
             />
             <Select label="Audience" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
               {audience.map((item) => (
@@ -125,7 +133,7 @@ export default function BroadcastPage() {
             <h2 className="font-display text-base font-semibold">Guidelines</h2>
             <ul className="mt-2 space-y-2 text-[11px] leading-5 text-slate-400">
               <li>• Use announcements for platform news, new labs or maintenance windows.</li>
-              <li>• Avoid duplicating course-specific updates — post those from the course tools.</li>
+              <li>• Avoid duplicating course-specific updates. Post those from the course tools.</li>
               <li>• Include a link so recipients land on the relevant page.</li>
             </ul>
           </Card>

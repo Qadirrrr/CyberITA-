@@ -7,6 +7,7 @@ import { Avatar, Badge, Button, Card, Input, Textarea } from '../../components/u
 import { IconLock, IconLogOut, IconSave, IconUser } from '../../components/icons';
 import { ROLES } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, validateChangePassword, validateProfileForm } from '../../lib/validation';
 
 export default function ProfilePage() {
   const { user, setUser, logout } = useAuth();
@@ -30,8 +31,10 @@ export default function ProfilePage() {
 
   const saveProfile = async (event) => {
     event.preventDefault();
+    const nextErrors = validateProfileForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     setSaving(true);
-    setErrors({});
     try {
       const { data } = await api.put('/users/me', {
         fullName: form.fullName.trim(),
@@ -51,13 +54,7 @@ export default function ProfilePage() {
 
   const changePassword = async (event) => {
     event.preventDefault();
-    const nextErrors = {};
-    if (!passwords.currentPassword) nextErrors.currentPassword = 'Enter your current password.';
-    if (passwords.newPassword.length < 8) nextErrors.newPassword = 'Use at least 8 characters.';
-    else if (!/[A-Za-z]/.test(passwords.newPassword) || !/[0-9]/.test(passwords.newPassword)) {
-      nextErrors.newPassword = 'Include at least one letter and one number.';
-    }
-    if (passwords.newPassword !== passwords.confirm) nextErrors.confirm = 'Passwords do not match.';
+    const nextErrors = validateChangePassword(passwords);
     setPasswordErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -94,7 +91,7 @@ export default function ProfilePage() {
           </h2>
           <p className="mt-1 text-xs text-slate-500">Your name, headline and bio appear on published lab reports and the community blog.</p>
 
-          <form onSubmit={saveProfile} className="mt-5 space-y-4">
+          <form onSubmit={saveProfile} noValidate className="mt-5 space-y-4">
             <div>
               <label htmlFor="fullName" className="label">
                 Full name
@@ -126,7 +123,7 @@ export default function ProfilePage() {
                 value={form.bio}
                 onChange={update('bio')}
                 className="mt-1.5"
-                placeholder="A short introduction — what you're learning, what you want to work on next."
+                placeholder="A short introduction: what you're learning and what you want to work on next."
                 error={errors.bio}
                 maxLength={2000}
               />
@@ -172,11 +169,11 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-slate-500">Member since</dt>
-                <dd className="text-slate-300">{user?.created_at ? formatDate(user.created_at) : '—'}</dd>
+                <dd className="text-slate-300">{user?.created_at ? formatDate(user.created_at) : 'N/A'}</dd>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-slate-500">Last sign-in</dt>
-                <dd className="text-slate-300">{user?.last_login_at ? formatDateTime(user.last_login_at) : '—'}</dd>
+                <dd className="text-slate-300">{user?.last_login_at ? formatDateTime(user.last_login_at) : 'N/A'}</dd>
               </div>
             </dl>
           </Card>
@@ -185,7 +182,7 @@ export default function ProfilePage() {
             <h2 className="flex items-center gap-2 font-display text-base font-semibold">
               <IconLock size={15} className="text-amber-300" /> Change password
             </h2>
-            <form onSubmit={changePassword} className="mt-4 space-y-3">
+            <form onSubmit={changePassword} noValidate className="mt-4 space-y-3">
               <div>
                 <label htmlFor="currentPassword" className="label">
                   Current password
@@ -212,7 +209,9 @@ export default function ProfilePage() {
                   onChange={(event) => setPasswords((current) => ({ ...current, newPassword: event.target.value }))}
                   className="mt-1.5"
                   error={passwordErrors.newPassword}
-                  hint="At least 8 characters with a letter and a number."
+                  hint="At least 8 characters, with a letter and a number."
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={PASSWORD_MAX_LENGTH}
                 />
               </div>
               <div>

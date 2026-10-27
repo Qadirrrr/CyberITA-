@@ -15,9 +15,12 @@ import {
   revokeRefreshToken,
 } from '../services/authService.js';
 import { recordActivity } from '../utils/activity.js';
+import logger from '../config/logger.js';
+import { emailSchema, fullNameSchema, passwordSchema } from '../utils/validation.js';
 
 const router = Router();
 
+const SESSION_COOKIE = 'cyberita_session';
 const PUBLIC_USER_COLUMNS = `id, email, full_name, role, headline, bio, avatar_url, is_active, last_login_at, created_at`;
 
 const authLimiter = rateLimit({
@@ -29,44 +32,67 @@ const authLimiter = rateLimit({
 });
 
 const registerSchema = z.object({
-  fullName: z.string().trim().min(2, 'Name must be at least 2 characters.').max(120),
-  email: z.string().trim().email('Enter a valid email address.').max(255),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters.')
-    .max(72, 'Password must be at most 72 characters.')
-    .regex(/[A-Za-z]/, 'Password must contain a letter.')
-    .regex(/[0-9]/, 'Password must contain a number.'),
+  fullName: fullNameSchema,
+  email: emailSchema,
+  password: passwordSchema,
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().email('Enter a valid email address.'),
+  email: emailSchema,
   password: z.string().min(1, 'Password is required.'),
+  remember: z.boolean().optional().default(true),
 });
 
-function setRefreshCookie(res, token) {
-  res.cookie(REFRESH_COOKIE, token, {
+function cookieOptions({ path, maxAge, remember = true }) {
+  const options = {
     httpOnly: true,
     sameSite: 'lax',
     secure: env.auth.cookieSecure,
-    path: '/api/auth',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+    path,
+  };
+  if (remember && maxAge) options.maxAge = maxAge;
+  return options;
 }
 
-function setAccessCookie(res, token) {
-  res.cookie('cyberita_at', token, {
-    httpOnly: true,
+function setRefreshCookie(res, token, remember = true) {
+  res.cookie(
+    REFRESH_COOKIE,
+    token,
+    cookieOptions({ path: '/api/auth', maxAge: 7 * 24 * 60 * 60 * 1000, remember })
+  );
+}
+
+function setAccessCookie(res, token, remember = true) {
+  res.cookie(
+    'cyberita_at',
+    token,
+    cookieOptions({ path: '/', maxAge: 12 * 60 * 60 * 1000, remember })
+  );
+}
+
+function setSessionCookie(res, remember = true) {
+  res.cookie(SESSION_COOKIE, '1', {
+    httpOnly: false,
     sameSite: 'lax',
     secure: env.auth.cookieSecure,
     path: '/',
-    maxAge: 12 * 60 * 60 * 1000,
+    ...(remember ? { maxAge: 7 * 24 * 60 * 60 * 1000 } : {}),
   });
 }
 
 function clearSessionCookies(res) {
   res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
   res.clearCookie('cyberita_at', { path: '/' });
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+}
+
+async function logActivity(userId, action) {
+  try {
+    await withTransaction((client) => recordActivity(client, { userId, action }));
+  } catch (error) {
+    // Never fail a successful login or registration because analytics logging failed.
+    logger.warn('Activity log failed', { action, error: error.message });
+  }
 }
 
 async function buildSession(user, req) {
@@ -92,9 +118,10 @@ router.post(
     );
     const user = rows[0];
     const session = await buildSession(user, req);
-    await withTransaction((client) => recordActivity(client, { userId: user.id, action: 'account.registered' }));
-    setRefreshCookie(res, session.refreshToken);
-    setAccessCookie(res, session.accessToken);
+    await logActivity(user.id, 'account.registered');
+    setRefreshCookie(res, session.refreshToken, true);
+    setAccessCookie(res, session.accessToken, true);
+    setSessionCookie(res, true);
     res.status(201).json({ user: session.user, accessToken: session.accessToken });
   })
 );
@@ -104,7 +131,7 @@ router.post(
   authLimiter,
   validateBody(loginSchema),
   asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
     const { rows } = await query(`SELECT * FROM users WHERE LOWER(email) = LOWER($1)`, [email]);
     const user = rows[0];
     if (!user || !(await verifyPassword(password, user.password_hash))) {
@@ -117,9 +144,10 @@ router.post(
       Object.entries(user).filter(([key]) => !['password_hash'].includes(key))
     );
     const session = await buildSession(safeUser, req);
-    await withTransaction((client) => recordActivity(client, { userId: user.id, action: 'account.login' }));
-    setRefreshCookie(res, session.refreshToken);
-    setAccessCookie(res, session.accessToken);
+    await logActivity(user.id, 'account.login');
+    setRefreshCookie(res, session.refreshToken, remember);
+    setAccessCookie(res, session.accessToken, remember);
+    setSessionCookie(res, remember);
     res.json({ user: safeUser, accessToken: session.accessToken });
   })
 );
@@ -137,6 +165,7 @@ router.post(
       setRefreshCookie(res, refreshToken);
       const accessToken = signAccessToken(user);
       setAccessCookie(res, accessToken);
+      setSessionCookie(res, true);
       res.json({ user, accessToken });
     } catch (error) {
       // Drop stale cookies so they cannot break later login/register calls.
@@ -165,14 +194,15 @@ router.get(
   })
 );
 
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required.'),
-  newPassword: z
-    .string()
-    .min(8, 'Password must be at least 8 characters.')
-    .regex(/[A-Za-z]/, 'Password must contain a letter.')
-    .regex(/[0-9]/, 'Password must contain a number.'),
-});
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required.'),
+    newPassword: passwordSchema,
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    path: ['newPassword'],
+    message: 'New password must be different from your current password.',
+  });
 
 router.put(
   '/change-password',

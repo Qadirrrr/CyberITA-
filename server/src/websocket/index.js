@@ -36,7 +36,7 @@ function authenticateSocket(req) {
     const token = cookies.cyberita_at || url.searchParams.get('token') || '';
     if (!token) return null;
     const payload = verifyAccessToken(token);
-    return { id: Number(payload.sub), role: payload.role, name: payload.name, email: payload.email };
+    return { id: String(payload.sub), role: payload.role, name: payload.name, email: payload.email };
   } catch {
     return null;
   }
@@ -121,6 +121,7 @@ async function handleLabAttach(socket, message) {
       })),
       progress: overview.progress,
       report: overview.report,
+      student: overview.student,
     });
   } catch (error) {
     send(socket, { type: 'error', message: error.message });

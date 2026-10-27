@@ -4,6 +4,7 @@
  */
 process.env.NODE_ENV = 'test';
 process.env.DB_NAME = process.env.TEST_DB_NAME || 'cyberita_test';
+process.env.LAB_PROVIDER = 'mock';
 process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'silent';
 
 const { resetDatabase, runMigrations } = await import('../src/db/migrate.js');

@@ -78,7 +78,7 @@
   }
 
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-night-900/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply w-full rounded-lg border border-white/10 bg-night-900/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-brand-400/60 focus:ring-2 focus:ring-brand-400/20 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   select.input {
@@ -99,11 +99,28 @@
   }
 
   .no-scrollbar {
+    -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Completely hide sidebar scrollbars for all roles (student, instructor, admin) while preserving scrollability */
+  aside,
+  aside * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  aside::-webkit-scrollbar,
+  aside *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   .markdown {

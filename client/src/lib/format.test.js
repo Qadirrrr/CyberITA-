@@ -4,8 +4,8 @@ import { formatDate, formatMinutes, initials, percent, pluralize, truncate } fro
 describe('format helpers', () => {
   it('formats dates and falls back for invalid input', () => {
     expect(formatDate('2026-03-04T12:00:00Z')).toMatch(/Mar 4, 2026/);
-    expect(formatDate(null)).toBe('—');
-    expect(formatDate('not-a-date')).toBe('—');
+    expect(formatDate(null)).toBe('N/A');
+    expect(formatDate('not-a-date')).toBe('N/A');
   });
 
   it('formats durations in minutes and hours', () => {

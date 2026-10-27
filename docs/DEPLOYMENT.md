@@ -29,14 +29,15 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_USER=cyberita
 DB_PASSWORD=<strong-password>
-DB_NAME=cyberita
+DB_NAME=CyberITA
 DB_SSL=false
 JWT_ACCESS_SECRET=<openssl rand -hex 48>
 JWT_REFRESH_SECRET=<openssl rand -hex 48>
 COOKIE_SECURE=true
 CORS_ORIGINS=https://cyberita.example.com
-LAB_PROVIDER=mock
-SEED_PASSWORD=<strong-initial-password>
+LAB_PROVIDER=docker
+LAB_DOCKER_IMAGE=cyberita/lab-runtime:1.0
+LAB_DOCKER_NETWORK=true
 ```
 
 Notes:
@@ -46,6 +47,9 @@ Notes:
 - Keep `CORS_ORIGINS` limited to the public origin. It is only needed for cross-origin browser calls; the production frontend is same-origin.
 - Set `DB_SSL=true` if your managed PostgreSQL requires TLS.
 - Do not commit `.env` files.
+- Install Docker Engine and keep the daemon running on the lab host. The API user must be able to run `docker`; add it to the `docker` group or configure a rootless daemon.
+- Lab sessions run as root *inside* their disposable container (real terminal, package installs). Containers are never privileged, have no host mounts and no Docker socket. Network access is on by default for `apt`; restrict egress at the network firewalling level if required.
+- Pre-pull `LAB_DOCKER_IMAGE` during deployment so students do not wait for image downloads. Per-lab images are pulled on first start when `LAB_DOCKER_PULL=true`.
 
 Run migrations as part of every release before starting the new process:
 
@@ -53,13 +57,13 @@ Run migrations as part of every release before starting the new process:
 npm run db:migrate
 ```
 
-Seed only for a first-time demo or staging environment:
+The database ships empty. Provision the first administrator explicitly:
 
 ```bash
-npm run db:seed
+npm run user:create -- --email admin@example.com --name "Platform Admin" --role admin
 ```
 
-Never run seeding against production data. `FORCE_SEED=1` clears application tables.
+After signing in, that administrator can create additional admins, instructors and students from **Users & Roles**.
 
 ## Process manager (systemd)
 
@@ -89,6 +93,8 @@ Create a dedicated system user and make these paths writable by it:
 
 - `server/uploads`
 - the application log destination
+
+For Docker labs, that user must also be able to run `docker` (for example via the `docker` group) or `LAB_DOCKER_HOST` must point at an accessible daemon.
 
 ## Reverse proxy (nginx)
 
@@ -145,7 +151,7 @@ A load balancer should expect HTTP 200. Do not probe `/health`; the SPA fallback
 Back up PostgreSQL with `pg_dump` and copy `server/uploads` alongside it, because reports and screenshots reference uploaded file paths.
 
 ```bash
-pg_dump -Fc -d cyberita -f /backups/cyberita-$(date +%F).dump
+pg_dump -Fc -d CyberITA -f /backups/cyberita-$(date +%F).dump
 tar -czf /backups/cyberita-uploads-$(date +%F).tar.gz server/uploads
 ```
 
@@ -155,11 +161,12 @@ Test restores regularly. Certificates, reports and submissions are not recoverab
 
 The current architecture assumes a single Node instance:
 
-- WebSocket clients and lab terminal sessions are tracked in process memory.
-- Lab sessions use the mock provider and virtual filesystem.
+- WebSocket clients and terminal rooms are tracked in process memory.
+- Lab sessions use the Docker provider on the host reachable by the API process.
+- Expired sessions are swept by one process, so running multiple API instances against the same Docker host requires coordination.
 - Rate limiting uses in-memory state.
 
-If you need multiple instances, add a shared pub/sub layer for WebSocket events and externalize rate-limit state. Do not enable a real Cloud/VPS lab provider until sessions, terminal I/O and cleanup have been designed for distributed execution.
+If you need multiple instances, add a shared pub/sub layer for WebSocket events, externalize rate-limit state, and run lab cleanup as a single worker. A remote Docker host can be shared with `LAB_DOCKER_HOST`, but container naming and cleanup must remain coordinated.
 
 ## Security checklist
 
@@ -168,9 +175,11 @@ If you need multiple instances, add a shared pub/sub layer for WebSocket events 
 - Restrict PostgreSQL to the application host or private network.
 - Keep `CORS_ORIGINS` minimal.
 - Run Node as an unprivileged user.
+- Treat Docker daemon access as root-equivalent. Use a dedicated lab host, a rootless daemon where possible, and never expose the Docker socket over the network.
+- Lab sessions are root inside their own disposable container by design. Do not give containers `--privileged`, host mounts or the Docker socket, keep the memory/CPU/PID limits, and treat the lab host as untrusted-workload infrastructure.
+- Egress from lab containers is enabled by default for package installs. Add host/network firewall rules if learners must not reach arbitrary internet hosts.
 - Put uploads behind the application; never expose the filesystem directly.
 - Keep dependencies patched and review `npm audit` output.
-- Rotate `SEED_PASSWORD` and remove demo accounts before a real launch.
 - Back up the database and uploads before every migration.
 - Add request logging, error tracking and uptime monitoring at the proxy or platform layer.
 

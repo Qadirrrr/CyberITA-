@@ -217,13 +217,26 @@ describe('Practical labs', () => {
       .expect(200);
     expect(approved.body.report.status).toBe('approved');
 
-    // Publish as technical blog article
+    // Convert the approved report into an instructor-authored blog draft
     const publishRes = await instructorSession
       .auth(api().post(`/api/reports/${report.id}/publish`))
       .send({ title: 'Published Lab Report', tags: ['linux', 'lab-report'] })
       .expect(201);
     expect(publishRes.body.post.slug).toBeTruthy();
-    expect(publishRes.body.report.status).toBe('published');
+    expect(publishRes.body.post.status).toBe('draft');
+    expect(publishRes.body.report.status).toBe('approved');
+
+    // Drafts stay private until the instructor publishes them
+    await api().get(`/api/posts/${publishRes.body.post.slug}`).expect(404);
+    const draftArticle = await instructorSession
+      .auth(api().get(`/api/posts/${publishRes.body.post.slug}`))
+      .expect(200);
+    expect(draftArticle.body.post.status).toBe('draft');
+
+    await instructorSession
+      .auth(api().post(`/api/posts/${publishRes.body.post.id}/status`))
+      .send({ status: 'published' })
+      .expect(200);
 
     const article = await api().get(`/api/posts/${publishRes.body.post.slug}`).expect(200);
     expect(article.body.post.title).toBe('Published Lab Report');

@@ -151,7 +151,7 @@ export default function CoursesPage() {
             <select value={sort} onChange={(event) => setSort(event.target.value)} className="input" aria-label="Sort courses">
               <option value="newest">Newest</option>
               <option value="popular">Most popular</option>
-              <option value="title">A–Z</option>
+              <option value="title">A-Z</option>
             </select>
           </div>
 
