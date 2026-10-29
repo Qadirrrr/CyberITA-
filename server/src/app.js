@@ -28,6 +28,7 @@ import messageRoutes from './routes/messages.js';
 import studentRoutes from './routes/student.js';
 import instructorRoutes from './routes/instructor.js';
 import contentReportRoutes from './routes/contentReports.js';
+import contentRoutes from './routes/content.js';
 import labSubmissionRoutes from './routes/labSubmissions.js';
 
 export function createApp() {
@@ -77,6 +78,7 @@ app.use('/api/lab-submissions', labSubmissionRoutes);
   app.use('/api/nav', navRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/content-reports', contentReportRoutes);
+  app.use('/api/content', contentRoutes);
   app.use('/api/messages', messageRoutes);
   app.use('/api/instructor', instructorRoutes);
   app.use('/api', studentRoutes);

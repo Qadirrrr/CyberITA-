@@ -7,12 +7,13 @@ import { Alert, Badge, Button, Card, Skeleton } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
-  IconBookOpen,
   IconCheckCircle,
   IconClock,
   IconExternalLink,
   IconPlay,
+  IconShield,
   IconTerminal,
+  IconZap,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
@@ -55,7 +56,21 @@ export default function LabDetailPage() {
     setStarting(true);
     try {
       const { data: session } = await api.post(`/labs/${id}/sessions`, {}, { timeout: 300000 });
-      navigate(`/labs/session/${session.session.id}`);
+      const sessionUrl = `/labs/session/${session.session.id}`;
+      const newWin = window.open(sessionUrl, '_blank');
+      if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+        navigate(sessionUrl);
+      } else {
+        toast.success(
+          data?.lab?.is_practice
+            ? 'Practice terminal opened in a new tab.'
+            : 'Real lab started in a new tab.'
+        );
+        try {
+          const res = await api.get(`/labs/${id}`);
+          setData(res.data);
+        } catch (_) {}
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not start the lab session.'));
     } finally {
@@ -89,6 +104,10 @@ export default function LabDetailPage() {
   const { lab, steps, sessions = [], mySession, stepCounts } = data;
   const running = mySession?.status === 'running';
   const tone = DIFFICULTIES[lab.difficulty]?.tone || 'brand';
+  const isPractice = Boolean(lab.is_practice);
+  // Practice terminals are container-less, so they never depend on Docker.
+  const infrastructureReady = isPractice || !labStatus || Boolean(labStatus.available);
+  const offlineReason = labStatus?.reason || 'The Docker container runtime is not currently running on this server.';
 
   return (
     <div className="space-y-5">
@@ -106,6 +125,18 @@ export default function LabDetailPage() {
                 <IconClock size={11} /> {lab.estimated_minutes} min
               </Badge>
               <Badge tone="slate">{stepCounts?.total ?? steps.length} steps</Badge>
+              {isPractice ? (
+                <>
+                  <Badge tone="emerald">Practice · not graded</Badge>
+                  <Badge tone="emerald">
+                    <IconShield size={11} /> No container
+                  </Badge>
+                </>
+              ) : (
+                <Badge tone="sky">
+                  <IconShield size={11} /> Real container
+                </Badge>
+              )}
               {running && <Badge tone="emerald">Session running</Badge>}
             </div>
             <h1 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">{lab.title}</h1>
@@ -116,7 +147,7 @@ export default function LabDetailPage() {
                   <IconExternalLink size={11} /> {data.course.title}
                 </Link>
               ) : (
-                <span>Independent lab</span>
+                <span>{lab.is_practice ? 'Practice lab · open to every learner' : 'Independent lab'}</span>
               )}
               <span>{sessions.length} session{sessions.length === 1 ? '' : 's'} started</span>
               {mySession?.last_activity_at && <span>Last activity {timeAgo(mySession.last_activity_at)}</span>}
@@ -125,7 +156,7 @@ export default function LabDetailPage() {
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
             {running ? (
               <>
-                <Button as={Link} to={`/labs/session/${mySession.id}`}>
+                <Button as="a" href={`/labs/session/${mySession.id}`} target="_blank" rel="noopener noreferrer">
                   <IconPlay size={15} /> Resume session
                 </Button>
                 <Button onClick={start} loading={starting} variant="ghost" size="sm">
@@ -137,26 +168,35 @@ export default function LabDetailPage() {
                 onClick={start}
                 loading={starting}
                 size="lg"
-                disabled={labStatus && !labStatus.available}
-                title={labStatus && !labStatus.available ? labStatus.reason || 'Docker unavailable' : 'Launch hands-on lab'}
+                disabled={!infrastructureReady}
+                title={!infrastructureReady ? offlineReason : isPractice ? 'Open the practice terminal' : 'Launch hands-on lab'}
               >
-                <IconTerminal size={17} /> Start real lab
+                {isPractice ? <IconZap size={17} /> : <IconTerminal size={17} />}
+                {isPractice ? 'Start practice terminal' : 'Start real lab'}
               </Button>
             )}
-            <Button as={Link} to={`/labs/${lab.id}/practice`} variant="secondary" size="sm">
-              <IconBookOpen size={14} /> Practice mode
-            </Button>
             <p className="max-w-[190px] text-[10px] leading-4 text-slate-500">
-              Practice is simulated and needs no screenshots. Real labs run in an isolated Linux container and expire automatically.
+              {isPractice
+                ? 'Runs entirely in your browser. No container, no setup, and you can start as many sessions as you like.'
+                : 'Runs in an isolated Linux container with full terminal access. Sessions expire automatically.'}
             </p>
           </div>
         </div>
       </Card>
 
-      {labStatus && !labStatus.available && (
+      {isPractice ? (
+        <Alert tone="info" title="Container-less practice terminal">
+          This practice lab runs in a simulated Ubuntu shell inside your browser — no Docker container is created, so it
+          starts instantly and keeps working even when the lab infrastructure is offline. It is not graded, needs no
+          practical report and is not tied to a course, so you can start as many sessions as you like.
+        </Alert>
+      ) : null}
+
+      {!isPractice && labStatus && !labStatus.available && (
         <Alert tone="amber" title="Real Lab Infrastructure Offline">
-          {labStatus.reason || 'The Docker container runtime is not currently running on this server.'}{' '}
-          Real Hands-on Lab Mode requires active Docker infrastructure. <strong>Practice Mode</strong> is fully available and simulated with guided commands!
+          {offlineReason}{' '}
+          Course practicals need a running Docker engine on the server — ask the administrator to start it, then reload
+          this page. Practice terminals are unaffected.
         </Alert>
       )}
 
@@ -196,7 +236,7 @@ export default function LabDetailPage() {
               <ul className="mt-2 divide-y divide-white/5">
                 {sessions.slice(0, 5).map((session) => (
                   <li key={session.id} className="flex items-center justify-between gap-2 py-2 text-[11px]">
-                    <Link to={`/labs/session/${session.id}`} className="text-slate-400 hover:text-brand-300">
+                    <Link to={`/labs/session/${session.id}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-brand-300">
                       {formatDateTime(session.started_at)}
                     </Link>
                     <span className="flex items-center gap-1.5">

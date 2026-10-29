@@ -61,6 +61,7 @@ export default function InstructorQuizzesPage() {
   const [autoGenModal, setAutoGenModal] = useState(false);
   const [autoGenForm, setAutoGenForm] = useState({
     title: '',
+    details: '',
     courseId: '',
     lessonId: '',
     mcqCount: 5,
@@ -291,6 +292,7 @@ export default function InstructorQuizzesPage() {
     const defaultCourse = courseFilter !== 'all' ? courseFilter : courses[0]?.id || '';
     setAutoGenForm({
       title: '',
+      details: '',
       courseId: defaultCourse ? String(defaultCourse) : '',
       lessonId: '',
       mcqCount: 5,
@@ -314,6 +316,7 @@ export default function InstructorQuizzesPage() {
     try {
       const payload = {
         title: autoGenForm.title.trim(),
+        details: (autoGenForm.details || '').trim(),
         courseId: Number(autoGenForm.courseId),
         lessonId: autoGenForm.lessonId ? Number(autoGenForm.lessonId) : null,
         mcqCount: Math.max(1, Number(autoGenForm.mcqCount) || 5),
@@ -796,6 +799,15 @@ export default function InstructorQuizzesPage() {
             onChange={(e) => setAutoGenForm((curr) => ({ ...curr, title: e.target.value }))}
             required
             autoFocus
+          />
+
+          <Textarea
+            label="Topic details and scope (recommended)"
+            rows={3}
+            value={autoGenForm.details}
+            onChange={(e) => setAutoGenForm((curr) => ({ ...curr, details: e.target.value }))}
+            placeholder="What exactly should be assessed? Mention tools, scenarios and the depth you expect. Keywords pick the question blueprint."
+            hint="Optional, but a specific brief produces questions that match your lesson instead of generic ones."
           />
 
           <div className="grid gap-4 sm:grid-cols-2">

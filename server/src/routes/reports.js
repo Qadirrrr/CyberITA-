@@ -101,7 +101,6 @@ async function loadReportEvidence(report, { includeAnswers = false } = {}) {
   const { rows: steps } = await query(
     `SELECT s.id, s.position, s.title, s.instruction, s.verification, s.points, s.is_optional,
             ${includeAnswers ? 's.expected_command, s.expected_output_pattern,' : ''}
-            s.practice_command, s.practice_output, s.practice_explanation,
             p.completed_at, p.command_used, p.output_excerpt
      FROM lab_steps s
      LEFT JOIN lab_step_progress p ON p.step_id = s.id AND p.session_id = $2
@@ -194,6 +193,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const session = await getSessionOr404(req.params.sessionId, req.user);
     if (session.user_id !== req.user.id) throw forbidden('Only the session owner can generate its report.');
+    const { rows: practiceRows } = await query('SELECT is_practice FROM labs WHERE id = $1', [session.lab_id]);
+    if (practiceRows[0]?.is_practice) {
+      throw badRequest('Practice labs are not graded, so no practical report is generated.');
+    }
     const { rows: existing } = await query('SELECT id, status FROM reports WHERE session_id = $1', [session.id]);
     if (existing[0]) throw badRequest('A report already exists for this lab session.');
 

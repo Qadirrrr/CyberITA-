@@ -1,19 +1,40 @@
-import { MockLabProvider } from '../mock/mockProvider.js';
 import { DockerLabProvider } from '../docker/dockerProvider.js';
+import { PracticeLabProvider } from '../practice/practiceProvider.js';
 import env from '../../config/env.js';
 
 const registry = new Map();
-const register = (Provider) => registry.set(Provider.providerName, new Provider());
 
-// Mock is available for automated tests and the simulated practice mode only.
-register(MockLabProvider);
-register(DockerLabProvider);
+/** Registers a provider class. Production ships Docker + container-less practice; tests may register a simulator. */
+export function registerProvider(Provider) {
+  return registry.set(Provider.providerName, new Provider());
+}
+
+registerProvider(DockerLabProvider);
+// Practice labs are always container-less, in production and in tests.
+registerProvider(PracticeLabProvider);
 
 /** Returns the active provider instance (LAB_PROVIDER env, default "docker"). */
 export function getProvider(name = env.labs.provider) {
   const provider = registry.get(String(name).toLowerCase());
   if (!provider) throw new Error(`Unknown lab provider "${name}". Registered: ${[...registry.keys()].join(', ')}`);
   return provider;
+}
+
+/**
+ * Picks the provider for a lab.
+ *
+ * - `labs.is_practice` → the in-process practice terminal (never Docker).
+ * - every other lab → the configured real-lab provider (`LAB_PROVIDER`,
+ *   "docker" in production and "mock" in automated tests).
+ */
+export function getProviderForLab(lab, { fallback = env.labs.provider } = {}) {
+  if (lab?.is_practice) return getProvider(PracticeLabProvider.providerName);
+  return getProvider(fallback);
+}
+
+/** Provider name that will be recorded on a new session for this lab. */
+export function providerNameForLab(lab, { fallback = env.labs.provider } = {}) {
+  return getProviderForLab(lab, { fallback }).name;
 }
 
 export function listProviders() {

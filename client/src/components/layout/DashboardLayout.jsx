@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../lib/api';
 import { ROLES } from '../../lib/constants';
 import { Avatar, cx } from '../ui';
+import ThemeToggle from '../ThemeToggle';
 import {
   IconAward,
   IconBarChart,
@@ -18,6 +19,7 @@ import {
   IconClock,
   IconFileText,
   IconLayout,
+  IconLayers,
   IconLogOut,
   IconMail,
   IconMenu,
@@ -67,6 +69,7 @@ const studentNavSecondary = [
 
 const instructorNav = [
   { to: '/instructor', label: 'Overview', icon: IconLayout, end: true },
+  { to: '/instructor/studio', label: 'Content studio', icon: IconLayers },
   { to: '/instructor/courses', label: 'Assigned courses', icon: IconBookOpen },
   { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
   { to: '/instructor/quizzes', label: 'Quizzes', icon: IconZap },
@@ -98,6 +101,7 @@ const adminNavGroups = [
     label: 'Courses & Content',
     items: [
       { to: '/admin/courses', label: 'Courses & Enrollment', icon: IconBookOpen },
+      { to: '/instructor/studio', label: 'Content Studio', icon: IconLayers },
       { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
       { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
       { to: '/instructor/submissions', label: 'Submission Review', icon: IconCheckCircle },
@@ -134,7 +138,7 @@ function navFor(role) {
 }
 
 export default function DashboardLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -242,6 +246,35 @@ export default function DashboardLayout() {
 
   const isStudent = user?.role === 'student';
 
+  const [resendStatus, setResendStatus] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const emailUnverified = Boolean(user && !user.email_verified_at);
+
+  const resendVerification = async () => {
+    setResendLoading(true);
+    setResendStatus('');
+    try {
+      const { data } = await api.post('/auth/resend-verification', { email: user.email });
+      if (data?.devVerificationLink) {
+        // Development: the link is echoed instead of being emailed, so open it
+        // and refresh the cached user once it has been consumed.
+        window.open(data.devVerificationLink, '_blank', 'noopener');
+        setResendStatus('dev');
+        window.setTimeout(() => {
+          refreshUser().catch(() => {});
+        }, 2000);
+      } else {
+        setResendStatus('sent');
+        toast.success('Verification email sent. Check your inbox.');
+      }
+    } catch (err) {
+      setResendStatus('error');
+      toast.error(err?.response?.data?.error?.message || 'Could not send the verification email.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const renderNavItem = (item, mini = false) => {
     const IconComponent = item.icon;
     let badgeCount = 0;
@@ -285,8 +318,8 @@ export default function DashboardLayout() {
             'group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150',
             mini ? 'mx-auto h-10 w-10 justify-center' : 'gap-3 px-3 py-2.5',
             isActive
-              ? 'bg-brand-400/10 text-brand-200 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+              ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
           )
         }
       >
@@ -341,7 +374,7 @@ export default function DashboardLayout() {
             <button
               type="button"
               onClick={() => setSidebarCollapsed(true)}
-              className="hidden rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:inline-flex"
+              className="hidden rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-white lg:inline-flex"
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -350,7 +383,7 @@ export default function DashboardLayout() {
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-white lg:hidden"
               aria-label="Close menu"
             >
               <IconX size={18} />
@@ -387,21 +420,21 @@ export default function DashboardLayout() {
             {profileOpen && (
               <div
                 className={cx(
-                  'overflow-hidden rounded-xl border border-white/10 bg-night-850 shadow-2xl',
+                  'overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-850 dark:shadow-2xl',
                   mini ? 'absolute bottom-full left-2 z-50 mb-2 w-56' : 'mb-2'
                 )}
               >
                 <nav className="space-y-0.5 p-1.5" onClick={() => setProfileOpen(false)}>
                   {studentNavSecondary.map((item) => renderNavItem(item))}
                 </nav>
-                <div className="border-t border-white/10 p-1.5">
+                <div className="border-t border-slate-200 p-1.5 dark:border-white/10">
                   <button
                     type="button"
                     onClick={() => {
                       setProfileOpen(false);
                       onLogout();
                     }}
-                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-300"
+                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                   >
                     <IconLogOut size={18} className="shrink-0" />
                     Log out
@@ -417,7 +450,7 @@ export default function DashboardLayout() {
               aria-label="Profile menu"
               title={mini ? user?.full_name || 'Profile' : undefined}
               className={cx(
-                'group flex w-full items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-left transition hover:border-white/15 hover:bg-white/[0.06]',
+                'group flex w-full items-center rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/15 dark:hover:bg-white/[0.06]',
                 mini ? 'justify-center p-1.5' : 'gap-2.5 p-2'
               )}
             >
@@ -425,10 +458,10 @@ export default function DashboardLayout() {
               {!mini && (
                 <>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-semibold text-slate-200">
+                    <span className="block truncate text-xs font-semibold text-slate-800 dark:text-slate-200">
                       {user?.full_name || 'Profile'}
                     </span>
-                    <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                    <span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:text-slate-500">
                       {ROLES[user?.role] || 'Profile'}
                     </span>
                   </span>
@@ -487,7 +520,7 @@ export default function DashboardLayout() {
     <div className="min-h-screen lg:flex">
       <aside
         className={cx(
-          'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-white/5 bg-night-900/70 transition-[width] duration-300 lg:block',
+          'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-slate-200/80 bg-white/95 transition-[width] duration-300 dark:border-white/5 dark:bg-night-900/70 lg:block',
           sidebarCollapsed ? 'w-[76px]' : 'w-[248px]'
         )}
       >
@@ -499,10 +532,10 @@ export default function DashboardLayout() {
           <button
             type="button"
             aria-label="Close menu overlay"
-            className="absolute inset-0 bg-night-950/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm dark:bg-night-950/80"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="no-scrollbar relative z-10 h-full w-[268px] border-r border-white/10 bg-night-900">
+          <aside className="no-scrollbar relative z-10 h-full w-[268px] border-r border-slate-200 bg-white dark:border-white/10 dark:bg-night-900">
             {renderSidebar(false)}
           </aside>
         </div>
@@ -514,13 +547,13 @@ export default function DashboardLayout() {
           sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'
         )}
       >
-        <header className="sticky top-0 z-30 border-b border-white/5 bg-night-950/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/5 dark:bg-night-950/80">
           <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-slate-300 transition hover:bg-white/5 lg:hidden"
+                className="rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5 lg:hidden"
                 aria-label="Open menu"
               >
                 <IconMenu size={21} />
@@ -528,7 +561,7 @@ export default function DashboardLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed((value) => !value)}
-                className="hidden rounded-lg p-2 text-slate-300 transition hover:bg-white/5 hover:text-white lg:inline-flex"
+                className="hidden rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white lg:inline-flex"
                 aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
                 aria-expanded={!sidebarCollapsed}
                 title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
@@ -537,18 +570,19 @@ export default function DashboardLayout() {
               </button>
               <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
                 <IconLayout size={15} />
-                <span>{title}</span>
-                {user?.role !== 'student' && <span className="text-slate-600">/</span>}
-                {user?.role !== 'student' && <span className="text-slate-400">Content management</span>}
+                <span className="font-medium text-slate-800 dark:text-slate-200">{title}</span>
+                {user?.role !== 'student' && <span className="text-slate-400">/</span>}
+                {user?.role !== 'student' && <span className="text-slate-500">Content management</span>}
               </div>
               <Logo compact className="lg:hidden" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <ThemeToggle />
               <NotificationBell />
               <button
                 type="button"
                 onClick={onLogout}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-rose-400/30 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                 aria-label="Log out"
                 title="Log out"
               >
@@ -558,6 +592,36 @@ export default function DashboardLayout() {
             </div>
           </div>
         </header>
+
+        {emailUnverified && (
+          <div className="border-b border-amber-300/40 bg-amber-50 px-4 py-2.5 dark:border-amber-400/20 dark:bg-amber-400/10 sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-200 sm:text-sm">
+                <IconMail size={15} className="shrink-0" />
+                <span>
+                  <span className="font-semibold">Email not verified.</span> Verify{' '}
+                  <span className="font-medium">{user?.email}</span> to secure your account.
+                </span>
+              </p>
+              <div className="flex items-center gap-2">
+                {resendStatus === 'sent' && (
+                  <span className="text-xs text-emerald-700 dark:text-emerald-300">Email sent — check your inbox.</span>
+                )}
+                {resendStatus === 'dev' && (
+                  <span className="text-xs text-amber-700 dark:text-amber-300">Verification link opened in a new tab.</span>
+                )}
+                <button
+                  type="button"
+                  onClick={resendVerification}
+                  disabled={resendLoading}
+                  className="rounded-lg border border-amber-400/40 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-50 dark:border-amber-300/30 dark:bg-amber-400/15 dark:text-amber-100 dark:hover:bg-amber-400/25"
+                >
+                  {resendLoading ? 'Sending…' : 'Resend verification'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <div className="mx-auto w-full max-w-[1400px]">

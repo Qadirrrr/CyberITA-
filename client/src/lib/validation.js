@@ -64,6 +64,22 @@ export function validateRegisterForm({ fullName, email, password, confirm, accep
   return errors;
 }
 
+export function validateForgotPasswordForm({ email }) {
+  const errors = {};
+  const nextEmail = emailError(email);
+  if (nextEmail) errors.email = nextEmail;
+  return errors;
+}
+
+export function validateResetPasswordForm({ password, confirm, token }) {
+  const errors = {};
+  if (!String(token ?? '')) errors.token = 'This reset link is missing its token. Request a new link.';
+  const nextPassword = passwordError(password, { label: 'New password' });
+  if (nextPassword) errors.password = nextPassword;
+  if (password !== confirm) errors.confirm = 'Passwords do not match.';
+  return errors;
+}
+
 export function validateContactForm({ name, email, subject, message }) {
   const errors = {};
   const nextName = nameError(name, { label: 'Name' });

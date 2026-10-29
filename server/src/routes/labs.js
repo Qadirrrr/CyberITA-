@@ -23,13 +23,8 @@ import {
   completeManualStep,
 } from '../services/labService.js';
 import { submitLabSession } from '../services/labSubmissions.js';
+import { generateLab } from '../services/labGenerator.js';
 import { getProvider } from '../labs/providers/index.js';
-import {
-  getPracticeOverview,
-  runPracticeCommand,
-  markPracticeStep,
-  resetPractice,
-} from '../services/practiceService.js';
 import {
   assertLabManager,
   assertLabReadable,
@@ -107,9 +102,6 @@ const stepSchema = z.object({
   verification: z.enum(['command', 'output', 'manual']).default('command'),
   expectedCommand: z.string().trim().max(500).optional().nullable(),
   expectedOutputPattern: z.string().trim().max(500).optional().nullable(),
-  practiceCommand: z.string().trim().max(1000).optional().nullable(),
-  practiceOutput: z.string().trim().max(4000).optional().nullable(),
-  practiceExplanation: z.string().trim().max(4000).optional().nullable(),
   points: z.coerce.number().int().min(0).max(1000).default(10),
   isOptional: z.boolean().default(false),
   position: z.coerce.number().int().min(0).optional(),
@@ -129,6 +121,7 @@ const labSchema = z.object({
   terminalWelcome: z.string().trim().max(2000).default('Welcome to your CyberITA+ lab environment.'),
   initialCwd: z.string().trim().max(300).default('/home/student'),
   initialFiles: z.record(z.any()).default({}),
+  isPractice: z.boolean().default(false),
   containerImage: z
     .string()
     .trim()
@@ -141,7 +134,8 @@ const labSchema = z.object({
 });
 
 async function assertLabParticipation(lab, user) {
-  if (isStaff(user) || !lab.course_id) return;
+  // Practice labs are open to every learner; course labs require enrollment.
+  if (lab.is_practice || isStaff(user) || !lab.course_id) return;
   const { rows } = await query(
     `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status <> 'dropped'`,
     [user.id, lab.course_id]
@@ -160,6 +154,13 @@ router.get(
       provider: provider.name,
       available: availability.ok,
       reason: availability.reason || null,
+      practice: {
+        // Practice terminals are in-process, so they are always available
+        // even when the Docker engine is down.
+        provider: 'practice',
+        available: true,
+        reason: 'In-browser practice terminal (no container required).',
+      },
       sessionTtlMinutes: env.labs.sessionTtlMinutes,
     });
   })
@@ -220,7 +221,7 @@ router.get(
     params.push(limit, (page - 1) * limit);
     const { rows } = await query(
       `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
-         l.course_id, l.lesson_id, c.title AS course_title, c.slug AS course_slug,
+         l.is_practice, l.course_id, l.lesson_id, c.title AS course_title, c.slug AS course_slug,
          l.lab_server_id, srv.name AS lab_server_name,
          (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count,
          (SELECT COUNT(*)::int FROM lab_sessions s WHERE s.lab_id = l.id) AS session_count,
@@ -275,53 +276,6 @@ router.get(
   })
 );
 
-// ---------- simulated practice mode ----------
-
-router.get(
-  '/:id/practice',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
-    await assertLabReadable(req.user, lab);
-    await assertLabParticipation(lab, req.user);
-    res.json(await getPracticeOverview(lab, req.user));
-  })
-);
-
-router.post(
-  '/:id/practice/exec',
-  requireAuth,
-  validateBody(z.object({ command: z.string().trim().min(1).max(4000) })),
-  asyncHandler(async (req, res) => {
-    const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
-    await assertLabReadable(req.user, lab);
-    await assertLabParticipation(lab, req.user);
-    res.json(await runPracticeCommand(lab, req.user, req.body.command));
-  })
-);
-
-router.post(
-  '/:id/practice/steps/:stepId/complete',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
-    await assertLabReadable(req.user, lab);
-    await assertLabParticipation(lab, req.user);
-    res.json(await markPracticeStep(lab, req.user, req.params.stepId));
-  })
-);
-
-router.post(
-  '/:id/practice/reset',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
-    await assertLabReadable(req.user, lab);
-    await assertLabParticipation(lab, req.user);
-    res.json(await resetPractice(lab, req.user));
-  })
-);
-
 // ---------- student session lifecycle ----------
 
 router.post(
@@ -355,6 +309,7 @@ router.get(
         title: lab.title,
         terminal_welcome: lab.terminal_welcome,
         submission_requirements: lab.submission_requirements || '',
+        is_practice: Boolean(lab.is_practice),
       },
     });
   })
@@ -522,23 +477,169 @@ router.delete(
 
 // ---------- staff: lab management ----------
 
+const generateLabSchema = z.object({
+  title: z.string().trim().min(3, 'Give the lab a title with at least 3 characters.').max(200),
+  details: z.string().trim().max(4000).default(''),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
+  stepCount: z.coerce.number().int().min(3).max(12).default(8),
+  isPractice: z.boolean().default(false),
+  courseId: z.coerce.number().int().optional().nullable(),
+  lessonId: z.coerce.number().int().optional().nullable(),
+  status: z.enum(['draft', 'published']).default('draft'),
+  autoSave: z.boolean().default(true),
+});
+
+router.post(
+  '/generate',
+  requireRole('admin', 'instructor'),
+  validateBody(generateLabSchema),
+  asyncHandler(async (req, res) => {
+    const b = req.body;
+    // Practice labs are open to every learner, so they never belong to a course.
+    const labCourseId = b.isPractice ? null : b.courseId ?? null;
+    const labLessonId = b.isPractice ? null : b.lessonId ?? null;
+
+    if (labCourseId) {
+      const { rows } = await query('SELECT id, instructor_id, title FROM courses WHERE id = $1', [labCourseId]);
+      if (!rows[0]) throw badRequest('Course not found.');
+      if (req.user.role === 'instructor' && rows[0].instructor_id !== req.user.id) {
+        throw forbidden('You can only attach labs to your own courses.');
+      }
+    }
+    if (labLessonId) {
+      const { rows } = await query('SELECT id FROM lessons WHERE id = $1 AND course_id = $2', [
+        labLessonId,
+        labCourseId,
+      ]);
+      if (!rows[0]) throw badRequest('Lesson does not belong to the selected course.');
+    }
+
+    const generated = generateLab({
+      title: b.title,
+      details: b.details,
+      difficulty: b.difficulty,
+      stepCount: b.stepCount,
+      isPractice: b.isPractice,
+    });
+
+    if (!b.autoSave) {
+      return res.json({ saved: false, generated });
+    }
+
+    const slug = `${slugify(generated.title)}-${Math.random().toString(36).slice(2, 6)}`;
+    const { rows: dup } = await query('SELECT id FROM labs WHERE slug = $1', [slug]);
+    if (dup[0]) throw conflict('A lab with this slug already exists. Try a slightly different title.');
+
+    const labId = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
+           submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
+           initial_cwd, status, created_by, is_practice)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+        [
+          slug,
+          generated.title,
+          labCourseId,
+          labLessonId,
+          generated.summary,
+          generated.description,
+          generated.objectives,
+          generated.submissionRequirements,
+          generated.difficulty,
+          generated.estimatedMinutes,
+          generated.terminalWelcome,
+          JSON.stringify(generated.initialFiles || {}),
+          generated.initialCwd,
+          b.status,
+          req.user.id,
+          b.isPractice,
+        ]
+      );
+      const id = rows[0].id;
+      for (const item of generated.steps) {
+        await client.query(
+          `INSERT INTO lab_steps (lab_id, position, title, instruction, hint, verification,
+             expected_command, expected_output_pattern, points, is_optional)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [
+            id,
+            item.position,
+            item.title,
+            item.instruction,
+            item.hint ?? null,
+            item.verification,
+            item.expectedCommand ?? null,
+            item.expectedOutputPattern ?? null,
+            item.points,
+            item.isOptional,
+          ]
+        );
+      }
+      await recordActivity(client, {
+        userId: req.user.id,
+        action: 'lab.created',
+        entityType: 'lab',
+        entityId: id,
+        metadata: { title: generated.title, autoGenerated: true, practice: Boolean(b.isPractice) },
+      });
+      return id;
+    });
+
+    if (b.status === 'published' && b.isPractice) {
+      const { rows: learners } = await query(
+        `SELECT id AS user_id FROM users WHERE role = 'student' AND is_active = TRUE`
+      );
+      if (learners.length > 0) {
+        await notify(null, {
+          userIds: learners.map((row) => row.user_id),
+          type: 'lab',
+          title: `New practice lab: ${generated.title}`,
+          body: `A new practice lab "${generated.title}" is ready for hands-on practice.`,
+          link: `/labs/${labId}`,
+        });
+      }
+    } else if (b.status === 'published' && labCourseId) {
+      const { rows: enrolled } = await query(
+        `SELECT user_id FROM enrollments WHERE course_id = $1 AND status <> 'dropped'`,
+        [labCourseId]
+      );
+      if (enrolled.length > 0) {
+        await notify(null, {
+          userIds: enrolled.map((row) => row.user_id),
+          type: 'lab',
+          title: `New lab: ${generated.title}`,
+          body: `A new hands-on lab "${generated.title}" is available in your course.`,
+          link: `/labs/${labId}`,
+        });
+      }
+    }
+
+    const lab = await getLab(labId, { staff: true });
+    const steps = await getLabSteps(labId, { includeAnswers: true });
+    res.status(201).json({ saved: true, lab, steps, generated });
+  })
+);
+
 router.post(
   '/',
   requireRole('admin', 'instructor'),
   validateBody(labSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
-    if (b.courseId) {
-      const { rows } = await query('SELECT id, instructor_id FROM courses WHERE id = $1', [b.courseId]);
+    // Practice labs are open to every learner, so they never belong to a course.
+    const labCourseId = b.isPractice ? null : b.courseId ?? null;
+    const labLessonId = b.isPractice ? null : b.lessonId ?? null;
+    if (labCourseId) {
+      const { rows } = await query('SELECT id, instructor_id FROM courses WHERE id = $1', [labCourseId]);
       if (!rows[0]) throw badRequest('Course not found.');
       if (req.user.role === 'instructor' && rows[0].instructor_id !== req.user.id) {
         throw forbidden('You can only attach labs to your own courses.');
       }
     }
-    if (b.lessonId) {
+    if (labLessonId) {
       const { rows } = await query('SELECT id FROM lessons WHERE id = $1 AND course_id = $2', [
-        b.lessonId,
-        b.courseId ?? null,
+        labLessonId,
+        labCourseId,
       ]);
       if (!rows[0]) throw badRequest('Lesson does not belong to the selected course.');
     }
@@ -549,12 +650,12 @@ router.post(
     const { rows } = await query(
       `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
          submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-         initial_cwd, container_image, network_enabled, status, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
-      [slug, b.title, b.courseId ?? null, b.lessonId ?? null, b.summary, b.description,
+         initial_cwd, container_image, network_enabled, status, created_by, is_practice)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+      [slug, b.title, labCourseId, labLessonId, b.summary, b.description,
        b.objectives, b.submissionRequirements, b.difficulty, b.estimatedMinutes, b.terminalWelcome,
        JSON.stringify(b.initialFiles), b.initialCwd, b.containerImage || null,
-       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id]
+       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, b.isPractice]
     );
     res.status(201).json({ lab: rows[0] });
   })
@@ -568,9 +669,13 @@ router.put(
     const lab = await getLab(req.params.id, { staff: true });
     await assertLabManager(req.user, lab);
     const b = req.body;
-    const nextCourseId = 'courseId' in b ? b.courseId ?? null : lab.course_id;
-    const nextLessonId = 'lessonId' in b ? b.lessonId ?? null : lab.lesson_id;
-    if ('courseId' in b && nextCourseId) {
+    const nextIsPractice = 'isPractice' in b ? Boolean(b.isPractice) : Boolean(lab.is_practice);
+    // Practice labs are open to every learner, so they never belong to a course.
+    const nextCourseId = nextIsPractice ? null : 'courseId' in b ? b.courseId ?? null : lab.course_id;
+    const nextLessonId = nextIsPractice ? null : 'lessonId' in b ? b.lessonId ?? null : lab.lesson_id;
+    const setCourse = nextIsPractice || 'courseId' in b;
+    const setLesson = nextIsPractice || 'lessonId' in b;
+    if (setCourse && nextCourseId) {
       const { rows: courseRows } = await query('SELECT id, instructor_id FROM courses WHERE id = $1', [nextCourseId]);
       if (!courseRows[0]) throw badRequest('Course not found.');
       if (req.user.role === 'instructor' && courseRows[0].instructor_id !== req.user.id) {
@@ -600,15 +705,17 @@ router.put(
          container_image = CASE WHEN $14::boolean THEN $15::varchar ELSE container_image END,
          network_enabled = COALESCE($16, network_enabled),
          objectives = COALESCE($18, objectives),
-         submission_requirements = COALESCE($19, submission_requirements)
+         submission_requirements = COALESCE($19, submission_requirements),
+         is_practice = COALESCE($20, is_practice)
        WHERE id = $17 RETURNING *`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.difficulty ?? null,
         b.estimatedMinutes ?? null, b.terminalWelcome ?? null, b.initialCwd ?? null,
         b.initialFiles ? JSON.stringify(b.initialFiles) : null, b.status ?? null,
-        'courseId' in b, b.courseId ?? null, 'lessonId' in b, b.lessonId ?? null,
+        setCourse, nextCourseId, setLesson, nextLessonId,
         'containerImage' in b, b.containerImage || null, 'networkEnabled' in b ? b.networkEnabled : null,
         lab.id, b.objectives ?? null, b.submissionRequirements ?? null,
+        'isPractice' in b ? b.isPractice : null,
       ]
     );
     res.json({ lab: rows[0] });
@@ -671,12 +778,10 @@ router.post(
     }
     const { rows } = await query(
       `INSERT INTO lab_steps (lab_id, position, title, instruction, hint, verification,
-         expected_command, expected_output_pattern, practice_command, practice_output,
-         practice_explanation, points, is_optional)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+         expected_command, expected_output_pattern, points, is_optional)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [lab.id, position, b.title, b.instruction, b.hint ?? null, b.verification,
-       b.expectedCommand ?? null, b.expectedOutputPattern ?? null, b.practiceCommand ?? null,
-       b.practiceOutput ?? null, b.practiceExplanation ?? null, b.points, b.isOptional]
+       b.expectedCommand ?? null, b.expectedOutputPattern ?? null, b.points, b.isOptional]
     );
     res.status(201).json({ step: rows[0] });
   })
@@ -704,16 +809,12 @@ router.put(
          verification = COALESCE($4, verification),
          expected_command = COALESCE($5, expected_command),
          expected_output_pattern = COALESCE($6, expected_output_pattern),
-         practice_command = COALESCE($7, practice_command),
-         practice_output = COALESCE($8, practice_output),
-         practice_explanation = COALESCE($9, practice_explanation),
-         points = COALESCE($10, points),
-         is_optional = COALESCE($11, is_optional),
-         position = COALESCE($12, position)
-       WHERE id = $13 RETURNING *`,
+         points = COALESCE($7, points),
+         is_optional = COALESCE($8, is_optional),
+         position = COALESCE($9, position)
+       WHERE id = $10 RETURNING *`,
       [b.title ?? null, b.instruction ?? null, b.hint ?? null, b.verification ?? null,
-       b.expectedCommand ?? null, b.expectedOutputPattern ?? null, b.practiceCommand ?? null,
-       b.practiceOutput ?? null, b.practiceExplanation ?? null, b.points ?? null,
+       b.expectedCommand ?? null, b.expectedOutputPattern ?? null, b.points ?? null,
        'isOptional' in b ? b.isOptional : null, b.position ?? null, step.id]
     );
     res.json({ step: updated[0] });

@@ -7,6 +7,7 @@ import {
   IconArrowRight,
   IconAward,
   IconBookOpen,
+  IconCalendar,
   IconChatBubble,
   IconClipboard,
   IconClock,
@@ -25,7 +26,7 @@ const quickLinks = [
   { to: '/student/lessons', label: 'My lessons', icon: IconPlay, hint: 'Every lesson in one place' },
   { to: '/student/quizzes', label: 'Quizzes', icon: IconZap, hint: 'Check your understanding' },
   { to: '/student/assignments', label: 'Assignments', icon: IconClipboard, hint: 'Submit work and track grades' },
-  { to: '/student/labs', label: 'Open a lab', icon: IconTerminal, hint: 'Practice in the terminal' },
+  { to: '/student/labs', label: 'Open a lab', icon: IconTerminal, hint: 'Real Linux terminal' },
   { to: '/student/chat', label: 'Chat', icon: IconChatBubble, hint: 'Ask your instructor a question' },
 ];
 
@@ -112,15 +113,15 @@ export default function StudentDashboard() {
     <div className="space-y-6">
       {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-night-900/60 p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-night-900/60 sm:p-8">
         <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-brand-400/[0.07] blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-300">
-              <IconSparkles /> {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-300">
+              <IconCalendar size={14} /> {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
             <h1 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Welcome back, {firstName}.</h1>
-            <p className="mt-1.5 max-w-xl text-sm text-slate-400">
+            <p className="mt-1.5 max-w-xl text-sm text-slate-500 dark:text-slate-400">
               {active.length > 0
                 ? `You have ${active.length} course${active.length === 1 ? '' : 's'} in progress. Keep the momentum going.`
                 : 'Ready to start something new? Pick a course and open your first lab.'}
@@ -360,16 +361,16 @@ export default function StudentDashboard() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-night-850/70 p-4 transition hover:border-brand-400/25 hover:bg-night-850"
+                  className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-500/40 hover:shadow-md dark:border-white/10 dark:bg-night-850/70 dark:hover:border-brand-400/25 dark:hover:bg-night-850"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-brand-300">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-white/5 dark:text-brand-300">
                     <IconComponent size={18} />
                   </span>
                   <span className="flex-1">
-                    <span className="block text-sm font-medium text-slate-200 group-hover:text-white">{link.label}</span>
+                    <span className="block text-sm font-medium text-slate-800 group-hover:text-brand-700 dark:text-slate-200 dark:group-hover:text-white">{link.label}</span>
                     <span className="block text-[11px] text-slate-500">{link.hint}</span>
                   </span>
-                  <IconArrowRight size={15} className="text-slate-600 transition group-hover:text-brand-300" />
+                  <IconArrowRight size={15} className="text-slate-400 transition group-hover:text-brand-600 dark:text-slate-600 dark:group-hover:text-brand-300" />
                 </Link>
               );
             })}
@@ -519,8 +520,4 @@ export default function StudentDashboard() {
       </div>
     </div>
   );
-}
-
-function IconSparkles() {
-  return <IconZap size={13} />;
 }

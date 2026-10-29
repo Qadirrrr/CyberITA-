@@ -183,7 +183,7 @@ export default function AdminLabsPage() {
             </Badge>
           </div>
           <p className="mt-2 text-lg font-semibold text-slate-200">
-            {dockerAvailable ? 'Docker Engine Ready' : 'Simulated / Practice'}
+            {dockerAvailable ? 'Docker Engine Ready' : 'Engine Offline'}
           </p>
           <p className="mt-1 text-[11px] text-slate-500 truncate">
             {health?.infrastructure?.docker?.reason || `Provider: ${health?.infrastructure?.configuredProvider || 'docker'}`}
@@ -226,7 +226,7 @@ export default function AdminLabsPage() {
 
       {!dockerAvailable && (
         <Alert tone="amber" title="Real Lab Infrastructure Notice">
-          Docker is not currently active on this host. Practical labs will run seamlessly in <strong>Practice Mode</strong>. Once Docker Desktop / the Docker daemon is launched, real Linux container execution will automatically enable without restarting the app.
+          Docker is not currently active on this host, so labs cannot start. Start Docker Desktop (or the Docker daemon) and labs will run again automatically without restarting the app.
         </Alert>
       )}
 

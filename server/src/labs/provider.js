@@ -2,7 +2,8 @@
  * ============================================================
  * Lab provider contract
  * ============================================================
- * Every provider (Docker for real labs, mock for tests) implements this
+ * Every provider (Docker in production, the in-process simulator in automated
+ * tests) implements this
  * interface so the rest of CyberITA+ never needs to know where a lab runs.
  *
  *   const session = await provider.provision({ lab, user })
@@ -41,7 +42,7 @@ export class LabProvider {
   }
 
   /**
-   * Returns an object with the same shape as the mock terminal:
+   * Returns a duplex command executor:
    *   execute({ command, cwd, fsState, session, lab }) -> { output, exitCode, cwd, fsState, events }
    */
   createTerminal(session, lab) {

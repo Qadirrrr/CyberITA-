@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MockShell } from '../src/labs/mock/mockShell.js';
-import { defaultFs } from '../src/labs/mock/virtualFs.js';
+import { MockShell } from './support/lab-mock/mockShell.js';
+import { defaultFs } from './support/lab-mock/virtualFs.js';
 
 const shell = () => new MockShell({ fsState: defaultFs(), cwd: '/home/student' });
 

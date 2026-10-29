@@ -29,27 +29,27 @@ export default function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1 pr-2 transition hover:border-white/20 hover:bg-white/10"
+        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 pr-2.5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10"
       >
         <Avatar name={user.full_name} src={user.avatar_url} size="xs" />
-        <span className="hidden max-w-[120px] truncate text-xs font-medium text-slate-200 sm:block">{user.full_name}</span>
-        <IconChevronDown size={14} className="text-slate-400" />
+        <span className="hidden max-w-[120px] truncate text-xs font-semibold text-slate-800 sm:block dark:text-slate-200">{user.full_name}</span>
+        <IconChevronDown size={14} className="text-slate-500 dark:text-slate-400" />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/10 bg-night-850 shadow-2xl">
-          <div className="border-b border-white/10 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-white">{user.full_name}</p>
-            <p className="truncate text-xs text-slate-500">{user.email}</p>
+        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-850 dark:shadow-2xl">
+          <div className="border-b border-slate-100 px-4 py-3 dark:border-white/10 bg-slate-50/50 dark:bg-transparent">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{user.full_name}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
             <Badge tone={user.role === 'admin' ? 'rose' : user.role === 'instructor' ? 'accent' : 'brand'} className="mt-2">
               {ROLES[user.role] || user.role}
             </Badge>
           </div>
-          <div className="p-1.5">
+          <div className="p-1.5 space-y-0.5">
             <Link
               to={dashboardPath(user.role)}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
             >
               <IconUser size={16} /> Dashboard
             </Link>
@@ -57,7 +57,7 @@ export default function UserMenu() {
               <Link
                 to="/student/profile"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
               >
                 <IconUser size={16} /> Profile settings
               </Link>
@@ -65,7 +65,7 @@ export default function UserMenu() {
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-rose-300 transition hover:bg-rose-500/10"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
             >
               <IconLogOut size={16} /> Sign out
             </button>

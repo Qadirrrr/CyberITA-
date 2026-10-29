@@ -1,16 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         night: {
-          950: '#05070d',
-          900: '#080c15',
-          850: '#0b111d',
-          800: '#0f1726',
-          700: '#172033',
-          600: '#1f2b42',
+          950: 'rgb(var(--night-950) / <alpha-value>)',
+          900: 'rgb(var(--night-900) / <alpha-value>)',
+          850: 'rgb(var(--night-850) / <alpha-value>)',
+          800: 'rgb(var(--night-800) / <alpha-value>)',
+          700: 'rgb(var(--night-700) / <alpha-value>)',
+          600: 'rgb(var(--night-600) / <alpha-value>)',
         },
         brand: {
           50: '#ecfeff',
@@ -32,8 +33,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace'],
       },
       boxShadow: {
@@ -43,9 +45,9 @@ export default {
       },
       backgroundImage: {
         'grid-fade':
-          'radial-gradient(ellipse at top, rgba(34,211,238,0.12), transparent 55%), linear-gradient(to bottom, #05070d, #080c15)',
+          'radial-gradient(ellipse at top, rgba(6,182,212,0.06), transparent 60%)',
         'hero-glow':
-          'radial-gradient(circle at 20% 20%, rgba(34,211,238,0.16), transparent 45%), radial-gradient(circle at 80% 10%, rgba(139,92,246,0.14), transparent 40%)',
+          'radial-gradient(circle at 20% 20%, rgba(6,182,212,0.08), transparent 45%), radial-gradient(circle at 80% 10%, rgba(139,92,246,0.06), transparent 40%)',
       },
       keyframes: {
         'fade-up': {

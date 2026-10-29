@@ -813,7 +813,7 @@ export default function CourseEditorPage() {
       {!isNew && tab === 'labs' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Hands-on labs with a simulated terminal and auto-verified steps.</p>
+            <p className="text-xs text-slate-500">Hands-on labs with a real Linux terminal and auto-verified steps.</p>
             <Button
               size="sm"
               variant="secondary"

@@ -67,7 +67,7 @@ export async function rotateRefreshToken(cookieValue) {
   }
   await query('UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1', [record.id]);
   const { rows: userRows } = await query(
-    `SELECT id, email, full_name, role, headline, bio, avatar_url, is_active, created_at
+    `SELECT id, email, full_name, role, headline, bio, avatar_url, is_active, email_verified_at, created_at
      FROM users WHERE id = $1 AND is_active = TRUE`,
     [record.user_id]
   );

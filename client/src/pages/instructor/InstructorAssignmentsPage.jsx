@@ -22,6 +22,7 @@ import {
   IconPlus,
   IconSearch,
   IconTrash,
+  IconZap,
 } from '../../components/icons';
 import { formatDateTime } from '../../lib/format';
 
@@ -62,6 +63,8 @@ export default function InstructorAssignmentsPage() {
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
   const [lessonMap, setLessonMap] = useState({});
+  const [autoModal, setAutoModal] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   const load = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -175,6 +178,62 @@ export default function InstructorAssignmentsPage() {
     }
   };
 
+  const openAutoGenerate = () => {
+    const courseId = courseFilter !== 'all' ? courseFilter : courses[0]?.id || '';
+    setAutoModal({
+      title: '',
+      details: '',
+      courseId: courseId ? String(courseId) : '',
+      lessonId: '',
+      difficulty: 'intermediate',
+      points: 100,
+      dueInDays: 7,
+      isPublished: true,
+    });
+    ensureLessons(courseId);
+  };
+
+  const runAutoGenerate = async (event) => {
+    event.preventDefault();
+    if (!autoModal.title.trim()) {
+      toast.error('Give the assignment a title or topic.');
+      return;
+    }
+    if (!autoModal.courseId) {
+      toast.error('Choose the course this assignment belongs to.');
+      return;
+    }
+    setGenerating(true);
+    try {
+      const { data } = await api.post(
+        '/assignments/generate',
+        {
+          title: autoModal.title.trim(),
+          details: autoModal.details.trim(),
+          courseId: Number(autoModal.courseId),
+          lessonId: autoModal.lessonId ? Number(autoModal.lessonId) : null,
+          difficulty: autoModal.difficulty,
+          points: Math.max(10, Number(autoModal.points) || 100),
+          dueInDays: Math.max(1, Number(autoModal.dueInDays) || 7),
+          isPublished: Boolean(autoModal.isPublished),
+          autoSave: true,
+        },
+        { timeout: 120000 }
+      );
+      toast.success(
+        autoModal.isPublished
+          ? `Assignment "${data.assignment.title}" generated and published.`
+          : `Assignment "${data.assignment.title}" saved as a draft.`
+      );
+      setAutoModal(null);
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not generate the assignment.'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const deleteAssignment = async (assignment) => {
     if (!window.confirm(`Delete assignment "${assignment.title}" and all submissions?`)) return;
     try {
@@ -187,6 +246,7 @@ export default function InstructorAssignmentsPage() {
   };
 
   const lessons = modal?.courseId ? lessonMap[modal.courseId] || [] : [];
+  const autoLessons = autoModal?.courseId ? lessonMap[autoModal.courseId] || [] : [];
 
   return (
     <div className="space-y-6">
@@ -197,9 +257,20 @@ export default function InstructorAssignmentsPage() {
             Create briefs, set due dates, and jump straight into submission review.
           </p>
         </div>
-        <Button size="sm" onClick={openCreate} disabled={courses.length === 0}>
-          <IconPlus size={14} /> New assignment
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={openAutoGenerate}
+            disabled={courses.length === 0}
+            className="border-brand-400/30 bg-brand-400/10 text-brand-300 hover:bg-brand-400/20"
+          >
+            <IconZap size={14} /> Auto-generate assignment
+          </Button>
+          <Button size="sm" onClick={openCreate} disabled={courses.length === 0}>
+            <IconPlus size={14} /> New assignment
+          </Button>
+        </div>
       </div>
 
       {error && <p className="text-sm text-rose-300">{error}</p>}
@@ -421,6 +492,112 @@ export default function InstructorAssignmentsPage() {
                   label="Visible to learners"
                   checked={modal.isPublished}
                   onChange={(event) => setModal((current) => ({ ...current, isPublished: event.target.checked }))}
+                />
+              </div>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(autoModal)}
+        onClose={() => !generating && setAutoModal(null)}
+        title="Auto-generate an assignment"
+        description="Describe the topic and CyberITA+ writes the full brief: scenario, tasks, deliverables, evidence list and a weighted rubric."
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" disabled={generating} onClick={() => setAutoModal(null)}>
+              Cancel
+            </Button>
+            <Button onClick={runAutoGenerate} loading={generating} disabled={!autoModal?.title.trim() || !autoModal?.courseId}>
+              <IconZap size={14} /> Generate assignment
+            </Button>
+          </>
+        }
+      >
+        {autoModal && (
+          <form onSubmit={runAutoGenerate} className="space-y-4">
+            <Input
+              label="Assignment title / topic"
+              placeholder="e.g. Investigate a brute-force login campaign"
+              value={autoModal.title}
+              onChange={(event) => setAutoModal((current) => ({ ...current, title: event.target.value }))}
+              required
+              autoFocus
+            />
+            <Textarea
+              label="Details and scope"
+              rows={4}
+              value={autoModal.details}
+              onChange={(event) => setAutoModal((current) => ({ ...current, details: event.target.value }))}
+              placeholder="What should learners investigate or produce? Mention the tools, scenario and evidence you expect."
+              hint="Keywords choose the scenario blueprint; the rest of the brief is adapted to your difficulty setting."
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Course"
+                value={autoModal.courseId}
+                onChange={(event) => {
+                  const courseId = event.target.value;
+                  setAutoModal((current) => ({ ...current, courseId, lessonId: '' }));
+                  ensureLessons(courseId);
+                }}
+                required
+              >
+                <option value="">Select a course</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label="Attach to lesson (optional)"
+                value={autoModal.lessonId}
+                onChange={(event) => setAutoModal((current) => ({ ...current, lessonId: event.target.value }))}
+              >
+                <option value="">Course-wide</option>
+                {autoLessons.map((lesson) => (
+                  <option key={lesson.id} value={lesson.id}>
+                    {lessonLabel(lesson)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Difficulty"
+                value={autoModal.difficulty}
+                onChange={(event) => setAutoModal((current) => ({ ...current, difficulty: event.target.value }))}
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </Select>
+              <Input
+                label="Points"
+                type="number"
+                min="10"
+                max="500"
+                value={autoModal.points}
+                onChange={(event) => setAutoModal((current) => ({ ...current, points: event.target.value }))}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Due in days"
+                type="number"
+                min="1"
+                max="120"
+                value={autoModal.dueInDays}
+                onChange={(event) => setAutoModal((current) => ({ ...current, dueInDays: event.target.value }))}
+              />
+              <div className="flex items-end pb-2">
+                <Checkbox
+                  label="Visible to learners"
+                  checked={autoModal.isPublished}
+                  onChange={(event) => setAutoModal((current) => ({ ...current, isPublished: event.target.checked }))}
                 />
               </div>
             </div>

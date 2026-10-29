@@ -14,7 +14,6 @@ import {
   IconFileText,
   IconLayers,
   IconShield,
-  IconSparkles,
   IconTerminal,
   IconUsers,
   IconZap,
@@ -25,7 +24,7 @@ const features = [
   {
     icon: IconTerminal,
     title: 'Browser-based Linux labs',
-    body: 'Practice in a sandboxed terminal. No installs, no setup, no risk. Commands are verified as you type them.',
+    body: 'Work inside a real isolated Linux container with full root access — install packages and run any tool you need.',
   },
   {
     icon: IconFileText,
@@ -80,22 +79,22 @@ export default function HomePage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
-        <div className="pointer-events-none absolute inset-0 bg-grid-fade opacity-60" />
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white dark:border-white/5 dark:bg-transparent">
+        <div className="pointer-events-none absolute inset-0 hidden dark:block bg-hero-glow" />
+        <div className="pointer-events-none absolute inset-0 hidden dark:block bg-grid-fade opacity-60" />
         <div className="container-page relative grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <div className="animate-fade-up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-400/10 px-3 py-1.5 text-xs font-medium text-brand-200">
-              <IconSparkles size={14} /> Hands-on IT training, built for the real world
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/25 dark:bg-brand-400/10 dark:text-brand-200">
+              <IconShield size={14} className="text-brand-600 dark:text-brand-400" /> Enterprise Practical IT & Cybersecurity Labs
             </div>
-            <h1 className="mt-5 text-balance font-display text-4xl font-semibold leading-[1.08] sm:text-5xl xl:text-6xl">
+            <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.08] text-slate-900 dark:text-white sm:text-5xl xl:text-6xl">
               Learn IT by doing it
-              <span className="bg-gradient-to-r from-brand-300 via-brand-400 to-accent-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-accent-600 bg-clip-text text-transparent dark:from-brand-300 dark:via-brand-400 dark:to-accent-400">
                 {' '}
                 in a real terminal.
               </span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-slate-400">
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-400">
               CyberITA+ pairs focused lessons with sandboxed Linux labs, automatic command verification and
               instructor-reviewed practical reports, so you graduate with proof of skill, not just a completion badge.
             </p>
@@ -113,10 +112,10 @@ export default function HomePage() {
                 Browse courses
               </Button>
             </div>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-slate-500">
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium text-slate-600 dark:text-slate-400">
               {['No credit card required', 'Browser-based labs', 'Verified certificates'].map((item) => (
                 <span key={item} className="inline-flex items-center gap-1.5">
-                  <IconCheckCircle size={14} className="text-brand-400" /> {item}
+                  <IconCheckCircle size={15} className="text-brand-600 dark:text-brand-400" /> {item}
                 </span>
               ))}
             </div>
@@ -124,15 +123,15 @@ export default function HomePage() {
 
           <div className="animate-fade-up [animation-delay:120ms]">
             <div className="relative mx-auto max-w-lg">
-              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-400/20 via-transparent to-accent-500/20 blur-2xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-night-950 shadow-2xl">
-                <div className="flex items-center gap-2 border-b border-white/10 bg-night-900/80 px-4 py-3">
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
-                  <span className="ml-2 font-mono text-[11px] text-slate-500">student@cyberita-lab: ~</span>
-                  <Badge tone="emerald" className="ml-auto !py-0.5 text-[10px]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
+              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-500/15 via-transparent to-accent-500/15 blur-2xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
+                <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/90 px-4 py-3">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+                  <span className="ml-2 font-mono text-xs text-slate-400">student@cyberita-lab: ~</span>
+                  <Badge tone="emerald" dot="animate-pulse" className="ml-auto !bg-emerald-500/20 !text-emerald-300 !border-emerald-500/30">
+                    Live
                   </Badge>
                 </div>
                 <div className="space-y-2.5 p-5 font-mono text-[12.5px] leading-6">
@@ -182,7 +181,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-b border-white/5 bg-night-900/30">
+      <section className="border-b border-slate-200/80 bg-slate-50/70 dark:border-white/5 dark:bg-night-900/30">
         <div className="container-page grid grid-cols-2 gap-6 py-8 sm:grid-cols-4">
           {[
             [IconBookOpen, 'Structured courses', 'From Linux basics to cloud operations'],
@@ -191,12 +190,12 @@ export default function HomePage() {
             [IconAward, 'Verifiable certificates', 'Serial numbers you can share'],
           ].map(([IconComponent, title, body]) => (
             <div key={title} className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-400/10 text-brand-300">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-400/10 dark:text-brand-300">
                 <IconComponent size={19} />
               </span>
               <div>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-500">{body}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">{body}</p>
               </div>
             </div>
           ))}
@@ -218,19 +217,19 @@ export default function HomePage() {
           {features.map((feature) => {
             const IconComponent = feature.icon;
             return (
-              <Card key={feature.title} className="group p-6 transition hover:border-brand-400/25">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400/20 to-accent-500/10 text-brand-300 ring-1 ring-white/5">
+              <Card key={feature.title} className="group p-6 transition hover:border-slate-300 hover:shadow-md dark:hover:border-brand-400/25">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-slate-200 dark:bg-gradient-to-br dark:from-brand-400/20 dark:to-accent-500/10 dark:text-brand-300 dark:ring-white/5">
                   <IconComponent size={21} />
                 </span>
-                <h3 className="mt-4 text-base font-semibold">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{feature.body}</p>
+                <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{feature.body}</p>
               </Card>
             );
           })}
         </div>
       </section>
 
-      <section className="border-y border-white/5 bg-night-900/30">
+      <section className="border-y border-slate-200/80 bg-slate-50/70 dark:border-white/5 dark:bg-night-900/30">
         <div className="container-page py-16 lg:py-20">
           <SectionHeading
             eyebrow="Popular right now"
@@ -383,9 +382,9 @@ export default function HomePage() {
         <div className="relative overflow-hidden rounded-3xl border border-brand-400/20 bg-gradient-to-br from-brand-500/[0.12] via-night-900 to-accent-500/[0.12] px-6 py-12 text-center sm:px-12 lg:py-16">
           <div className="pointer-events-none absolute inset-0 bg-noise opacity-40" />
           <div className="relative mx-auto max-w-2xl">
-            <Badge tone="brand" className="mb-4">
-              <IconSparkles size={13} /> Your next role starts with proof
-            </Badge>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
+              <IconAward size={14} /> Industry-Standard Skill Verification
+            </div>
             <h2 className="text-balance font-display text-3xl font-semibold sm:text-4xl">
               Build the skills. Show the evidence. Get certified.
             </h2>

@@ -219,12 +219,13 @@ CREATE TABLE labs (
   difficulty         VARCHAR(20) NOT NULL DEFAULT 'beginner'
                      CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
   estimated_minutes  INT NOT NULL DEFAULT 30,
-  provider_hint      VARCHAR(30) NOT NULL DEFAULT 'mock',
+  provider_hint      VARCHAR(30) NOT NULL DEFAULT 'docker', -- migration 015 removed the simulator
   terminal_welcome   TEXT NOT NULL DEFAULT 'Welcome to your CyberITA+ lab environment.',
   initial_files      JSONB NOT NULL DEFAULT '{}',
   initial_cwd        VARCHAR(300) NOT NULL DEFAULT '/home/student',
   container_image    VARCHAR(255),
   network_enabled    BOOLEAN NOT NULL DEFAULT FALSE,
+  is_practice        BOOLEAN NOT NULL DEFAULT FALSE, -- open to all learners, not graded
   status             VARCHAR(20) NOT NULL DEFAULT 'published'
                      CHECK (status IN ('draft', 'published')),
   created_by         BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -233,6 +234,7 @@ CREATE TABLE labs (
 );
 CREATE INDEX labs_course_idx ON labs(course_id);
 CREATE INDEX labs_lesson_idx ON labs(lesson_id);
+CREATE INDEX labs_practice_idx ON labs(is_practice) WHERE is_practice;
 
 CREATE TABLE lab_steps (
   id                   BIGSERIAL PRIMARY KEY,
@@ -254,7 +256,7 @@ CREATE TABLE lab_sessions (
   id               BIGSERIAL PRIMARY KEY,
   lab_id           BIGINT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
   user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider         VARCHAR(30) NOT NULL DEFAULT 'mock',
+  provider         VARCHAR(30) NOT NULL DEFAULT 'mock', -- reset to 'docker' by migration 015
   instance_id      VARCHAR(80),
   status           VARCHAR(20) NOT NULL DEFAULT 'running'
                    CHECK (status IN ('provisioning', 'running', 'stopped', 'error')),
@@ -481,31 +483,21 @@ ALTER TABLE labs
   ADD COLUMN IF NOT EXISTS network_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- ============================================================
--- migration: 005_practice_mode.sql
+-- migration: 015_remove_practice_mode.sql
 -- ============================================================
 
--- Practice mode content and per-learner simulated terminal state.
-ALTER TABLE lab_steps
-  ADD COLUMN IF NOT EXISTS practice_command TEXT,
-  ADD COLUMN IF NOT EXISTS practice_output TEXT,
-  ADD COLUMN IF NOT EXISTS practice_explanation TEXT;
+-- Simulated practice mode was removed: every lab is a real, isolated Docker
+-- container, so the practice tables/columns and the old provider defaults go
+-- away. Harmless on databases that never had practice mode.
+ALTER TABLE lab_steps DROP COLUMN IF EXISTS practice_command;
+ALTER TABLE lab_steps DROP COLUMN IF EXISTS practice_output;
+ALTER TABLE lab_steps DROP COLUMN IF EXISTS practice_explanation;
 
-CREATE TABLE IF NOT EXISTS lab_practice_sessions (
-  id               BIGSERIAL PRIMARY KEY,
-  lab_id           BIGINT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
-  user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  cwd              VARCHAR(300) NOT NULL DEFAULT '/home/student',
-  fs_state         JSONB NOT NULL DEFAULT '{}',
-  history          JSONB NOT NULL DEFAULT '[]',
-  completed_steps  JSONB NOT NULL DEFAULT '[]',
-  started_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_activity_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  reset_at         TIMESTAMPTZ,
-  UNIQUE (lab_id, user_id)
-);
+DROP TABLE IF EXISTS lab_practice_sessions;
 
-CREATE INDEX IF NOT EXISTS lab_practice_sessions_user_idx
-  ON lab_practice_sessions(user_id, lab_id);
+-- Labs always run on a real provider now.
+ALTER TABLE labs ALTER COLUMN provider_hint SET DEFAULT 'docker';
+ALTER TABLE lab_sessions ALTER COLUMN provider SET DEFAULT 'docker';
 
 -- ============================================================
 -- migration tracking (matches server/src/db/migrate.js)
@@ -520,8 +512,7 @@ INSERT INTO schema_migrations (name, checksum) VALUES
 ('001_initial_schema.sql', 'f645feac76daa1e116a1e35272956aa5'),
 ('002_fix_updated_at_triggers.sql', '99357146903739f594cd92df0b7983a7'),
 ('003_course_subcategories.sql', 'e5c27ce03ca07c3a0fe2f58c9275d318'),
-('004_lab_container_runtime.sql', 'a82c98ddfb33f99796e4d68a4aee3351'),
-('005_practice_mode.sql', '43296dfd2a64ab4a674ea7d6f9990bb2')
+('004_lab_container_runtime.sql', 'a82c98ddfb33f99796e4d68a4aee3351')
 ON CONFLICT (name) DO NOTHING;
 
 COMMIT;

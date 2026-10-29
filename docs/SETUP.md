@@ -56,6 +56,39 @@ DB_PASSWORD=<your-password>
 
 Keep the two env files in sync. `server/.env` overrides `.env` because the server loads both.
 
+## Email: verification and password reset
+
+Registration sends a verification email and "Forgot password" sends a reset link.
+Both flows work without mail credentials:
+
+```dotenv
+APP_URL=http://localhost:5173
+MAIL_FROM="CyberITA+ <no-reply@cyberita.plus>"
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=you@gmail.com
+# SMTP_PASS=your-gmail-app-password   # Gmail: create an App Password
+EMAIL_VERIFY_TTL_MINUTES=1440
+PASSWORD_RESET_TTL_MINUTES=60
+```
+
+- **Without SMTP** every message is stored in the `email_outbox` table, printed to
+  the server log, and the API echoes `devVerificationLink` / `devResetLink` in the
+  response, so the pages can show the link directly. Never enabled in production.
+- **With SMTP** messages are delivered for real and links are never echoed back.
+
+Security properties: tokens are random 32-byte values stored only as SHA-256
+hashes, expire (24 h for verification, 60 min for reset), are single use, a
+password reset revokes every refresh token, and both endpoints return the same
+answer for unknown addresses so they cannot be used to probe accounts.
+
+Login hardening: five failed attempts lock the account for 15 minutes, and failed
+logins always answer "Incorrect email or password." Emails are rate limited to
+8 requests per 15 minutes per client.
+
+Accounts created before this feature are backfilled as verified by migration
+`016`; new accounts see a "Resend verification" banner until they verify.
+
 ## Install and run
 
 ```bash
@@ -137,30 +170,31 @@ Security notes:
 - Access to the Docker daemon is root-equivalent. Run the API and Docker on a dedicated lab host, restrict host access, and prefer rootless Docker where possible.
 - Root inside the session container is intentional and gives learners a real terminal. Containers are never privileged, have no host mounts and no Docker socket, and keep resource limits, so root applies only to the disposable container.
 - Network access is on by default so `apt` works. Restrict outbound traffic at the host/network level if learners should not reach arbitrary internet hosts, or disable networking per lab.
-- `LAB_PROVIDER=mock` remains available for automated tests only. It does not execute real commands and must not be used for real lab delivery.
+- Two lab providers ship in production: `docker` for course practicals and `practice` for container-less practice terminals. The in-process simulator (`server/tests/support/lab-mock/`) is registered only by the automated test suite and never runs in production.
 
-### Practice mode
+### Two lab modes
 
-Every lab exposes a simulated practice mode alongside the real Docker lab. Practice is designed for safe, repeatable rehearsal before a learner starts a billable container session:
+CyberITA+ deliberately separates warm-up practice from graded course work:
 
-- Commands run against an in-memory mock shell, never against a server or Docker container.
-- The UI shows a permanent "simulated" notice and never claims that a real machine was provisioned.
-- Learners can reset the simulation, repeat commands, and mark steps as practised.
-- Completing a step requires running the lab author's `practiceCommand`; the expected output and explanation are shown to guide the learner.
-- Progress is stored in `lab_practice_sessions` and survives page reloads.
-- Practice requires course enrollment, creates no `lab_sessions` row, and does not require screenshots.
-- Practice content is authored per step in the instructor lab editor (`practiceCommand`, `practiceOutput`, `practiceExplanation`).
+| Mode | Runtime | Docker required | Graded |
+| --- | --- | --- | --- |
+| **Practice terminal** (`labs.is_practice`) | In-process simulated Ubuntu shell (`PracticeLabProvider`, `server/src/labs/practice/`) | No | No |
+| **Course practical** | One isolated Docker container per session (`DockerLabProvider`) | Yes | Yes, with a practical report |
 
-Practice API:
+Practice terminals start instantly, keep working while the Docker engine is offline, have no session expiry, and never touch a lab server or container. Their state lives in `lab_sessions.fs_state`, so a reload resumes the same simulated filesystem. Stopping a practice session discards that sandbox; the next start is clean.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/labs/:id/practice` | Load simulated session, steps and progress |
-| `POST` | `/api/labs/:id/practice/exec` | Run a simulated command |
-| `POST` | `/api/labs/:id/practice/steps/:stepId/complete` | Mark a step as practised |
-| `POST` | `/api/labs/:id/practice/reset` | Reset the simulation |
+Practice labs need no course enrollment, produce no practical report and cannot be submitted for grading. Create one from **Lab builder → Auto-generate lab** (tick *Practice lab*) or tick the practice toggle in any lab's settings. Course labs keep the screenshot evidence and written report workflow.
 
-Only the real lab starts a container session. Real sessions use the WebSocket endpoint at `/ws` with `lab.attach` and `lab.exec` messages, and require screenshot evidence plus the written report workflow.
+In the student UI, **Practical labs** shows two clear options: *Practice terminal* (instant, no Docker) and *Course practicals* (real containers). When Docker is offline only the course option is blocked; the practice terminal stays available.
+
+Instructors and admins can generate content from a title plus a short brief:
+
+- **Content Studio** (`/instructor/studio`) creates a lab, quiz and assignment in one step.
+- **Lab builder**, **Quizzes** and **Assignments** each have their own *Auto-generate* button; manual authoring is unchanged.
+
+Generation is deterministic and blueprint based (no external AI call). Generated labs only use tools present in the runtime image and ship fixture files through `initial_files`, so course steps verify against real command output and practice steps run in the simulated shell.
+
+Real lab sessions use the WebSocket endpoint at `/ws` with `lab.attach` and `lab.exec` messages.
 
 ## Troubleshooting
 

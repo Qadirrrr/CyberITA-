@@ -7,6 +7,7 @@ import { useAuth, dashboardPath } from '../../context/AuthContext';
 import api from '../../lib/api';
 import useClickOutside from '../../hooks/useClickOutside';
 import { Button } from '../ui';
+import ThemeToggle from '../ThemeToggle';
 import {
   IconArrowRight,
   IconChevronDown,
@@ -91,7 +92,7 @@ function CatalogMenu({ label, groups, loading, allHref, allLabel, itemHref, empt
         aria-expanded={open}
         aria-haspopup="true"
         className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-          open ? 'text-white' : 'text-slate-400 hover:text-slate-100'
+          open ? 'text-slate-900 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
         }`}
       >
         {label}
@@ -100,8 +101,8 @@ function CatalogMenu({ label, groups, loading, allHref, allLabel, itemHref, empt
 
       {open && (
         <div className="absolute left-0 top-full z-50 pt-2">
-          <div className="flex w-[min(32rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-white/10 bg-night-900/95 shadow-2xl shadow-black/40 backdrop-blur-xl">
-            <ul className="max-h-[70vh] w-56 shrink-0 overflow-y-auto border-r border-white/5 py-2">
+          <div className="flex w-[min(32rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-night-900/95 dark:shadow-black/40">
+            <ul className="max-h-[70vh] w-56 shrink-0 overflow-y-auto border-r border-slate-100 py-2 dark:border-white/5 bg-slate-50/50 dark:bg-transparent">
               {groups.map((group) => {
                 const active = activeGroup?.name === group.name;
                 return (
@@ -112,7 +113,9 @@ function CatalogMenu({ label, groups, loading, allHref, allLabel, itemHref, empt
                       onFocus={() => setActiveName(group.name)}
                       onClick={() => setActiveName(group.name)}
                       className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition ${
-                        active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                        active
+                          ? 'bg-brand-50 font-medium text-brand-700 dark:bg-white/10 dark:text-white'
+                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white'
                       }`}
                     >
                       <span className="truncate">{group.name}</span>
@@ -244,7 +247,7 @@ function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-night-950/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/5 dark:bg-night-950/80">
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
           <Logo />
@@ -273,7 +276,7 @@ function Navbar() {
                 to={link.to}
                 className={({ isActive }) =>
                   `rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    isActive ? 'text-white' : 'text-slate-400 hover:text-slate-100'
+                    isActive ? 'font-semibold text-brand-600 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
                   }`
                 }
               >
@@ -283,12 +286,13 @@ function Navbar() {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-2.5 lg:flex">
+          <ThemeToggle />
           {user ? (
             <>
               <Link
                 to={dashboardPath(user.role)}
-                className="mr-1 text-sm font-medium text-slate-300 transition hover:text-white"
+                className="mr-1 text-sm font-medium text-slate-700 transition hover:text-brand-600 dark:text-slate-300 dark:hover:text-white"
               >
                 Dashboard
               </Link>
@@ -311,14 +315,17 @@ function Navbar() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="rounded-lg p-2 text-slate-300 transition hover:bg-white/5 lg:hidden"
-          aria-label="Toggle navigation"
-        >
-          {open ? <IconX size={22} /> : <IconMenu size={22} />}
-        </button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <ThemeToggle size="sm" />
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+            aria-label="Toggle navigation"
+          >
+            {open ? <IconX size={22} /> : <IconMenu size={22} />}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -388,7 +395,7 @@ function Navbar() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-night-950/60">
+    <footer className="border-t border-slate-200 bg-slate-50/70 dark:border-white/5 dark:bg-night-950/60">
       <div className="container-page grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <Logo />

@@ -174,9 +174,9 @@ export default function AboutPage() {
 
       <section className="container-page pb-16 lg:pb-24">
         <Card className="border-brand-400/20 bg-gradient-to-br from-brand-500/[0.1] via-night-900 to-accent-500/[0.08] p-8 text-center sm:p-12">
-          <Badge tone="brand" className="mb-4">
-            <IconSparklesIcon /> Start learning today
-          </Badge>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
+            <IconZap size={14} /> Start Learning Today
+          </div>
           <h2 className="mx-auto max-w-2xl text-balance font-display text-2xl font-semibold sm:text-3xl">
             The best way to understand CyberITA+ is to run your first command.
           </h2>
@@ -202,8 +202,4 @@ export default function AboutPage() {
       </section>
     </div>
   );
-}
-
-function IconSparklesIcon() {
-  return <IconZap size={13} />;
 }

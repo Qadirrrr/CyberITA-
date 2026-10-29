@@ -15,6 +15,9 @@ import ContactPage from './pages/public/ContactPage';
 import VerifyCertificatePage from './pages/public/VerifyCertificatePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -29,7 +32,6 @@ import StudentCalendarPage from './pages/student/StudentCalendarPage';
 import LabsPage from './pages/student/LabsPage';
 import LabDetailPage from './pages/student/LabDetailPage';
 import LabSessionPage from './pages/student/LabSessionPage';
-import PracticeLabPage from './pages/student/PracticeLabPage';
 import ReportsPage from './pages/student/ReportsPage';
 import ReportEditorPage from './pages/student/ReportEditorPage';
 import CertificatesPage from './pages/student/CertificatesPage';
@@ -52,6 +54,7 @@ import BlogManagePage from './pages/instructor/BlogManagePage';
 import StudentsPage from './pages/instructor/StudentsPage';
 import InstructorQuizzesPage from './pages/instructor/InstructorQuizzesPage';
 import InstructorAssignmentsPage from './pages/instructor/InstructorAssignmentsPage';
+import ContentStudioPage from './pages/instructor/ContentStudioPage';
 import InstructorAnnouncementsPage from './pages/instructor/InstructorAnnouncementsPage';
 
 import AdminOverview from './pages/admin/AdminOverview';
@@ -84,8 +87,12 @@ export default function App() {
 
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
+      <Route path="forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="reset-password" element={<ResetPasswordPage />} />
+      <Route path="verify-email" element={<VerifyEmailPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="labs/session/:sessionId" element={<LabSessionPage />} />
         <Route element={<DashboardLayout />}>
           <Route path="student" element={<StudentDashboard />} />
           <Route path="student/courses" element={<MyCoursesPage />} />
@@ -108,7 +115,6 @@ export default function App() {
           <Route path="learn/quizzes/:id" element={<QuizPage />} />
           <Route path="learn/assignments/:id" element={<AssignmentPage />} />
           <Route path="labs/:id" element={<LabDetailPage />} />
-          <Route path="labs/:id/practice" element={<PracticeLabPage />} />
           <Route path="labs/session/:sessionId" element={<LabSessionPage />} />
 
           <Route element={<ProtectedRoute roles={['instructor', 'admin']} />}>
@@ -117,6 +123,7 @@ export default function App() {
             <Route path="instructor/courses/new" element={<CourseEditorPage />} />
             <Route path="instructor/courses/:id" element={<CourseEditorPage />} />
             <Route path="instructor/labs" element={<ManageLabsPage />} />
+            <Route path="instructor/studio" element={<ContentStudioPage />} />
             <Route path="instructor/labs/:id" element={<LabEditorPage />} />
             <Route path="instructor/quizzes" element={<InstructorQuizzesPage />} />
             <Route path="instructor/assignments" element={<InstructorAssignmentsPage />} />

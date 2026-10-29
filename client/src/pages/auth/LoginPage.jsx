@@ -14,6 +14,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const registered = Boolean(location.state?.registered);
+  const verificationSent = Boolean(location.state?.verificationSent);
+  const devVerificationLink = location.state?.devVerificationLink || '';
+  const passwordReset = Boolean(location.state?.passwordReset);
   const [form, setForm] = useState({ email: location.state?.email || '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -55,9 +58,41 @@ export default function LoginPage() {
         </>
       }
     >
+      {passwordReset && (
+        <Alert tone="success" title="Password updated" className="mb-5">
+          Your password has been changed. Sign in with the new one.
+        </Alert>
+      )}
+
       {registered && (
-        <Alert tone="success" title="Account created" className="mb-5">
-          Your account is ready. Sign in to continue.
+        <Alert tone={verificationSent ? 'info' : 'success'} title="Account created" className="mb-5">
+          Your account is ready.{' '}
+          {verificationSent ? (
+            <>
+              We emailed you a verification link — open it to verify your address.
+            </>
+          ) : (
+            <>Sign in to continue.</>
+          )}
+        </Alert>
+      )}
+
+      {registered && devVerificationLink && (
+        <Alert tone="info" title="Development mode" className="mb-5">
+          SMTP is not configured, so the verification link is shown here instead of being emailed:{' '}
+          <a href={devVerificationLink} className="break-all font-medium text-brand-300 underline">
+            {devVerificationLink}
+          </a>
+        </Alert>
+      )}
+
+      {!registered && !passwordReset && location.state?.email && (
+        <Alert tone="info" title="Email not verified yet" className="mb-5">
+          Your email address has not been verified. Sign in and use the “Resend verification” button in the banner, or{' '}
+          <Link to={`/verify-email?email=${encodeURIComponent(location.state.email)}`} className="font-medium text-brand-300 underline">
+            request a new verification email
+          </Link>
+          .
         </Alert>
       )}
 
@@ -105,7 +140,7 @@ export default function LoginPage() {
         </div>
         <div className="flex items-center justify-between">
           <Checkbox label="Keep me signed in" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-          <Link to="/contact" className="text-xs text-slate-500 underline-offset-4 hover:text-brand-300 hover:underline">
+          <Link to="/forgot-password" className="text-xs text-slate-500 underline-offset-4 hover:text-brand-300 hover:underline">
             Forgot password?
           </Link>
         </div>

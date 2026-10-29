@@ -139,6 +139,9 @@ export async function getSubmissionForSession(sessionId) {
 export async function submitLabSession({ session, lab, user, note = '', file = null }) {
   if (session.status === 'error') throw badRequest('This lab session failed and cannot be submitted.');
   if (lab.status !== 'published') throw badRequest('Only published labs can be submitted.');
+  if (lab.is_practice) {
+    throw badRequest('Practice labs are open-ended: there is nothing to submit for review.');
+  }
 
   const { rows: remainingRows } = await query(
     `SELECT COUNT(*)::int AS remaining FROM lab_steps s

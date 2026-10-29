@@ -4,14 +4,25 @@ Real hands-on labs run one isolated Docker container per learner session. This
 document explains exactly what is required to run them for real, how to verify
 the stack end to end, and how to troubleshoot it.
 
+CyberITA+ offers two distinct lab experiences:
+
+| Mode | Runtime | Needs Docker? | Graded? |
+| --- | --- | --- | --- |
+| **Practice terminal** (`labs.is_practice = true`) | In-process simulated Ubuntu shell (`PracticeLabProvider`) | No | No |
+| **Course practical** (every other lab) | One disposable Docker container per session (`DockerLabProvider`) | Yes | Yes, with a practical report |
+
+Practice terminals keep working while Docker is offline; course practicals do
+not start until the engine and image are ready.
+
 ## 1. What the platform already provides (no setup needed)
 
 | Piece | Where it lives | What it does |
 | --- | --- | --- |
 | Container provider | `server/src/labs/docker/` | Creates one disposable container per session (memory/CPU/PID limits, no `--privileged`, no host mounts, no Docker socket), creates a per-session root identity named after the learner, bootstraps the workspace, and executes commands as UID 0 inside the container. |
-| Terminal bridge | `server/src/websocket/index.js` | Line-oriented terminal over `/ws` (`lab.attach`, `lab.exec`), with per-session history persisted in PostgreSQL. |
-| Session lifecycle | `server/src/services/labService.js` | Start/reuse sessions, verify lab steps against executed commands, expire after `LAB_SESSION_TTL_MINUTES`, sweep expired containers every `LAB_CLEANUP_INTERVAL_MINUTES`. |
-| Practice mode | `server/src/labs/mock/` + `PracticeLabPage` | Simulated fallback so learners keep working when no Docker engine is available. |
+| Practice provider | `server/src/labs/practice/` | Container-less practice terminals. `PracticeShell` runs a simulated Ubuntu 22.04 shell (filesystem, permissions, processes, networking, text processing, hashing, package/service stubs) entirely in-process; state is persisted per session in `lab_sessions.fs_state`. |
+| Terminal bridge | `server/src/websocket/index.js` | Line-oriented terminal over `/ws` (`lab.attach`, `lab.exec`), with per-session history persisted in PostgreSQL. The same bridge serves Docker and practice sessions. |
+| Session lifecycle | `server/src/services/labService.js` | Start/reuse sessions, verify lab steps against executed commands, expire real labs after `LAB_SESSION_TTL_MINUTES`, sweep expired containers every `LAB_CLEANUP_INTERVAL_MINUTES`. Practice sessions have no expiry and are torn down when the learner stops them. |
+| Test simulator | `server/tests/support/lab-mock/` | In-process provider used only by the automated test suite (`LAB_PROVIDER=mock`); never registered in production. The real practice provider is always registered, in tests and production alike. |
 | Admin monitoring | **Admin → Lab Infrastructure** | Service health, provider breakdown, sessions, failed labs, limits, cleanup, plus a live **Runtime readiness** check. |
 | Smoke test | `npm run lab:smoke` (in `/server`) | Provisions a throwaway container, runs real commands, removes the container. |
 
@@ -117,8 +128,8 @@ readiness check**. It verifies, in order:
 4. lab container inventory (spot orphans),
 5. expired session sweep.
 
-Learner view: **Lab detail → Launch hands-on lab**. When Docker is down, the
-same page clearly offers practice mode instead — nothing breaks.
+Learner view: **Lab detail → Start real lab**. When Docker is down the page
+clearly says labs cannot start until the engine is running.
 
 ## 5. Lab servers and student submissions
 
@@ -194,11 +205,86 @@ attachments. Admins can **Acknowledge** a submission
 | `GET /api/lab-submissions/:id/attachment` | owner/instructor/admin | Authorized download |
 | `POST /api/lab-submissions/:id/review` | owning instructor/admin | Approve / request changes |
 
-## 6. Configuration reference
+## 6. Practice labs and auto-generated content
+
+### Practice terminals (container-less)
+
+Practice labs are warm-up terminals. They are **not** Docker containers: the
+session is served by `PracticeLabProvider` (`server/src/labs/practice/`), which
+replaces the Docker container with an in-process simulated Ubuntu 22.04 shell.
+
+- **Provider selection is per lab.** `startSession` calls
+  `getProviderForLab(lab)`: `labs.is_practice = true` always uses `practice`;
+  every other lab uses `LAB_PROVIDER` (`docker` in production, `mock` in tests).
+- **No container, no lab server.** Practice sessions never resolve a lab server,
+  never contact Docker, and record `lab_server_id = NULL`. They start even when
+  the engine is down, when a lab is assigned to a disabled server, or when the
+  image has not been built.
+- **Simulated shell.** `PracticeShell` supports a practical Ubuntu subset:
+  - filesystem: `pwd cd ls cat head tail touch mkdir rm cp mv find tree stat file`
+  - text: `echo grep awk sort uniq cut tr sed wc`
+  - integrity: `sha256sum sha1sum md5sum base64`
+  - system: `whoami id groups uname hostname date uptime nproc ps pgrep top df du free env history`
+  - network: `ip ifconfig ping traceroute ss netstat curl wget nmap getent`
+  - services: `apt apt-get systemctl service sudo`
+  - shell syntax: pipelines (`|`), redirection (`>` / `>>`), `&&`, `||`, `;`,
+    `~` expansion, quotes, `sudo`, `help`, `clear`, `exit`.
+- **Realistic seed filesystem.** `/etc/os-release`, `/etc/passwd`, `/etc/resolv.conf`,
+  `/proc/{loadavg,1,cpuinfo,meminfo,mounts,self/ns}`, `/bin/bash` (ELF marker),
+  `/var/log/{syslog,auth.log,nginx/…}` and a learner home directory are seeded,
+  then the lab's `initial_files` are merged in (for example
+  `practice/access.log`).
+- **Persistent, private state.** The simulated filesystem and cwd are stored in
+  `lab_sessions.fs_state`/`cwd`, so a page reload resumes exactly where the
+  learner stopped. Nothing executes on the host and no network traffic is sent.
+- **Unlimited sessions.** `expires_at` is `NULL`; the learner ends the session
+  with **Stop**. Stopping discards the simulated filesystem; the next start is a
+  clean sandbox.
+- **Not graded.** No course or enrollment is required (`course_id` stays `NULL`),
+  no practical report is generated and the submission/review flow is disabled
+  server-side (`POST /api/reports/sessions/:id/generate` and
+  `POST /api/labs/sessions/:id/submit` both return `400`).
+
+In the UI, **Practical labs** presents two explicit options: *Practice terminal*
+(instant, no Docker, unlimited) and *Course practicals* (real containers, graded).
+Create practice labs from **Lab builder → Auto-generate lab** (tick *Practice
+lab*) or by editing any lab and ticking the practice toggle.
+
+### Auto-generated labs, quizzes and assignments
+
+Instructors and admins can turn a *title + short brief* into finished content.
+Generation is deterministic and blueprint based; it never calls an external AI
+service, so the same brief always produces the same structure.
+
+| Method & path | Who | Purpose |
+| --- | --- | --- |
+| `POST /api/labs/generate` | instructor/admin | Generate + save a lab and its steps |
+| `POST /api/quizzes/generate` | instructor/admin | Generate MCQs + scenario questions |
+| `POST /api/assignments/generate` | instructor/admin | Generate a full assignment brief |
+| `POST /api/content/generate` | instructor/admin | One call: lab + quiz + assignment |
+
+Each endpoint accepts `details` (free-text scope). `autoSave` is available on
+the single-artefact endpoints; the Content Studio endpoint always saves and
+supports `publish` plus per-artefact toggles (`includeLab`, `includeQuiz`,
+`includeAssignment`).
+
+Generated labs only use tooling that exists in `cyberita/lab-runtime:1.0`
+(coreutils, procps, iproute2, nmap, ping, file, grep, awk, sha256sum, python3).
+Starter data is shipped through `initial_files` (for example
+`practice/access.log` for log analysis), so a lab works without internet access.
+Those are ordinary files inside the real container — nothing about the runtime is
+simulated. Steps are verified against real command output inside the container.
+
+The same blueprints are used for practice labs, and the practice shell implements
+every command and pipe they rely on. `server/tests/practiceLabs.test.js` executes
+each generated step in `PracticeShell` and asserts the exit code and output
+pattern, so a generated practice lab is guaranteed to be solvable in-browser.
+
+## 7. Configuration reference
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `LAB_PROVIDER` | `docker` | `docker` for real labs, `mock` for automated tests only. |
+| `LAB_PROVIDER` | `docker` | Provider for **course** labs. `docker` for real containers. `mock` is a test-only simulator registered by the automated test suite. Practice labs always use the built-in `practice` provider regardless of this value. |
 | `LAB_DOCKER_IMAGE` | `cyberita/lab-runtime:1.0` | Default image; overridable per lab in the lab editor. |
 | `LAB_DOCKER_BINARY` | `docker` | Docker CLI binary (or full path). |
 | `LAB_DOCKER_HOST` | *(empty)* | Remote daemon, e.g. `ssh://labuser@lab-host`. |
@@ -208,10 +294,10 @@ attachments. Admins can **Acknowledge** a submission
 | `LAB_DOCKER_TIMEOUT_MS` | `180000` | Per-command timeout in a session. |
 | `LAB_DOCKER_PROVISION_TIMEOUT_MS` | `180000` | Timeout for image/creation steps. |
 | `LAB_DOCKER_MAX_OUTPUT_BYTES` | `65536` | Output cap per command. |
-| `LAB_SESSION_TTL_MINUTES` | `120` | Session lifetime; expired sessions are swept. |
-| `LAB_CLEANUP_INTERVAL_MINUTES` | `5` | Background sweep interval. |
+| `LAB_SESSION_TTL_MINUTES` | `120` | Lifetime of **real** lab sessions; expired sessions are swept. Practice sessions never expire. |
+| `LAB_CLEANUP_INTERVAL_MINUTES` | `5` | Background sweep interval (real labs only). |
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -223,8 +309,11 @@ attachments. Admins can **Acknowledge** a submission
 | `apt-get install` cannot reach the archive | Network access is disabled for that lab, or the host has no outbound internet. | Enable *Allow outbound network access* in the lab editor and check the Docker host's connectivity. |
 | Containers accumulate | Sessions never expire/swept. | Admin → Lab Infrastructure → *Cleanup Expired*; check the readiness check's sweep result. |
 | Very slow first session | Image being pulled/built. | Pre-pull: `docker pull ubuntu:22.04` and build the runtime image. |
+| Practice terminal works but a course lab does not start | This is expected while Docker is offline: practice labs are container-less. | Fix Docker for course labs; practice needs no action. |
+| A command says `bash: <cmd>: command not found` in a practice terminal | The practice shell implements a fixed Ubuntu subset. | Run `help` for the reference; use the commands shown in the lab steps. |
+| `POST /api/labs/:id/sessions` returns 500 with *unsupported Unicode escape sequence* | A NUL byte reached `lab_sessions.fs_state`. | Fixed in `PracticeShell.snapshot()`, which strips NUL bytes before persisting. |
 
-## 8. Security notes
+## 9. Security notes
 
 - Access to the Docker daemon is root-equivalent. Run the API and Docker on a
   dedicated lab host, restrict host access, and prefer rootless Docker where
@@ -243,8 +332,15 @@ attachments. Admins can **Acknowledge** a submission
   storage between sessions.
 - Session containers are labelled `cyberita.lab=true`, named `cyberita-lab-*`
   and removed on stop/expiry; the readiness check surfaces orphans.
-- `LAB_PROVIDER=mock` never executes real commands and must not be used for
-  real lab delivery.
+- **Practice terminals are a simulator, not a shell.** `PracticeShell` never
+  spawns a process, never touches the host filesystem and never opens a network
+  connection. Commands are implemented in JavaScript against a per-session JSON
+  filesystem, the `curl`/`ping`/`nmap` output is canned, and `sleep` returns
+  immediately. That makes practice labs safe by construction and independent of
+  Docker.
+- Two providers ship in production: `docker` for course practicals and
+  `practice` for container-less practice terminals. The `mock` provider exists
+  for automated tests only and is registered by the test bootstrap.
 - Lab submissions are scoped server-side: students see only their own, an
   instructor only their own courses' submissions, admins the whole ledger.
   Attachments are served through an authorized download endpoint and stored

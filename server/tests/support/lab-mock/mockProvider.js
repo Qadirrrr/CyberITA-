@@ -1,16 +1,16 @@
 import crypto from 'node:crypto';
-import { LabProvider } from '../provider.js';
+import { LabProvider } from '../../../src/labs/provider.js';
 import { MockShell } from './mockShell.js';
 import { defaultFs } from './virtualFs.js';
-import { studentIdentity } from '../identity.js';
+import { studentIdentity } from '../../../src/labs/identity.js';
 
 /**
- * Mock lab provider, simulates provisioning entirely in-process.
+ * TEST-ONLY in-process lab simulator.
  *
  * It behaves exactly like a real provider from the API's point of view
  * (async provision/deprovision, instance ids, terminals), so automated
- * tests can exercise the full lab workflow without Docker. It never
- * executes real commands and must remain test-only.
+ * tests can exercise the full lab workflow without Docker. It is never
+ * registered in production code: students always get real Docker labs.
  */
 export class MockLabProvider extends LabProvider {
   static providerName = 'mock';
@@ -21,7 +21,7 @@ export class MockLabProvider extends LabProvider {
   }
 
   async isAvailable() {
-    return { ok: true, reason: 'in-process simulated provisioning' };
+    return { ok: true, reason: 'in-process simulated provisioning (tests only)' };
   }
 
   async provision({ lab, user }) {

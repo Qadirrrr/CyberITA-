@@ -11,3 +11,9 @@ const { resetDatabase, runMigrations } = await import('../src/db/migrate.js');
 
 await resetDatabase(process.env.DB_NAME);
 await runMigrations({ dbName: process.env.DB_NAME, silent: true });
+
+// Register the in-process lab simulator for automated tests. Production code
+// only ever ships the Docker provider; this keeps lab tests hermetic.
+const { registerProvider } = await import('../src/labs/providers/index.js');
+const { MockLabProvider } = await import('./support/lab-mock/mockProvider.js');
+registerProvider(MockLabProvider);

@@ -30,6 +30,7 @@ const quizSchema = z.object({
 
 const generateQuizSchema = z.object({
   title: z.string().trim().min(2).max(200),
+  details: z.string().trim().max(4000).default(''),
   mcqCount: z.coerce.number().int().min(1).max(30).default(5),
   subjectiveCount: z.coerce.number().int().min(0).max(20).default(2),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'),
@@ -224,10 +225,11 @@ router.post(
   requireRole('admin', 'instructor'),
   validateBody(generateQuizSchema),
   asyncHandler(async (req, res) => {
-    const { title, mcqCount, subjectiveCount, difficulty, courseId, lessonId, autoSave } = req.body;
+    const { title, details, mcqCount, subjectiveCount, difficulty, courseId, lessonId, autoSave } = req.body;
 
     const generated = generateQuiz({
       title,
+      details,
       mcqCount,
       subjectiveCount,
       difficulty,

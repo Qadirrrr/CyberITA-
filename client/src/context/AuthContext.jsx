@@ -66,7 +66,9 @@ export function AuthProvider({ children }) {
     const { data } = await api.post('/auth/register', payload);
     setAccessToken(data.accessToken);
     setUser(data.user);
-    return data.user;
+    // Full response: the caller also needs the email-verification extras
+    // (emailVerificationSent / devVerificationLink).
+    return data;
   }, []);
 
   const logout = useCallback(async () => {

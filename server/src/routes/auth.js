@@ -17,11 +17,17 @@ import {
 import { recordActivity } from '../utils/activity.js';
 import logger from '../config/logger.js';
 import { emailSchema, fullNameSchema, passwordSchema } from '../utils/validation.js';
+import { issueAccountToken, consumeAccountToken } from '../services/accountTokens.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  mailConfigured,
+} from '../services/mailer.js';
 
 const router = Router();
 
 const SESSION_COOKIE = 'cyberita_session';
-const PUBLIC_USER_COLUMNS = `id, email, full_name, role, headline, bio, avatar_url, is_active, last_login_at, created_at`;
+const PUBLIC_USER_COLUMNS = `id, email, full_name, role, headline, bio, avatar_url, is_active, email_verified_at, last_login_at, created_at`;
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -30,6 +36,19 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: { message: 'Too many authentication attempts, please try again later.', code: 'rate_limited' } },
 });
+
+// Password reset and verification emails are expensive and attract abuse:
+// a much tighter budget than generic auth endpoints.
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.isTest ? 10_000 : 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many email requests, please try again in a few minutes.', code: 'rate_limited' } },
+});
+
+const MAX_FAILED_LOGINS = 5;
+const LOCKOUT_MINUTES = 15;
 
 const registerSchema = z.object({
   fullName: fullNameSchema,
@@ -42,6 +61,28 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),
   remember: z.boolean().optional().default(true),
 });
+
+const forgotPasswordSchema = z.object({ email: emailSchema });
+
+const resetPasswordSchema = z.object({
+  email: emailSchema,
+  token: z.string().trim().min(20, 'Invalid reset token.').max(200),
+  password: passwordSchema,
+});
+
+const verifyEmailSchema = z.object({
+  email: emailSchema,
+  token: z.string().trim().min(20, 'Invalid verification token.').max(200),
+});
+
+const resendVerificationSchema = z.object({ email: emailSchema.optional().nullable() });
+
+/** Links are only echoed back outside production, and only when SMTP is not configured. */
+function devLink(path, params) {
+  if (env.isProduction || mailConfigured) return {};
+  const query = new URLSearchParams(params).toString();
+  return { devLink: `${env.mail.appUrl}${path}?${query}` };
+}
 
 function cookieOptions({ path, maxAge, remember = true }) {
   const options = {
@@ -101,6 +142,18 @@ async function buildSession(user, req) {
   return { user, accessToken, refreshToken };
 }
 
+/** Issues a fresh verification token and emails it. Never throws into the request path. */
+async function deliverVerification(user) {
+  try {
+    const { token } = await issueAccountToken(user, 'email_verification');
+    const result = await sendVerificationEmail({ user, token });
+    return { ok: result.ok, ...devLink('/verify-email', { token, email: user.email }) };
+  } catch (error) {
+    logger.error('Could not send verification email', { userId: user.id, error: error.message });
+    return { ok: false };
+  }
+}
+
 router.post(
   '/register',
   authLimiter,
@@ -119,10 +172,16 @@ router.post(
     const user = rows[0];
     const session = await buildSession(user, req);
     await logActivity(user.id, 'account.registered');
+    const verification = await deliverVerification(user);
     setRefreshCookie(res, session.refreshToken, true);
     setAccessCookie(res, session.accessToken, true);
     setSessionCookie(res, true);
-    res.status(201).json({ user: session.user, accessToken: session.accessToken });
+    res.status(201).json({
+      user: session.user,
+      accessToken: session.accessToken,
+      emailVerificationSent: verification.ok,
+      ...verification.devLink ? { devVerificationLink: verification.devLink } : {},
+    });
   })
 );
 
@@ -134,15 +193,37 @@ router.post(
     const { email, password, remember } = req.body;
     const { rows } = await query(`SELECT * FROM users WHERE LOWER(email) = LOWER($1)`, [email]);
     const user = rows[0];
-    if (!user || !(await verifyPassword(password, user.password_hash))) {
+
+    // Brute-force protection: lock the account briefly after repeated failures.
+    if (user?.locked_until && new Date(user.locked_until) > new Date()) {
+      throw unauthorized('Too many failed sign-in attempts. Please wait a few minutes and try again.');
+    }
+
+    const passwordOk = user ? await verifyPassword(password, user.password_hash) : false;
+
+    if (!user || !passwordOk) {
+      if (user?.is_active) {
+        const attempts = Number(user.failed_login_attempts || 0) + 1;
+        const lockedUntil = attempts >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null;
+        await query('UPDATE users SET failed_login_attempts = $1, locked_until = $2 WHERE id = $3', [
+          attempts,
+          lockedUntil,
+          user.id,
+        ]);
+        if (lockedUntil) {
+          logger.warn('Account locked after repeated failed logins', { userId: user.id, attempts });
+          throw unauthorized('Too many failed sign-in attempts. This account is locked for a few minutes.');
+        }
+      }
       throw unauthorized('Incorrect email or password.');
     }
     if (!user.is_active) throw unauthorized('This account has been disabled.');
 
-    await query('UPDATE users SET last_login_at = now() WHERE id = $1', [user.id]);
-    const safeUser = Object.fromEntries(
-      Object.entries(user).filter(([key]) => !['password_hash'].includes(key))
-    );
+    await query('UPDATE users SET last_login_at = now(), failed_login_attempts = 0, locked_until = NULL WHERE id = $1', [
+      user.id,
+    ]);
+    const sensitiveKeys = ['password_hash', 'email_verify_token_hash', 'email_verify_expires_at', 'password_reset_token_hash', 'password_reset_expires_at', 'failed_login_attempts', 'locked_until'];
+    const safeUser = Object.fromEntries(Object.entries(user).filter(([key]) => !sensitiveKeys.includes(key)));
     const session = await buildSession(safeUser, req);
     await logActivity(user.id, 'account.login');
     setRefreshCookie(res, session.refreshToken, remember);
@@ -217,6 +298,91 @@ router.put(
     }
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await hashPassword(newPassword), req.user.id]);
     await query('UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL', [req.user.id]);
+    clearSessionCookies(res);
+    res.json({ ok: true });
+  })
+);
+
+// ---------- email verification ----------
+
+router.post(
+  '/verify-email',
+  emailLimiter,
+  validateBody(verifyEmailSchema),
+  asyncHandler(async (req, res) => {
+    const { email, token } = req.body;
+    const user = await consumeAccountToken({ email, token, kind: 'email_verification' });
+    if (!user) throw badRequest('This verification link is invalid or has expired. Request a new one.');
+    await query('UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1', [user.id]);
+    await logActivity(user.id, 'account.email_verified');
+    res.json({ ok: true });
+  })
+);
+
+router.post(
+  '/resend-verification',
+  emailLimiter,
+  validateBody(resendVerificationSchema),
+  asyncHandler(async (req, res) => {
+    const email = req.user?.email || req.body?.email;
+    if (!email) throw badRequest('Enter the email address of the account.');
+    const { rows } = await query(`SELECT id, email, full_name, email_verified_at FROM users WHERE LOWER(email) = LOWER($1)`, [
+      email,
+    ]);
+    const user = rows[0];
+    // Same response whether or not the account exists: never confirm an address.
+    if (!user || user.email_verified_at) return res.json({ ok: true });
+    const verification = await deliverVerification(user);
+    res.json({ ok: true, emailSent: verification.ok, ...verification.devLink ? { devVerificationLink: verification.devLink } : {} });
+  })
+);
+
+// ---------- password reset ----------
+
+router.post(
+  '/forgot-password',
+  emailLimiter,
+  validateBody(forgotPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const { rows } = await query(`SELECT id, email, full_name, is_active FROM users WHERE LOWER(email) = LOWER($1)`, [email]);
+    const user = rows[0];
+
+    if (user?.is_active) {
+      try {
+        const { token } = await issueAccountToken(user, 'password_reset');
+        const result = await sendPasswordResetEmail({ user, token });
+        await logActivity(user.id, 'account.password_reset_requested');
+        const resetDev = devLink('/reset-password', { token, email: user.email });
+        return res.json({
+          ok: true,
+          emailSent: result.ok,
+          ...resetDev.devLink ? { devResetLink: resetDev.devLink } : {},
+        });
+      } catch (error) {
+        logger.error('Could not send password reset email', { userId: user.id, error: error.message });
+      }
+    }
+    // Always the same answer so the endpoint cannot be used to probe accounts.
+    res.json({ ok: true });
+  })
+);
+
+router.post(
+  '/reset-password',
+  emailLimiter,
+  validateBody(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const { email, token, password } = req.body;
+    const user = await consumeAccountToken({ email, token, kind: 'password_reset' });
+    if (!user) throw badRequest('This reset link is invalid or has expired. Request a new one.');
+    await query('UPDATE users SET password_hash = $1, failed_login_attempts = 0, locked_until = NULL WHERE id = $2', [
+      await hashPassword(password),
+      user.id,
+    ]);
+    // A reset ends every existing session on every device.
+    await query('UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL', [user.id]);
+    await logActivity(user.id, 'account.password_reset');
     clearSessionCookies(res);
     res.json({ ok: true });
   })

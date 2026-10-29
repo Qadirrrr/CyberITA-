@@ -34,10 +34,18 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register({ fullName: form.fullName, email: form.email, password: form.password });
+      const data = await register({ fullName: form.fullName, email: form.email, password: form.password });
       await logout();
-      toast.success('Account created. Please sign in to continue.');
-      navigate('/login', { replace: true, state: { registered: true, email: form.email } });
+      toast.success('Account created. Check your inbox to verify your email.');
+      navigate('/login', {
+        replace: true,
+        state: {
+          registered: true,
+          email: form.email,
+          verificationSent: Boolean(data?.emailVerificationSent),
+          devVerificationLink: data?.devVerificationLink || '',
+        },
+      });
     } catch (err) {
       setErrors(getFieldErrors(err));
       setError(getErrorMessage(err, 'Unable to create your account.'));

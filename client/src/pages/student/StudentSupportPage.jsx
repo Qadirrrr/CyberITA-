@@ -35,7 +35,7 @@ const faqs = [
   {
     question: 'My lab terminal will not start. What should I do?',
     answer:
-      'First open the lab again and use the practice mode if it is available. If the container still fails, send us a support request with the lab name, time and any error text you saw.',
+      'Labs run in a real Docker container on the server. If the terminal will not start, send us a support request with the lab name, time and any error text you saw — the administrator can check the Docker engine.',
   },
   {
     question: 'Can I resubmit an assignment?',
@@ -118,42 +118,42 @@ export default function StudentSupportPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Link
           to="/student/chat"
-          className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-night-850/70 p-4 transition hover:border-brand-400/30"
+          className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-500/40 hover:shadow-md dark:border-white/10 dark:bg-night-850/70 dark:hover:border-brand-400/30"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-400/10 text-brand-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-400/10 dark:text-brand-300">
             <IconChatBubble size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-slate-100">Chat with an instructor</span>
+            <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">Chat with an instructor</span>
             <span className="block text-[11px] text-slate-500">Ask a course-specific question</span>
           </span>
-          <IconArrowRight size={15} className="text-slate-600 group-hover:text-brand-300" />
+          <IconArrowRight size={15} className="text-slate-400 group-hover:text-brand-600 dark:text-slate-600 dark:group-hover:text-brand-300" />
         </Link>
         <Link
           to="/student/courses"
-          className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-night-850/70 p-4 transition hover:border-brand-400/30"
+          className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-accent-500/40 hover:shadow-md dark:border-white/10 dark:bg-night-850/70 dark:hover:border-brand-400/30"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400/10 text-accent-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-accent-400/10 dark:text-accent-300">
             <IconBookOpen size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-slate-100">Course help</span>
+            <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">Course help</span>
             <span className="block text-[11px] text-slate-500">Review lessons and resources</span>
           </span>
-          <IconArrowRight size={15} className="text-slate-600 group-hover:text-brand-300" />
+          <IconArrowRight size={15} className="text-slate-400 group-hover:text-purple-600 dark:text-slate-600 dark:group-hover:text-brand-300" />
         </Link>
         <Link
           to="/student/labs"
-          className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-night-850/70 p-4 transition hover:border-brand-400/30"
+          className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-500/40 hover:shadow-md dark:border-white/10 dark:bg-night-850/70 dark:hover:border-brand-400/30"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
             <IconTerminal size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-slate-100">Lab troubleshooting</span>
+            <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">Lab troubleshooting</span>
             <span className="block text-[11px] text-slate-500">Restart or reset a lab session</span>
           </span>
-          <IconArrowRight size={15} className="text-slate-600 group-hover:text-brand-300" />
+          <IconArrowRight size={15} className="text-slate-400 group-hover:text-amber-600 dark:text-slate-600 dark:group-hover:text-brand-300" />
         </Link>
       </div>
 

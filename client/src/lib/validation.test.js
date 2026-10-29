@@ -3,8 +3,10 @@ import {
   passwordError,
   validateChangePassword,
   validateContactForm,
+  validateForgotPasswordForm,
   validateLoginForm,
   validateRegisterForm,
+  validateResetPasswordForm,
 } from './validation';
 
 describe('password rules', () => {
@@ -39,6 +41,25 @@ describe('auth forms', () => {
     expect(errors.password).toMatch(/at least 8/);
     expect(errors.confirm).toBe('Passwords do not match.');
     expect(errors.accepted).toMatch(/accept the terms/);
+  });
+});
+
+describe('forgot and reset password forms', () => {
+  it('requires a valid email to start a reset', () => {
+    expect(validateForgotPasswordForm({ email: '' }).email).toMatch(/required/);
+    expect(validateForgotPasswordForm({ email: 'nope' }).email).toMatch(/valid email/);
+    expect(validateForgotPasswordForm({ email: 'you@example.com' })).toEqual({});
+  });
+
+  it('requires a token plus matching, strong passwords to finish a reset', () => {
+    expect(validateResetPasswordForm({ password: '', confirm: '', token: '' })).toMatchObject({
+      token: expect.stringMatching(/token/i),
+      password: expect.stringMatching(/required|at least 8/),
+    });
+    expect(
+      validateResetPasswordForm({ password: 'Secret12', confirm: 'Other123', token: 'abc' }).confirm
+    ).toBe('Passwords do not match.');
+    expect(validateResetPasswordForm({ password: 'Secret12', confirm: 'Secret12', token: 'abc' })).toEqual({});
   });
 });
 

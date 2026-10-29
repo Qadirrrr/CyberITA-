@@ -65,6 +65,18 @@ export const env = {
     maxMb: Number(process.env.MAX_UPLOAD_MB || 8),
     maxBytes: Number(process.env.MAX_UPLOAD_MB || 8) * 1024 * 1024,
   },
+  mail: {
+    // SMTP is optional: without it every email is stored in email_outbox and
+    // printed to the server log, so local development never silently breaks.
+    host: process.env.SMTP_HOST || '',
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.MAIL_FROM || process.env.SMTP_USER || 'CyberITA+ <no-reply@cyberita.plus>',
+    appUrl: (process.env.APP_URL || 'http://localhost:5173').replace(/\/+$/, ''),
+    verifyTtlMinutes: parsePositiveNumber(process.env.EMAIL_VERIFY_TTL_MINUTES, 24 * 60),
+    resetTtlMinutes: parsePositiveNumber(process.env.PASSWORD_RESET_TTL_MINUTES, 60),
+  },
 };
 
 export default env;

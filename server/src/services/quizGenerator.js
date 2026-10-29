@@ -382,12 +382,19 @@ const DOMAIN_BANKS = {
  */
 function detectDomain(title) {
   const normalized = (title || '').toLowerCase();
+  let best = null;
+  let bestScore = 0;
   for (const [key, domain] of Object.entries(DOMAIN_BANKS)) {
-    if (domain.match.some((keyword) => normalized.includes(keyword))) {
-      return { key, bank: domain };
+    const score = domain.match.reduce(
+      (total, keyword) => (normalized.includes(keyword) ? total + keyword.length : total),
+      0
+    );
+    if (score > bestScore) {
+      best = { key, bank: domain };
+      bestScore = score;
     }
   }
-  return { key: 'general_cyber', bank: DOMAIN_BANKS.web_security };
+  return best || { key: 'general_cyber', bank: DOMAIN_BANKS.web_security };
 }
 
 /**
@@ -538,15 +545,17 @@ function createCustomQuestions(title, mcqCount, subjectiveCount, difficulty) {
  */
 export function generateQuiz({
   title,
+  details = '',
   mcqCount = 5,
   subjectiveCount = 2,
   difficulty = 'intermediate',
 }) {
   const cleanTitle = (title || 'Cybersecurity Assessment').trim();
+  const cleanDetails = String(details || '').trim();
   const numMcq = Math.max(1, Math.min(30, Number(mcqCount) || 5));
   const numSubj = Math.max(0, Math.min(20, Number(subjectiveCount) || 0));
 
-  const { bank } = detectDomain(cleanTitle);
+  const { bank } = detectDomain(`${cleanTitle} ${cleanDetails}`);
   const { customMcqs, customSubjectives } = createCustomQuestions(cleanTitle, numMcq, numSubj, difficulty);
 
   // Combine domain-specific templates with custom-tailored questions
@@ -589,7 +598,12 @@ export function generateQuiz({
 
   return {
     title: cleanTitle,
-    description: `Automated assessment evaluating core theoretical concepts (${numMcq} MCQs) and scenario-based analytical judgment (${numSubj} Subjective Cases) in ${cleanTitle}.`,
+    description: [
+      `Automated assessment evaluating core theoretical concepts (${numMcq} MCQs) and scenario-based analytical judgment (${numSubj} Subjective Cases) in ${cleanTitle}.`,
+      cleanDetails ? `Scope: ${cleanDetails}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     passScore,
     difficulty,
     counts: {

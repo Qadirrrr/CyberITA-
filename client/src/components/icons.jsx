@@ -86,7 +86,7 @@ export const IconInfo = make(<><circle cx="12" cy="12" r="10" /><path d="M12 16v
 export const IconSave = make(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></>);
 export const IconTarget = make(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>);
 export const IconRocket = make(<><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></>);
-export const IconLogo = make(<><path d="M12 2 3 6v6c0 5.25 3.84 9.74 9 10 5.16-.26 9-4.75 9-10V6l-9-4Z" /><path d="m7.5 12 2.5 2.5 5-5" /></>);
+export const IconLogo = make(<><path d="M15.5 6.5C14.2 5.5 12.6 4.8 10.5 4.8 6.4 4.8 3.5 8 3.5 12s2.9 7.2 7 7.2c2.1 0 3.7-.7 5-1.7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /><path d="M13.5 12h7M17 8.5v7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></>);
 export const IconPaperclip = make(<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />);
 export const IconMore = make(<><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></>);
 export const IconFlag = make(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22v-7" /></>);
@@ -151,3 +151,15 @@ export const IconExitDoor = make(
     <line x1="21" y1="12" x2="9" y2="12" />
   </>
 );
+
+export const IconSun = make(
+  <>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+  </>
+);
+
+export const IconMoon = make(
+  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+);
+

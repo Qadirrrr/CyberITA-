@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Skeleton } from '../../components/ui';
-import { IconArrowRight, IconBookOpen, IconClock, IconLayers, IconSparkles, IconTarget } from '../../components/icons';
+import { IconArrowRight, IconBookOpen, IconClock, IconLayers, IconTarget } from '../../components/icons';
 
 export default function LearningPathsPage() {
   const [paths, setPaths] = useState([]);
@@ -19,12 +19,12 @@ export default function LearningPathsPage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-white/5">
+      <section className="relative overflow-hidden border-b border-slate-200/80 dark:border-white/5">
         <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-70" />
         <div className="container-page relative py-12 lg:py-16">
-          <Badge tone="accent" className="mb-4">
-            <IconTarget size={13} /> Guided routes
-          </Badge>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-3.5 py-1 text-xs font-semibold text-purple-700 shadow-sm dark:border-accent-400/30 dark:bg-accent-400/10 dark:text-accent-300">
+            <IconTarget size={14} /> Guided Career Routes
+          </div>
           <h1 className="max-w-2xl text-balance font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
             Learning paths that take you from curious to capable
           </h1>
@@ -123,8 +123,8 @@ export default function LearningPathsPage() {
         <Card className="mt-10 border-brand-400/20 bg-gradient-to-br from-brand-400/[0.07] to-transparent p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-start gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-400/15 text-brand-300">
-                <IconSparkles size={21} />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-400/15 dark:text-brand-300">
+                <IconTarget size={21} />
               </span>
               <div>
                 <h3 className="font-display text-lg font-semibold">Not sure where to start?</h3>

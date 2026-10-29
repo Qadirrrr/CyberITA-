@@ -1,7 +1,7 @@
 import { query, withTransaction } from '../config/db.js';
 import env from '../config/env.js';
 import logger from '../config/logger.js';
-import { getProvider } from '../labs/providers/index.js';
+import { getProvider, getProviderForLab } from '../labs/providers/index.js';
 import { normalizeCommand, matchesPattern } from '../utils/helpers.js';
 import { notFound, forbidden, badRequest } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
@@ -24,7 +24,6 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
   const { rows } = await query(
     `SELECT id, position, title, instruction, hint, verification,
        ${includeAnswers ? 'expected_command, expected_output_pattern,' : ''}
-       practice_command, practice_output, practice_explanation,
        points, is_optional
      FROM lab_steps WHERE lab_id = $1 ORDER BY position, id`,
     [labId]
@@ -34,7 +33,7 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
 
 async function loadSession(sessionId) {
   const { rows } = await query(
-    `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id,
+    `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id, l.is_practice,
             l.created_by, l.status AS lab_status, l.title AS lab_title,
             srv.name AS lab_server_name,
             u.full_name AS student_name
@@ -57,7 +56,10 @@ export async function getSessionOr404(sessionId, user) {
 
 /** Provisions (or reuses) a lab session for a user. */
 export async function startSession(user, lab) {
-  const provider = getProvider();
+  // Practice labs always use the in-process terminal; course labs use the
+  // configured real provider (Docker in production).
+  const provider = getProviderForLab(lab);
+  const isPractice = Boolean(lab.is_practice);
   const { rows: existing } = await query(
     `SELECT * FROM lab_sessions
      WHERE user_id = $1 AND lab_id = $2 AND provider = $3 AND status = 'running'
@@ -70,11 +72,16 @@ export async function startSession(user, lab) {
     return { session: fullExisting || existing[0], reused: true };
   }
 
-  // Route the session to the lab's assigned server (or the default host).
-  const { host, server } = await resolveServerForNewSession(lab);
+  // Course labs are routed to their assigned Docker server. Practice labs are
+  // container-less, so they never touch a lab server.
+  const { host, server } = isPractice
+    ? { host: null, server: null }
+    : await resolveServerForNewSession(lab);
 
   const descriptor = await provider.provision({ lab, user, host, serverId: server?.id ?? null });
-  const expiresAt = new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
+  // Practice sessions stay open until the learner stops them; real labs keep
+  // the configured TTL so abandoned containers are reclaimed.
+  const expiresAt = isPractice ? null : new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
   let rows;
   try {
     ({ rows } = await query(
@@ -96,13 +103,15 @@ export async function startSession(user, lab) {
       action: 'lab.started',
       entityType: 'lab',
       entityId: lab.id,
-      metadata: { title: lab.title, instanceId: descriptor.instanceId },
+      metadata: { title: lab.title, instanceId: descriptor.instanceId, practice: isPractice },
     });
     await notify(client, {
       userIds: [user.id],
       type: 'lab',
       title: `Lab started: ${lab.title}`,
-      body: 'Your isolated lab environment is ready in the browser terminal.',
+      body: isPractice
+        ? 'Your in-browser practice terminal is ready. No container was started.'
+        : 'Your isolated lab environment is ready in the browser terminal.',
       link: `/labs/${lab.id}`,
     });
   });
@@ -401,7 +410,7 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     [session.id]
   );
   const { rows: labRows } = await query(
-    'SELECT id, title, submission_requirements FROM labs WHERE id = $1',
+    'SELECT id, title, submission_requirements, is_practice FROM labs WHERE id = $1',
     [session.lab_id]
   );
 
@@ -425,6 +434,7 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
       lab_id: session.lab_id,
       user_id: session.user_id,
       provider: session.provider,
+      containerless: session.provider === 'practice',
       instance_id: session.instance_id,
       status: session.status,
       cwd: session.cwd,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import api, { getAccessToken } from '../../lib/api';
-import { IconCheckCircle, IconCopy, IconRefresh, IconTerminal } from '../icons';
+import { IconCheckCircle, IconCopy, IconRefresh, IconShield, IconTerminal } from '../icons';
 import { IconButton } from '../ui';
 
 function historyToLines(history = []) {
@@ -34,14 +34,34 @@ function normalizeIdentity(student) {
   };
 }
 
-function identityBanner(identity) {
+function identityBanner(identity, practice = false) {
   const displayName = identity.name || identity.shellUser || 'Student';
   const id = identity.id ? ` (student #${identity.id})` : '';
+  if (practice) {
+    return `Signed in as ${displayName}${id} \u2014 in-browser practice shell (no container). Type help for commands.`;
+  }
   return `Signed in as ${displayName}${id} \u2014 full root access in your private container. Type help for commands.`;
 }
 
-export default function LabTerminal({ sessionId, status, initialHistory = [], welcome = '', student, onProgress, onServerState }) {
+function practiceWelcome(text = '') {
+  // Labs authored before the container-less practice mode may still carry a
+  // "real Linux container" welcome message; keep the copy accurate.
+  return String(text).replace(/This is a real Linux container/gi, 'This is an in-browser practice shell');
+}
+
+export default function LabTerminal({
+  sessionId,
+  status,
+  initialHistory = [],
+  welcome = '',
+  student,
+  practice = false,
+  className = 'h-[560px] sm:h-[600px] xl:h-[640px]',
+  onProgress,
+  onServerState,
+}) {
   const [identity, setIdentity] = useState(() => normalizeIdentity(student));
+  const welcomeText = practice ? practiceWelcome(welcome) : welcome;
 
   useEffect(() => {
     if (student) {
@@ -51,9 +71,9 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
 
   const [lines, setLines] = useState(() => {
     const initial = [];
-    const banner = identityBanner(normalizeIdentity(student));
+    const banner = identityBanner(normalizeIdentity(student), practice);
     if (banner) initial.push({ type: 'system', text: banner });
-    if (welcome) initial.push({ type: 'system', text: welcome });
+    if (welcomeText) initial.push({ type: 'system', text: welcomeText });
     return [...initial, ...historyToLines(initialHistory)];
   });
   const [input, setInput] = useState('');
@@ -73,9 +93,20 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
     setMode(next);
   };
 
+  const bottomRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+    bottomRef.current?.scrollIntoView({ block: 'nearest' });
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [lines]);
+    scrollToBottom();
+    const frame = requestAnimationFrame(scrollToBottom);
+    return () => cancelAnimationFrame(frame);
+  }, [lines, busy, cwd, scrollToBottom]);
 
   useEffect(() => {
     if (status !== 'running') {
@@ -122,9 +153,9 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
         if (message.student) setIdentity(normalizeIdentity(message.student));
         setLines(() => {
           const next = [];
-          const banner = identityBanner(normalizeIdentity(message.student || student));
+          const banner = identityBanner(normalizeIdentity(message.student || student), practice);
           if (banner) next.push({ type: 'system', text: banner });
-          if (message.welcome) next.push({ type: 'system', text: message.welcome });
+          if (message.welcome) next.push({ type: 'system', text: practice ? practiceWelcome(message.welcome) : message.welcome });
           return [...next, ...historyToLines(message.history || [])];
         });
         onServerState?.(message);
@@ -256,8 +287,8 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
   };
 
   return (
-    <div className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-night-950 shadow-2xl">
-      <div className="flex items-center gap-2 border-b border-white/10 bg-night-900/80 px-3 py-2.5">
+    <div className={`flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-night-950 shadow-2xl ${className}`}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-night-900/80 px-3 py-2.5">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
@@ -266,6 +297,11 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
         <span className="ml-1.5 flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
           <IconTerminal size={12} /> {identity.shellUser}@{identity.hostname}
         </span>
+        {practice && (
+          <span className="hidden items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 sm:flex">
+            <IconShield size={10} /> No container
+          </span>
+        )}
         <span className={`ml-auto hidden items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium sm:flex ${modeBadge.className}`}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
           {modeBadge.label}
@@ -285,11 +321,11 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
       <div
         ref={scrollRef}
         onClick={() => inputRef.current?.focus()}
-        className="flex-1 cursor-text overflow-y-auto bg-[#05070d] px-4 py-3 font-mono text-[12.5px] leading-6"
+        className="flex-1 min-h-0 cursor-text overflow-y-auto bg-[#05070d] px-4 py-3 font-mono text-[12.5px] leading-6 select-text"
       >
         {lines.length === 0 && (
           <p className="text-slate-600">
-            Type <span className="text-slate-400">help</span> to see available commands.
+            Type <span className="text-slate-400">help</span> to see {practice ? 'the practice command reference' : 'available commands'}.
           </p>
         )}
         {lines.map((line, index) => {
@@ -360,16 +396,21 @@ export default function LabTerminal({ sessionId, status, initialHistory = [], we
             />
           </form>
         ) : (
-          <p className="mt-2 text-rose-300/80">This session is no longer running. Start a new session to continue.</p>
+          <p className="mt-2 text-rose-300/80">
+            This {practice ? 'practice session' : 'session'} is no longer running. Start a new session to continue.
+          </p>
         )}
+        <div ref={bottomRef} className="h-0.5 shrink-0" />
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-night-900/60 px-3 py-1.5 text-[10px] text-slate-600">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 bg-night-900/60 px-3 py-1.5 text-[10px] text-slate-600">
         <span className="font-mono">
-          {identity.name ? `${identity.name}${identity.id ? ` · student #${identity.id}` : ''} · ` : ''}session #{sessionId}
+          {identity.name ? `${identity.name}${identity.id ? ` · student #${identity.id}` : ''} · ` : ''}
+          {practice ? 'practice shell · ' : ''}session #{sessionId}
         </span>
         <span className="hidden sm:block">
           <span className="kbd">↑</span> history · <span className="kbd">Ctrl</span>+<span className="kbd">L</span> clear
+          {practice ? ' · simulated in-browser' : ''}
         </span>
       </div>
     </div>
