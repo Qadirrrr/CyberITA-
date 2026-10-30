@@ -66,9 +66,12 @@ export default function HomePage() {
     ])
       .then(([courseRes, pathRes, postRes]) => {
         if (!active) return;
-        setCourses(courseRes.data.courses);
-        setPaths(pathRes.data.paths.slice(0, 2));
-        setPosts(postRes.data.posts);
+        const courses = Array.isArray(courseRes.data?.courses) ? courseRes.data.courses : [];
+        const paths = Array.isArray(pathRes.data?.paths) ? pathRes.data.paths : [];
+        const posts = Array.isArray(postRes.data?.posts) ? postRes.data.posts : [];
+        setCourses(courses);
+        setPaths(paths.slice(0, 2));
+        setPosts(posts);
       })
       .catch(() => {})
       .finally(() => active && setLoading(false));
