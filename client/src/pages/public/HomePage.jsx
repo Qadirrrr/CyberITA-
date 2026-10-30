@@ -309,7 +309,7 @@ export default function HomePage() {
                     <IconClock size={14} /> {path.courses?.reduce((sum, course) => sum + Number(course.duration_hours || 0), 0)} hours
                   </span>
                 </div>
-                {path.courses?.length > 0 && (
+                {Array.isArray(path.courses) && path.courses.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-white/5 pt-4">
                     {path.courses.slice(0, 3).map((course) => (
                       <span key={course.id} className="rounded-lg bg-white/5 px-2.5 py-1 text-[11px] text-slate-400">
