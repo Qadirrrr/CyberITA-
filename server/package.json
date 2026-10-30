@@ -12,9 +12,7 @@
     "db:reset": "node src/db/reset.js",
     "user:create": "node src/scripts/createUser.js",
     "lab:smoke": "node src/scripts/dockerSmoke.js",
-    "lab:image:build": "docker build -t cyberita/lab-runtime:1.0 ../docker/lab-image",
-    "test": "vitest run --reporter=basic --no-file-parallelism",
-    "test:watch": "vitest --no-file-parallelism"
+    "lab:image:build": "docker build -t cyberita/lab-runtime:1.0 ../docker/lab-image"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
