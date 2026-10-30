@@ -9,7 +9,6 @@ import {
   IconPlay,
   IconSearch,
   IconServer,
-  IconShield,
   IconTerminal,
   IconZap,
 } from '../../components/icons';
@@ -21,23 +20,23 @@ const difficultyTone = { beginner: 'emerald', intermediate: 'amber', advanced: '
 const MODES = {
   practice: {
     id: 'practice',
-    label: 'Practice terminal',
-    tagline: 'Instant · no Docker',
+    label: 'Practice labs',
+    tagline: 'Not graded',
     description:
-      'Open a simulated Ubuntu shell right in your browser. Explore commands freely, break things and start over — nothing is graded or tied to a course.',
-    points: ['No container needed', 'Unlimited sessions', 'Never graded'],
+      'Open a Linux shell in your browser. Try commands, start over any time, and learn at your own pace.',
+    points: ['Instant start', 'Unlimited sessions', 'Open to everyone'],
   },
   course: {
     id: 'course',
-    label: 'Course practicals',
-    tagline: 'Real containers',
+    label: 'Course labs',
+    tagline: 'Graded practicals',
     description:
-      'Hands-on labs attached to your enrolled courses. Each one runs in its own isolated Docker container and unlocks a graded practical report.',
-    points: ['Isolated Docker container', 'Verified guided steps', 'Practical report'],
+      'Hands-on labs from your enrolled courses, with guided steps and a practical report when you finish.',
+    points: ['Guided steps', 'Tied to your course', 'Practical report'],
   },
 };
 
-function ModeCard({ mode, active, count, statusLine, statusTone, onSelect, onPrimary, primaryLabel, primaryLoading, disabled, disabledReason }) {
+function ModeCard({ mode, active, count, onSelect, onPrimary, primaryLabel, primaryLoading, disabled, disabledReason }) {
   const config = MODES[mode];
   const Icon = mode === 'practice' ? IconZap : IconServer;
 
@@ -53,50 +52,41 @@ function ModeCard({ mode, active, count, statusLine, statusTone, onSelect, onPri
           onSelect();
         }
       }}
-      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 ${
+      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 ${
         active
-          ? 'border-brand-400/60 bg-brand-400/[0.07] shadow-lg shadow-brand-500/10'
-          : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
+          ? 'border-brand-400 bg-white shadow-md shadow-brand-500/10 dark:border-brand-400/60 dark:bg-brand-400/[0.07]'
+          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.02] dark:hover:border-white/20'
       }`}
     >
-      <div
-        className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl transition ${
-          mode === 'practice' ? 'bg-emerald-500/10' : 'bg-sky-500/10'
-        }`}
-      />
       <div className="relative flex items-start justify-between gap-3">
         <span
           className={`flex h-11 w-11 items-center justify-center rounded-xl border ${
             mode === 'practice'
-              ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
-              : 'border-sky-400/30 bg-sky-400/10 text-sky-300'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300'
+              : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-300'
           }`}
         >
           <Icon size={20} />
         </span>
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <Badge tone={mode === 'practice' ? 'emerald' : 'sky'}>{config.tagline}</Badge>
-          <span className="text-[11px] font-medium text-slate-400">{count} lab{count === 1 ? '' : 's'}</span>
+          <Badge tone="slate">{count} lab{count === 1 ? '' : 's'}</Badge>
         </div>
       </div>
 
-      <h2 className="relative mt-3 font-display text-lg font-semibold text-white">{config.label}</h2>
-      <p className="relative mt-1.5 text-xs leading-5 text-slate-400">{config.description}</p>
+      <h2 className="relative mt-3 font-display text-lg font-semibold text-slate-900 dark:text-white">{config.label}</h2>
+      <p className="relative mt-1.5 text-sm leading-6 text-slate-600 dark:text-slate-400">{config.description}</p>
 
-      <ul className="relative mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+      <ul className="relative mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
         {config.points.map((point) => (
           <li key={point} className="inline-flex items-center gap-1.5">
-            <IconCheckCircle size={11} className={mode === 'practice' ? 'text-emerald-400' : 'text-sky-400'} />
+            <IconCheckCircle size={13} className={mode === 'practice' ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'} />
             {point}
           </li>
         ))}
       </ul>
 
-      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-3">
-        <span className={`inline-flex items-center gap-1.5 text-[11px] ${statusTone}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-current" />
-          {statusLine}
-        </span>
+      <div className="relative mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-white/5">
         <Button
           type="button"
           size="sm"
@@ -121,7 +111,6 @@ export default function LabsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [labs, setLabs] = useState([]);
-  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('all');
@@ -152,12 +141,6 @@ export default function LabsPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    api
-      .get('/labs/status')
-      .then((res) => {
-        if (!cancelled) setStatus(res.data);
-      })
-      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -179,8 +162,6 @@ export default function LabsPage() {
   }, [activeLabs, search, difficulty, mineOnly]);
 
   const startedCount = labs.filter((lab) => lab.last_started_at).length;
-  const dockerOnline = Boolean(status?.available);
-  const dockerReason = status?.reason || 'The Docker engine is not responding.';
 
   const startPractice = async (lab) => {
     if (!lab) return;
@@ -207,21 +188,13 @@ export default function LabsPage() {
     setMineOnly(false);
   };
 
-  const practiceStatus = status?.practice?.available
-    ? { line: 'Always available · runs in-browser', tone: 'text-emerald-300' }
-    : { line: 'Available', tone: 'text-emerald-300' };
-  const courseStatus = dockerOnline
-    ? { line: 'Docker engine online', tone: 'text-emerald-300' }
-    : { line: 'Docker engine offline', tone: 'text-amber-300' };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Practical labs</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">
-            Choose how you want to practise: instant browser terminals for warm-ups, or real Docker workstations for
-            graded course practicals.
+          <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-white">Practical labs</h1>
+          <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+            Warm up on practice labs, or open course labs for graded practicals.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -244,8 +217,6 @@ export default function LabsPage() {
           mode="practice"
           active={mode === 'practice'}
           count={practiceLabs.length}
-          statusLine={practiceStatus.line}
-          statusTone={practiceStatus.tone}
           onSelect={() => setMode('practice')}
           onPrimary={practiceLabs.length ? quickStart : undefined}
           primaryLabel={practiceLabs.length ? 'Start practice' : 'No labs yet'}
@@ -257,24 +228,12 @@ export default function LabsPage() {
           mode="course"
           active={mode === 'course'}
           count={courseLabs.length}
-          statusLine={courseStatus.line}
-          statusTone={courseStatus.tone}
           onSelect={() => setMode('course')}
           onPrimary={() => setMode('course')}
           primaryLabel={mode === 'course' ? 'Browse labs' : 'Browse practicals'}
           disabled={loading}
         />
       </div>
-
-      {!dockerOnline && courseLabs.length > 0 && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-3.5 py-2.5 text-xs leading-5 text-amber-200">
-          <IconServer size={14} className="mt-0.5 shrink-0 text-amber-400" />
-          <span>
-            <span className="font-medium text-amber-200">Course practicals are temporarily offline.</span>{' '}
-            {dockerReason} Practice terminals keep working because they run in your browser.
-          </span>
-        </div>
-      )}
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -306,7 +265,7 @@ export default function LabsPage() {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-400">
+        <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
           <input
             type="checkbox"
             checked={mineOnly}
@@ -319,15 +278,10 @@ export default function LabsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-slate-300">
-            {mode === 'practice' ? 'Practice terminals' : 'Course practicals'}
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            {mode === 'practice' ? 'Practice labs' : 'Course labs'}
           </h2>
           <Badge tone="slate">{filtered.length}</Badge>
-          {mode === 'practice' && (
-            <Badge tone="emerald">
-              <IconShield size={11} /> simulated shell
-            </Badge>
-          )}
         </div>
         {(search || difficulty !== 'all' || mineOnly) && (
           <button type="button" onClick={resetFilters} className="text-[11px] text-slate-400 transition hover:text-brand-300">
@@ -385,32 +339,32 @@ export default function LabsPage() {
             const tone = difficultyTone[lab.difficulty] || 'brand';
             const isPractice = Boolean(lab.is_practice);
             return (
-              <Card key={lab.id} className="group flex flex-col p-5 transition hover:border-brand-400/30">
+              <Card key={lab.id} className="group flex flex-col p-5 transition hover:border-brand-400">
                 <div className="flex items-start justify-between gap-3">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
                       isPractice
-                        ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
-                        : 'border-sky-400/20 bg-sky-400/10 text-sky-300'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300'
+                        : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300'
                     }`}
                   >
                     {isPractice ? <IconZap size={18} /> : <IconTerminal size={18} />}
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
                     <Badge tone={tone}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
-                    {isPractice ? <Badge tone="emerald">practice</Badge> : <Badge tone="sky">course</Badge>}
+                    {isPractice ? <Badge tone="emerald">Practice</Badge> : <Badge tone="sky">Course</Badge>}
                   </div>
                 </div>
-                <h3 className="mt-3 font-display text-base font-semibold leading-snug text-white">{lab.title}</h3>
-                {lab.summary && <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-400">{lab.summary}</p>}
-                <p className="mt-2 text-[11px] text-slate-500">
+                <h3 className="mt-3 font-display text-base font-semibold leading-snug text-slate-900 dark:text-white">{lab.title}</h3>
+                {lab.summary && <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{lab.summary}</p>}
+                <p className="mt-2 text-xs text-slate-500">
                   {isPractice
-                    ? `Practice · open to all · ${lab.step_count} steps`
+                    ? `Open to all · ${lab.step_count} steps`
                     : `${lab.course_title || 'Independent lab'} · ${lab.step_count} steps`}
                 </p>
 
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
                       <IconClock size={11} /> {lab.estimated_minutes} min
                     </span>
@@ -438,8 +392,8 @@ export default function LabsPage() {
                   )}
                 </div>
                 {lab.my_status && (
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-white/5 pt-2 text-[10px] uppercase tracking-wider text-slate-500">
-                    <span className={`h-1.5 w-1.5 rounded-full ${lab.my_status === 'running' ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                  <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-white/5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${lab.my_status === 'running' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     last session {lab.my_status}
                   </div>
                 )}
@@ -449,11 +403,11 @@ export default function LabsPage() {
         </div>
       )}
 
-      <p className="flex items-start gap-1.5 text-[11px] leading-5 text-slate-600">
+      <p className="flex items-start gap-1.5 text-xs leading-5 text-slate-500">
         <IconArrowRight size={12} className="mt-1 shrink-0" />
         {mode === 'practice'
-          ? 'Practice terminals are simulated entirely in the browser — no container is created and nothing is graded.'
-          : 'Course practicals run in a real isolated Linux container. Finish every required step to unlock your practical report.'}
+          ? 'Practice labs are not graded. Start as many sessions as you like.'
+          : 'Finish every required step in a course lab to unlock your practical report.'}
       </p>
     </div>
   );

@@ -7,9 +7,8 @@ import { useToast } from '../../context/ToastContext';
 import { getErrorMessage, getFieldErrors } from '../../lib/api';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, validateRegisterForm } from '../../lib/validation';
 import { IconArrowRight, IconEye, IconEyeOff, IconMail, IconUser } from '../../components/icons';
-
 export default function RegisterPage() {
-  const { register, logout } = useAuth();
+  const { register } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' });
@@ -35,8 +34,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const data = await register({ fullName: form.fullName, email: form.email, password: form.password });
-      await logout();
-      toast.success('Account created. Check your inbox to verify your email.');
+      toast.success('Account created! Check your inbox to verify your email before signing in.');
       navigate('/login', {
         replace: true,
         state: {

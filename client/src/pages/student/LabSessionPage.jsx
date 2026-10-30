@@ -4,7 +4,7 @@ import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
-import { Alert, Badge, Button, Meta } from '../../components/ui';
+import { Alert, Badge, Button } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -15,7 +15,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClipboard,
-  IconClock,
   IconCopy,
   IconFileText,
   IconPlay,
@@ -29,10 +28,17 @@ import {
 } from '../../components/icons';
 import { REPORT_STATUS } from '../../lib/constants';
 
-function minutesLeft(expiresAt) {
-  if (!expiresAt) return null;
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  return Math.max(0, Math.round(diff / 60000));
+function splitInstruction(instruction) {
+  const source = String(instruction || '');
+  const commands = [];
+  const text = source
+    .replace(/```(?:bash|sh|shell|zsh|console)?[ \t]*\r?\n([\s\S]*?)```/gi, (_, body) => {
+      const command = String(body || '').trim();
+      if (command) commands.push(command);
+      return '';
+    })
+    .trim();
+  return { text, commands };
 }
 
 export default function LabSessionPage() {
@@ -48,7 +54,6 @@ export default function LabSessionPage() {
   const [stopping, setStopping] = useState(false);
   const [starting, setStarting] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [remaining, setRemaining] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   const fileRef = useRef(null);
@@ -79,12 +84,6 @@ export default function LabSessionPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  useEffect(() => {
-    setRemaining(minutesLeft(data?.session?.expires_at));
-    const timer = window.setInterval(() => setRemaining(minutesLeft(data?.session?.expires_at)), 30000);
-    return () => window.clearInterval(timer);
-  }, [data?.session?.expires_at]);
 
   const activeStep = useMemo(
     () => data?.steps?.find((step) => step.id === activeStepId) || null,
@@ -300,16 +299,16 @@ export default function LabSessionPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#06080d] text-slate-300">
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-100 text-slate-600 dark:bg-[#06080d] dark:text-slate-300">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-brand-500 border-t-transparent mb-3" />
-        <p className="font-mono text-xs text-slate-400">Preparing your lab workstation…</p>
+        <p className="font-mono text-sm text-slate-500 dark:text-slate-400">Preparing your lab workstation…</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#06080d] p-6 text-center text-slate-300">
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-100 p-6 text-center text-slate-700 dark:bg-[#06080d] dark:text-slate-300">
         <div className="w-full max-w-md">
           <Alert tone="error" title="Session unavailable">
             {error || 'This lab session could not be found or has expired.'}
@@ -340,15 +339,10 @@ export default function LabSessionPage() {
     hostname: session.hostname,
   } : null);
 
-  const studentDisplay = (() => {
-    if (!student) return 'student@cyberita-lab';
-    const shell = student.shell_user || student.shellUser || (student.name ? String(student.name).toLowerCase().split(' ')[0].replace(/[^a-z0-9_-]/g, '') : 'student');
-    const host = student.hostname || 'cyberita-lab';
-    return `${shell}@${host}`;
-  })();
+  const instructionParts = splitInstruction(activeStep?.instruction);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#06080d] text-slate-100 font-sans select-none">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-100 text-slate-900 font-sans select-none dark:bg-[#06080d] dark:text-slate-100">
       <input
         ref={fileRef}
         type="file"
@@ -357,87 +351,41 @@ export default function LabSessionPage() {
         onChange={onFileSelected}
       />
 
-      {/* Top Workstation Navigation Bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-night-950/95 px-4 backdrop-blur z-30">
-        {/* Left: Branding & Lab Title */}
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-night-950">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={handleExit}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-white"
             title="Exit workstation"
           >
-            <IconArrowLeft size={14} />
+            <IconArrowLeft size={15} />
           </button>
 
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-brand-600 to-sky-500 text-xs font-bold text-white shadow-md shadow-brand-500/20">
-              C+
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-sky-500 text-xs font-bold text-white shadow-sm shadow-brand-500/20">
+            C+
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate font-display text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white" title={data.lab?.title || 'Hands-on Lab'}>
+                {data.lab?.title || 'Hands-on Lab'}
+              </h1>
+              <Badge tone={running ? 'emerald' : 'slate'} dot={running ? 'animate-pulse' : true}>
+                {running ? 'Online' : session.status}
+              </Badge>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate font-display text-sm font-semibold text-white max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md">
-                  {data.lab?.title || 'Hands-on Lab'}
-                </h1>
-                <Badge tone={running ? 'emerald' : 'slate'} dot={running ? 'animate-pulse' : true}>
-                  {running ? 'Online' : session.status}
-                </Badge>
-                {isPractice && <Meta>Practice · no container</Meta>}
-              </div>
-              <p className="hidden text-[10px] text-slate-500 truncate sm:block">
-                Session #{session.id} ·{' '}
-                {isPractice
-                  ? 'Practice terminal · simulated · no container'
-                  : session.lab_server_name
-                    ? `${session.lab_server_name} · isolated Linux container`
-                    : 'Isolated Linux container'}
-              </p>
-            </div>
+            <p className="hidden truncate text-xs text-slate-500 sm:block">
+              {isPractice
+                ? 'Simulated in-browser terminal'
+                : session.lab_server_name
+                  ? `${session.lab_server_name} · isolated Linux container`
+                  : 'Isolated Linux container'}
+            </p>
           </div>
         </div>
 
-        {/* Center: Live Timer & Progress */}
-        <div className="hidden lg:flex items-center gap-4 shrink-0">
-          {running && isPractice && (
-            <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-mono text-emerald-300">
-              <IconZap size={12} />
-              <span>Practice · unlimited</span>
-            </div>
-          )}
-          {running && !isPractice && remaining !== null && (
-            <div
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-mono transition-all ${
-                remaining < 10
-                  ? 'border-amber-400/40 bg-amber-400/10 text-amber-300 animate-pulse'
-                  : 'border-white/10 bg-white/[0.04] text-slate-300'
-              }`}
-            >
-              <IconClock size={12} className={remaining < 10 ? 'text-amber-400' : 'text-slate-400'} />
-              <span>{remaining}m remaining</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-[11px] text-slate-400">
-              Step <span className="font-medium text-white">{activeIndex >= 0 ? activeIndex + 1 : 1}</span> of {steps.length}
-            </span>
-            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-brand-500 via-sky-400 to-emerald-400 transition-all duration-300"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-            <span className="font-mono text-[11px] font-semibold text-emerald-400">{Math.round(progress.percent)}%</span>
-          </div>
-        </div>
-
-        {/* Right: Identity Chip, Refresh, Stop & Exit */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="hidden md:flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs text-emerald-300">
-            <IconTerminal size={12} />
-            <span className="truncate max-w-[170px]">{studentDisplay}</span>
-          </div>
-
+        <div className="flex shrink-0 items-center gap-2">
           {progress.allRequiredCompleted && !isPractice && (
             report ? (
               <Button as={Link} to={`/student/reports/${report.id}`} target="_blank" size="xs" variant="secondary" className="gap-1">
@@ -455,11 +403,11 @@ export default function LabSessionPage() {
           </Button>
 
           {running ? (
-            <Button variant="danger" size="xs" onClick={stopSession} loading={stopping} className="gap-1">
+            <Button variant="danger" size="xs" onClick={stopSession} loading={stopping} className="gap-1 rounded-xl px-3">
               <IconXCircle size={13} /> Stop
             </Button>
           ) : (
-            <Button size="xs" onClick={restart} loading={starting} className="gap-1">
+            <Button size="xs" onClick={restart} loading={starting} className="gap-1 rounded-xl px-3">
               <IconPlay size={13} /> Restart
             </Button>
           )}
@@ -467,7 +415,7 @@ export default function LabSessionPage() {
           <button
             type="button"
             onClick={handleExit}
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
           >
             Exit
           </button>
@@ -477,18 +425,18 @@ export default function LabSessionPage() {
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
       <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] gap-3 p-3 overflow-hidden">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
-        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-white/10 bg-night-950/90 shadow-2xl backdrop-blur overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
           {/* Header Stepper and Progress */}
-          <div className="flex shrink-0 flex-col border-b border-white/10 bg-night-900/80 px-4 py-3">
+          <div className="flex shrink-0 flex-col border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-400/30 bg-brand-400/10 text-brand-300 shadow-sm shadow-brand-500/10">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
                   <IconClipboard size={15} />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="font-display text-xs font-semibold uppercase tracking-wider text-white">Lab Guide & Steps</h2>
-                  <p className="truncate text-[11px] text-slate-400">
-                    Step {activeIndex >= 0 ? activeIndex + 1 : 1} of {steps.length} · <span className="font-medium text-emerald-400">{completedCount} completed</span>
+                  <h2 className="font-display text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-white">Lab Guide & Steps</h2>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    Step {activeIndex >= 0 ? activeIndex + 1 : 1} of {steps.length} · <span className="font-medium text-emerald-700 dark:text-emerald-400">{completedCount} completed</span>
                   </p>
                 </div>
               </div>
@@ -497,7 +445,7 @@ export default function LabSessionPage() {
                   type="button"
                   onClick={goToPrev}
                   disabled={!hasPrev}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
                   title="Previous step"
                 >
                   <IconChevronLeft size={14} />
@@ -506,7 +454,7 @@ export default function LabSessionPage() {
                   type="button"
                   onClick={goToNext}
                   disabled={!hasNext}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
                   title="Next step"
                 >
                   <IconChevronRight size={14} />
@@ -516,13 +464,13 @@ export default function LabSessionPage() {
 
             {/* Overall Progress Bar */}
             <div className="mt-3">
-              <div className="mb-1 flex items-center justify-between text-[10px]">
-                <span className="font-medium uppercase tracking-wider text-slate-400">Overall Progress</span>
-                <span className="font-mono font-semibold text-emerald-300">{Math.round(progress.percent)}%</span>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Overall Progress</span>
+                <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-300">{Math.round(progress.percent)}%</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-500 via-sky-400 to-emerald-400 transition-all duration-500"
+                  className="h-full rounded-full bg-brand-500 transition-all duration-500"
                   style={{ width: `${progress.percent}%` }}
                 />
               </div>
@@ -530,24 +478,24 @@ export default function LabSessionPage() {
           </div>
 
           {/* Target Environment Badge Strip */}
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/5 bg-night-950/60 px-4 py-2 text-[10.5px] text-slate-400">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 dark:border-white/5 dark:bg-night-950/60 dark:text-slate-400">
             {isPractice ? (
               <>
-                <span className="inline-flex items-center gap-1.5">
-                  <IconTerminal size={12} className="text-emerald-400" />
-                  <span>Practice terminal · simulated · no container</span>
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <IconTerminal size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="truncate">Simulated practice terminal</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-emerald-300">
-                  <IconShield size={11} /> Sandboxed in-browser session
+                <span className="inline-flex shrink-0 items-center gap-1 text-emerald-700 dark:text-emerald-300">
+                  <IconShield size={11} /> In-browser
                 </span>
               </>
             ) : (
               <>
-                <span className="inline-flex items-center gap-1.5">
-                  <IconServer size={12} className="text-brand-400" />
-                  <span>Ubuntu 22.04 LTS (x86_64)</span>
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <IconServer size={12} className="shrink-0 text-cyan-700 dark:text-brand-400" />
+                  <span className="truncate">Ubuntu 22.04 LTS (x86_64)</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-emerald-300">
+                <span className="inline-flex shrink-0 items-center gap-1 text-emerald-700 dark:text-emerald-300">
                   <IconShield size={11} /> Root Privileges
                 </span>
               </>
@@ -555,96 +503,119 @@ export default function LabSessionPage() {
           </div>
 
           {/* Horizontal Step Navigation Ribbon */}
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-white/10 bg-night-950/70 p-2.5">
+          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-200 bg-slate-50 p-2.5 dark:border-white/10 dark:bg-night-950/70">
             {steps.map((step, index) => {
               const active = step.id === activeStepId;
               return (
                 <button
                   key={step.id}
                   type="button"
+                  title={step.title}
                   onClick={() => {
                     setActiveStepId(step.id);
                     setShowHint(false);
                   }}
-                  className={`group flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                  className={`group flex max-w-[220px] shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
                     active
-                      ? 'border-brand-400/60 bg-brand-400/15 font-medium text-white shadow-sm shadow-brand-400/10'
+                      ? 'border-cyan-300 bg-cyan-50 font-semibold text-slate-900 shadow-sm dark:border-brand-400/60 dark:bg-brand-400/15 dark:text-white dark:shadow-brand-400/10'
                       : step.completed
-                        ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/15'
-                        : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.07] hover:text-slate-200'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/15'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:bg-white/[0.07] dark:hover:text-slate-200'
                   }`}
                 >
                   <span
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                       step.completed
-                        ? 'bg-emerald-400 text-night-950'
+                        ? 'bg-emerald-500 text-white dark:bg-emerald-400 dark:text-night-950'
                         : active
-                          ? 'bg-brand-400 text-night-950'
-                          : 'bg-white/10 text-slate-400 group-hover:text-slate-200'
+                          ? 'bg-cyan-600 text-white dark:bg-brand-400 dark:text-night-950'
+                          : 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-400 dark:group-hover:text-slate-200'
                     }`}
                   >
                     {step.completed ? <IconCheck size={10} strokeWidth={3} /> : index + 1}
                   </span>
-                  <span className="max-w-[110px] truncate text-[11px]">{step.title}</span>
+                  <span className="truncate text-xs">{step.title}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Active Step Details Scrollable View */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3.5 select-text">
+          <div className="flex-1 min-h-0 space-y-3.5 overflow-y-auto p-4 select-text">
             {activeStep ? (
               <div className="space-y-3.5">
                 {/* Step Title & Points Card */}
-                <div className="rounded-xl border border-white/10 bg-night-900/40 p-3.5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/40">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-md border border-brand-400/25 bg-brand-400/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-brand-300">
+                      <span className="rounded-md border border-cyan-200 bg-cyan-50 px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-cyan-800 dark:border-brand-400/25 dark:bg-brand-400/10 dark:text-brand-300">
                         Step {activeIndex >= 0 ? activeIndex + 1 : 1}
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         {activeStep.is_optional ? 'Optional' : isPractice ? 'Practice step' : `${activeStep.points} points`}
                       </span>
                     </div>
                     {activeStep.completed ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
                         <IconCheckCircle size={11} /> Verified
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-300">
-                        {activeStep.verification === 'manual' ? 'Manual Confirmation' : 'Auto Terminal Verification'}
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-white/5 dark:text-slate-300">
+                        {activeStep.verification === 'manual' ? 'Manual confirmation' : 'Checks your terminal output'}
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-2 font-display text-sm font-semibold leading-snug text-white">
+                  <h3 className="mt-2 font-display text-base font-semibold leading-snug text-slate-900 dark:text-white">
                     {activeStep.title}
                   </h3>
                 </div>
 
                 {/* Instruction Content */}
-                <div className="rounded-xl border border-white/10 bg-night-900/30 p-3.5">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Instructions</p>
-                  <div className="prose prose-invert max-w-none text-xs leading-6 text-slate-300">
-                    <Markdown>{activeStep.instruction}</Markdown>
-                  </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-white/10 dark:bg-night-900/30">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Instructions</p>
+                  {instructionParts.text ? (
+                    <div className="markdown max-w-none text-sm leading-6 text-slate-700 dark:text-slate-300">
+                      <Markdown>{instructionParts.text}</Markdown>
+                    </div>
+                  ) : null}
+                  {!instructionParts.text && instructionParts.commands.length === 0 && (
+                    <p className="text-sm text-slate-500">No instructions for this step.</p>
+                  )}
+                  {instructionParts.commands.map((command) => (
+                    <div key={command} className="terminal-surface mt-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Command to run</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCmd(command)}
+                          className="inline-flex items-center gap-1 text-xs text-emerald-300 transition hover:text-white"
+                        >
+                          <IconCopy size={12} /> {copiedCmd ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <pre className="overflow-x-auto px-3 py-2.5 font-mono text-sm leading-6 text-emerald-300">
+                        {command}
+                      </pre>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Hint Drawer */}
                 {activeStep.hint && (
-                  <div className="overflow-hidden rounded-xl border border-amber-400/25 bg-amber-400/[0.04]">
+                  <div className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-400/25 dark:bg-amber-400/[0.04]">
                     <button
                       type="button"
                       onClick={() => setShowHint((current) => !current)}
-                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-xs font-medium text-amber-300 transition hover:bg-amber-400/[0.06]"
+                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm font-medium text-amber-800 transition hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-400/[0.06]"
                     >
                       <span className="flex items-center gap-2">
                         <IconChevronDown size={13} className={`transition-transform duration-200 ${showHint ? 'rotate-180' : ''}`} />
-                        <span>Need a Hint or Help?</span>
+                        <span>Need a hint?</span>
                       </span>
-                      <span className="text-[10px] uppercase tracking-wider opacity-75">{showHint ? 'Hide' : 'Show'}</span>
+                      <span className="text-xs uppercase tracking-wider opacity-75">{showHint ? 'Hide' : 'Show'}</span>
                     </button>
                     {showHint && (
-                      <div className="border-t border-amber-400/15 p-3 text-xs leading-5 text-amber-100/90">
+                      <div className="border-t border-amber-200 p-3 text-sm leading-6 text-amber-950 dark:border-amber-400/15 dark:text-amber-100/90">
                         <Markdown>{activeStep.hint}</Markdown>
                       </div>
                     )}
@@ -653,21 +624,21 @@ export default function LabSessionPage() {
 
                 {/* Verified Command Box */}
                 {activeStep.completed && activeStep.command_used && (
-                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/[0.05] p-3">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-400/30 dark:bg-emerald-400/[0.05]">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
-                        <IconCheckCircle size={12} /> Verified Command
+                      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                        <IconCheckCircle size={12} /> Verified command
                       </span>
                       <button
                         type="button"
                         onClick={() => handleCopyCmd(activeStep.command_used)}
-                        className="inline-flex items-center gap-1 text-[10px] text-emerald-300 transition hover:text-white"
+                        className="inline-flex items-center gap-1 text-xs text-emerald-700 transition hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-white"
                       >
                         <IconCopy size={11} /> {copiedCmd ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <div className="mt-1.5 rounded-lg border border-emerald-500/20 bg-night-950/80 px-2.5 py-2 font-mono text-[11.5px] text-emerald-300 break-words">
-                      $ {activeStep.command_used}
+                    <div className="mt-1.5 break-words rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-2 font-mono text-sm text-emerald-300">
+                      # {activeStep.command_used}
                     </div>
                   </div>
                 )}
@@ -680,24 +651,24 @@ export default function LabSessionPage() {
                     </Button>
                   )}
                   {activeStep.completed && hasNext && (
-                    <Button size="sm" variant="secondary" onClick={goToNext} className="gap-1.5">
+                    <Button size="sm" variant="primary" onClick={goToNext} className="gap-1.5">
                       Next Step <IconArrowRight size={13} />
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => openUpload(activeStep.id)} loading={uploading} className="gap-1.5 text-slate-300 hover:text-white">
+                  <Button size="sm" variant="ghost" onClick={() => openUpload(activeStep.id)} loading={uploading} className="gap-1.5">
                     <IconCamera size={13} /> Add Screenshot
                   </Button>
                 </div>
 
                 {/* Step Evidence */}
-                <div className="rounded-xl border border-white/10 bg-night-900/30 p-3.5">
-                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    <IconCamera size={11} /> Step Evidence ({stepScreenshots.length})
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/30">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <IconCamera size={11} /> Step evidence ({stepScreenshots.length})
                   </p>
                   {stepScreenshots.length === 0 ? (
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
                       {isPractice
-                        ? 'Screenshots are kept with this session as your own evidence. Practice labs have no graded report.'
+                        ? 'Screenshots stay with this session as your own notes. Practice labs are not graded.'
                         : 'Terminal screenshots attached here are automatically included in your lab report.'}
                     </p>
                   ) : (
@@ -738,7 +709,7 @@ export default function LabSessionPage() {
                       const file = imageItem.getAsFile();
                       if (file) uploadScreenshot(file, { stepId: activeStep.id });
                     }}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-white/15 bg-white/[0.02] py-2 text-[11px] text-slate-400 transition hover:border-brand-400/50 hover:bg-brand-400/[0.06] hover:text-brand-300"
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white py-2.5 text-xs text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/[0.02] dark:text-slate-400 dark:hover:border-brand-400/50 dark:hover:bg-brand-400/[0.06] dark:hover:text-brand-300"
                     title="Press Ctrl+V anywhere in this lab to paste a screenshot, or click to browse"
                   >
                     <IconClipboard size={12} /> Paste screenshot (Ctrl+V) or click to browse
@@ -752,7 +723,7 @@ export default function LabSessionPage() {
 
           {/* Footer Report Bar */}
           {report && !isPractice && (
-            <div className="shrink-0 border-t border-white/10 bg-night-950/70 p-3">
+            <div className="shrink-0 border-t border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-night-950/70">
               <Link to={`/student/reports/${report.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs transition hover:text-brand-300">
                 <span className="flex items-center gap-1.5 text-slate-300">
                   <IconFileText size={13} className="text-brand-400" /> {report.title}

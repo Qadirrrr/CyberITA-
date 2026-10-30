@@ -11,7 +11,6 @@ import {
   IconClock,
   IconExternalLink,
   IconPlay,
-  IconShield,
   IconTerminal,
   IconZap,
 } from '../../components/icons';
@@ -105,9 +104,8 @@ export default function LabDetailPage() {
   const running = mySession?.status === 'running';
   const tone = DIFFICULTIES[lab.difficulty]?.tone || 'brand';
   const isPractice = Boolean(lab.is_practice);
-  // Practice terminals are container-less, so they never depend on Docker.
   const infrastructureReady = isPractice || !labStatus || Boolean(labStatus.available);
-  const offlineReason = labStatus?.reason || 'The Docker container runtime is not currently running on this server.';
+  const offlineReason = 'This lab cannot start right now. Please try again later.';
 
   return (
     <div className="space-y-5">
@@ -126,21 +124,14 @@ export default function LabDetailPage() {
               </Badge>
               <Badge tone="slate">{stepCounts?.total ?? steps.length} steps</Badge>
               {isPractice ? (
-                <>
-                  <Badge tone="emerald">Practice · not graded</Badge>
-                  <Badge tone="emerald">
-                    <IconShield size={11} /> No container
-                  </Badge>
-                </>
+                <Badge tone="emerald">Practice</Badge>
               ) : (
-                <Badge tone="sky">
-                  <IconShield size={11} /> Real container
-                </Badge>
+                <Badge tone="sky">Course</Badge>
               )}
               {running && <Badge tone="emerald">Session running</Badge>}
             </div>
             <h1 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">{lab.title}</h1>
-            {lab.summary && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{lab.summary}</p>}
+            {lab.summary && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">{lab.summary}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-slate-500">
               {data.course ? (
                 <Link to={`/courses/${data.course.slug}`} className="inline-flex items-center gap-1 hover:text-brand-300">
@@ -175,28 +166,18 @@ export default function LabDetailPage() {
                 {isPractice ? 'Start practice terminal' : 'Start real lab'}
               </Button>
             )}
-            <p className="max-w-[190px] text-[10px] leading-4 text-slate-500">
+            <p className="max-w-[220px] text-xs leading-5 text-slate-500">
               {isPractice
-                ? 'Runs entirely in your browser. No container, no setup, and you can start as many sessions as you like.'
-                : 'Runs in an isolated Linux container with full terminal access. Sessions expire automatically.'}
+                ? 'Not graded. Start as many sessions as you like.'
+                : 'Finish the required steps to unlock your practical report.'}
             </p>
           </div>
         </div>
       </Card>
 
-      {isPractice ? (
-        <Alert tone="info" title="Container-less practice terminal">
-          This practice lab runs in a simulated Ubuntu shell inside your browser — no Docker container is created, so it
-          starts instantly and keeps working even when the lab infrastructure is offline. It is not graded, needs no
-          practical report and is not tied to a course, so you can start as many sessions as you like.
-        </Alert>
-      ) : null}
-
       {!isPractice && labStatus && !labStatus.available && (
-        <Alert tone="amber" title="Real Lab Infrastructure Offline">
-          {offlineReason}{' '}
-          Course practicals need a running Docker engine on the server — ask the administrator to start it, then reload
-          this page. Practice terminals are unaffected.
+        <Alert tone="amber" title="This lab is temporarily unavailable">
+          Course labs cannot start right now. Please try again later or ask your instructor.
         </Alert>
       )}
 

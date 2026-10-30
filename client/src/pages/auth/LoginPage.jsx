@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
+  const [emailUnverified, setEmailUnverified] = useState(false);
 
   const from = location.state?.from;
 
@@ -33,13 +34,19 @@ export default function LoginPage() {
     if (Object.keys(nextErrors).length) return;
     setLoading(true);
     setError('');
+    setEmailUnverified(false);
     try {
       const account = await login({ ...form, remember });
       toast.success(`Welcome back, ${account.full_name.split(' ')[0]}.`);
       navigate(from || dashboardPath(account.role), { replace: true });
     } catch (err) {
       setErrors(getFieldErrors(err));
-      setError(getErrorMessage(err, 'Unable to sign in. Check your details and try again.'));
+      const message = getErrorMessage(err, 'Unable to sign in. Check your details and try again.');
+      // Detect the email-not-verified case so we can show a targeted banner.
+      if (message.toLowerCase().includes('verify your email')) {
+        setEmailUnverified(true);
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -96,9 +103,24 @@ export default function LoginPage() {
         </Alert>
       )}
 
-      {error && (
+      {error && !emailUnverified && (
         <Alert tone="error" className="mb-5">
           {error}
+        </Alert>
+      )}
+
+      {emailUnverified && (
+        <Alert tone="warning" title="Email not verified" className="mb-5">
+          Please verify your email before signing in.{' '}
+          We just re-sent a verification link to <strong>{form.email}</strong> — check your inbox
+          (and spam folder). Or{' '}
+          <Link
+            to={`/verify-email?email=${encodeURIComponent(form.email)}`}
+            className="font-medium text-brand-300 underline"
+          >
+            click here to resend
+          </Link>
+          .
         </Alert>
       )}
 

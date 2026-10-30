@@ -170,15 +170,12 @@ router.post(
       [email.toLowerCase(), passwordHash, fullName]
     );
     const user = rows[0];
-    const session = await buildSession(user, req);
     await logActivity(user.id, 'account.registered');
     const verification = await deliverVerification(user);
-    setRefreshCookie(res, session.refreshToken, true);
-    setAccessCookie(res, session.accessToken, true);
-    setSessionCookie(res, true);
+    // Do NOT issue a session here — the account must be verified before login.
+    // We return a minimal payload so the client can redirect to /login with
+    // the appropriate banner without leaking tokens for an unverified account.
     res.status(201).json({
-      user: session.user,
-      accessToken: session.accessToken,
       emailVerificationSent: verification.ok,
       ...verification.devLink ? { devVerificationLink: verification.devLink } : {},
     });
@@ -218,6 +215,15 @@ router.post(
       throw unauthorized('Incorrect email or password.');
     }
     if (!user.is_active) throw unauthorized('This account has been disabled.');
+
+    // Block login until the email address is verified.
+    if (!user.email_verified_at) {
+      // Silently re-send a fresh verification link so the user can unblock themselves.
+      await deliverVerification(user);
+      throw unauthorized(
+        'Please verify your email address before signing in. We just sent you a new verification link — check your inbox (and spam folder).'
+      );
+    }
 
     await query('UPDATE users SET last_login_at = now(), failed_login_attempts = 0, locked_until = NULL WHERE id = $1', [
       user.id,
