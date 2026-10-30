@@ -264,7 +264,7 @@ export default function AdminSystemPage() {
           <div className="mt-4 border-t border-white/5 pt-4">
             <p className="mb-3 text-xs font-medium text-slate-400">Top courses by enrollment</p>
             <div className="space-y-2">
-              {learning.topCourses.map((course) => (
+              {(learning?.topCourses || []).map((course) => (
                 <div key={course.id} className="flex items-center gap-3">
                   <p className="min-w-0 flex-1 truncate text-xs text-slate-300">{course.title}</p>
                   <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ export default function AdminSystemPage() {
           <div className="mt-4">
             <p className="mb-2 text-xs font-medium text-slate-400">Table Overview</p>
             <div className="grid max-h-48 gap-1.5 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
-              {database.tables.map((table) => (
+              {(database?.tables || []).map((table) => (
                 <div key={table.name} className="flex items-center justify-between rounded-lg border border-white/5 px-3 py-1.5 text-xs">
                   <span className="font-mono text-slate-400">{table.name}</span>
                   <span className="tabular-nums text-slate-600">{table.rows.toLocaleString()}</span>
@@ -342,7 +342,7 @@ export default function AdminSystemPage() {
             <Badge tone="rose">{errors.failedLabSessions} failed</Badge>
           </div>
           <div className="mt-4 space-y-2.5">
-            {errors.failedLabSessionList.map((session) => (
+            {(errors?.failedLabSessionList || []).map((session) => (
               <div key={session.id} className="flex items-start gap-3 rounded-xl border border-rose-400/10 bg-rose-400/[0.04] p-3.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-400/10 text-rose-300">
                   <IconXCircle size={15} />
@@ -376,7 +376,7 @@ export default function AdminSystemPage() {
           <h2 className="font-display text-base font-semibold">Recent System Errors</h2>
           <p className="text-[11px] text-slate-500">Events matching error or fail patterns in audit log</p>
           <div className="mt-4 space-y-2">
-            {errors.recentFailures.map((event) => (
+            {(errors?.recentFailures || []).map((event) => (
               <div key={event.id} className="flex items-start gap-3 rounded-lg border border-white/5 px-3 py-2.5">
                 <Badge tone="rose" className="font-mono text-[10px] shrink-0">{event.action}</Badge>
                 <div className="min-w-0 flex-1">

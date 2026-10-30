@@ -78,7 +78,7 @@ function ModeCard({ mode, active, count, onSelect, onPrimary, primaryLabel, prim
       <p className="relative mt-1.5 text-sm leading-6 text-slate-600 dark:text-slate-400">{config.description}</p>
 
       <ul className="relative mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-        {config.points.map((point) => (
+        {(config?.points || []).map((point) => (
           <li key={point} className="inline-flex items-center gap-1.5">
             <IconCheckCircle size={13} className={mode === 'practice' ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'} />
             {point}

@@ -218,7 +218,7 @@ export default function AdminCoursesPage() {
             <Badge tone="accent">{catalog.paths.length} paths</Badge>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {catalog.paths.map((lp) => (
+            {(catalog?.paths || []).map((lp) => (
               <div key={lp.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-medium text-slate-200 truncate">{lp.title}</p>
@@ -256,7 +256,7 @@ export default function AdminCoursesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {catalog.recentCertificates.map((cert) => (
+                {(catalog?.recentCertificates || []).map((cert) => (
                   <tr key={cert.id} className="hover:bg-white/[0.02]">
                     <td className="px-3 py-2.5">
                       <p className="font-medium text-slate-200">{cert.student_name}</p>

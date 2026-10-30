@@ -392,7 +392,7 @@ export default function StudentsPage() {
                 <p className="mt-2 text-xs text-slate-500">No enrollments in your courses.</p>
               ) : (
                 <ul className="mt-2 space-y-2">
-                  {detail.enrollments.map((enrollment) => (
+                  {(detail?.enrollments || []).map((enrollment) => (
                     <li key={enrollment.id} className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Link
@@ -431,7 +431,7 @@ export default function StudentsPage() {
                 <p className="mt-2 text-xs text-slate-500">No quizzes in your courses yet.</p>
               ) : (
                 <ul className="mt-2 divide-y divide-white/5 rounded-lg border border-white/10">
-                  {detail.quizzes.map((quiz) => (
+                  {(detail?.quizzes || []).map((quiz) => (
                     <li key={quiz.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs text-slate-200">{quiz.title}</p>
@@ -463,7 +463,7 @@ export default function StudentsPage() {
                 <p className="mt-2 text-xs text-slate-500">No assignments in your courses yet.</p>
               ) : (
                 <ul className="mt-2 divide-y divide-white/5 rounded-lg border border-white/10">
-                  {detail.assignments.map((assignment) => (
+                  {(detail?.assignments || []).map((assignment) => (
                     <li key={assignment.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs text-slate-200">{assignment.title}</p>
@@ -506,7 +506,7 @@ export default function StudentsPage() {
                 <p className="mt-2 text-xs text-slate-500">No practical reports submitted yet.</p>
               ) : (
                 <ul className="mt-2 divide-y divide-white/5 rounded-lg border border-white/10">
-                  {detail.reports.map((report) => (
+                  {(detail?.reports || []).map((report) => (
                     <li key={report.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs text-slate-200">{report.title}</p>

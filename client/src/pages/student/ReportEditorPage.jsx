@@ -417,7 +417,7 @@ export default function ReportEditorPage() {
                     <IconCamera size={11} /> Evidence
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {section.screenshots.map((shot, shotIndex) => (
+                    {(section?.screenshots || []).map((shot, shotIndex) => (
                       <a
                         key={`${shot}-${shotIndex}`}
                         href={shot}

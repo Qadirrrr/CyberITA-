@@ -491,7 +491,7 @@ export default function DashboardLayout() {
                     </p>
                   )}
                   <nav className="space-y-0.5">
-                    {group.items.map((item) => renderNavItem(item, mini))}
+                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
                   </nav>
                 </div>
               ))

@@ -170,7 +170,7 @@ export default function InstructorQuizzesPage() {
   const updateQuestion = (index, field, value) => {
     setModal((current) => ({
       ...current,
-      questions: current.questions.map((question, itemIndex) =>
+      questions: (current?.questions || []).map((question, itemIndex) =>
         itemIndex === index ? { ...question, [field]: value } : question
       ),
     }));
@@ -179,11 +179,11 @@ export default function InstructorQuizzesPage() {
   const updateOption = (questionIndex, optionIndex, value) => {
     setModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) =>
+      questions: (current?.questions || []).map((question, index) =>
         index === questionIndex
           ? {
               ...question,
-              options: question.options.map((option, position) =>
+              options: (question?.options || []).map((option, position) =>
                 position === optionIndex ? value : option
               ),
             }
@@ -195,7 +195,7 @@ export default function InstructorQuizzesPage() {
   const addOption = (questionIndex) => {
     setModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) =>
+      questions: (current?.questions || []).map((question, index) =>
         index === questionIndex && question.options.length < 6
           ? { ...question, options: [...question.options, ''] }
           : question
@@ -206,7 +206,7 @@ export default function InstructorQuizzesPage() {
   const removeOption = (questionIndex, optionIndex) => {
     setModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) => {
+      questions: (current?.questions || []).map((question, index) => {
         if (index !== questionIndex || question.options.length <= 2) return question;
         const options = question.options.filter((_, position) => position !== optionIndex);
         return { ...question, options, correctOption: Math.min(question.correctOption, options.length - 1) };
@@ -240,7 +240,7 @@ export default function InstructorQuizzesPage() {
       description: modal.description,
       passScore: Number(modal.passScore) || 0,
       lessonId: modal.lessonId ? Number(modal.lessonId) : null,
-      questions: modal.questions.map((question, index) => ({
+      questions: (modal?.questions || []).map((question, index) => ({
         question: question.question,
         type: question.type,
         options: question.options,
@@ -616,7 +616,7 @@ export default function InstructorQuizzesPage() {
             </div>
 
             <div className="space-y-3">
-              {modal.questions.map((question, questionIndex) => (
+              {(modal?.questions || []).map((question, questionIndex) => (
                 <div key={questionIndex} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -636,7 +636,7 @@ export default function InstructorQuizzesPage() {
                     placeholder="Question text"
                   />
                   <div className="mt-3 space-y-2">
-                    {question.options.map((option, optionIndex) => (
+                    {(question?.options || []).map((option, optionIndex) => (
                       <div key={optionIndex} className="flex items-center gap-2">
                         <input
                           type="radio"
@@ -728,7 +728,7 @@ export default function InstructorQuizzesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {attempts.rows.map((row) => {
+                {(attempts?.rows || []).map((row) => {
                   const percent = Number(row.max_points) > 0 ? Math.round((Number(row.score) / Number(row.max_points)) * 100) : 0;
                   return (
                     <tr key={row.id}>

@@ -176,7 +176,7 @@ export default function QuizPage() {
           </Card>
 
           <div className="space-y-3">
-            {result.detail.map((question, index) => (
+            {(result?.detail || []).map((question, index) => (
               <Card key={question.questionId} className="p-5">
                 <div className="flex items-start gap-3">
                   <span
@@ -191,7 +191,7 @@ export default function QuizPage() {
                       {index + 1}. {question.question}
                     </p>
                     <div className="mt-3 space-y-1.5">
-                      {question.options.map((option, optionIndex) => {
+                      {(question?.options || []).map((option, optionIndex) => {
                         const chosen = question.chosen === optionIndex;
                         const correct = question.correctOption === optionIndex;
                         return (
@@ -241,7 +241,7 @@ export default function QuizPage() {
                       <span className="shrink-0 text-[11px] text-slate-500">{question.points} pts</span>
                     </div>
                     <div className="mt-3 grid gap-2">
-                      {question.options.map((option, optionIndex) => {
+                      {(question?.options || []).map((option, optionIndex) => {
                         const selected = answers[question.id] === optionIndex;
                         return (
                           <button
@@ -295,7 +295,7 @@ export default function QuizPage() {
         <Card className="p-5">
           <h2 className="font-display text-base font-semibold">Previous attempts</h2>
           <ul className="mt-3 divide-y divide-white/5">
-            {data.attempts.map((attempt) => (
+            {(data?.attempts || []).map((attempt) => (
               <li key={attempt.id} className="flex items-center justify-between gap-3 py-2.5 text-xs">
                 <span className="text-slate-400">{formatDateTime(attempt.created_at)}</span>
                 <span className="flex items-center gap-2">

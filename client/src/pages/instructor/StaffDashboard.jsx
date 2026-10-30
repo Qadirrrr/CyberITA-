@@ -202,7 +202,7 @@ export default function StaffDashboard() {
                 </p>
                 {stats?.recentSubmissions?.length ? (
                   <ul className="space-y-2.5">
-                    {stats.recentSubmissions.map((item) => (
+                    {(stats?.recentSubmissions || []).map((item) => (
                       <li key={`submission-${item.id}`} className="flex items-center gap-2.5">
                         <Avatar name={item.student_name} src={item.avatar_url} size="sm" />
                         <div className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ export default function StaffDashboard() {
                 </p>
                 {stats?.recentAttempts?.length ? (
                   <ul className="space-y-2.5">
-                    {stats.recentAttempts.map((item) => {
+                    {(stats?.recentAttempts || []).map((item) => {
                       const percent =
                         Number(item.max_points) > 0
                           ? Math.round((Number(item.score) / Number(item.max_points)) * 100)

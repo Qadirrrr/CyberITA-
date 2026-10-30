@@ -381,7 +381,7 @@ export default function ReportReviewDetailPage() {
 
                   {step.screenshots?.length > 0 && (
                     <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {step.screenshots.map((shot) => (
+                      {(step?.screenshots || []).map((shot) => (
                         <a
                           key={`${step.id}-${shot.id}`}
                           href={shot.file_path}

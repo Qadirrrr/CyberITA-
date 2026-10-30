@@ -127,7 +127,7 @@ export default function CoursesPage() {
               aria-label="Filter by category"
             >
               <option value="">All categories</option>
-              {meta.categories.map((item) => (
+              {(meta?.categories || []).map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
@@ -233,7 +233,7 @@ export default function CoursesPage() {
         ) : (
           <>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {data.courses.map((course) => (
+              {(data?.courses || []).map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
             </div>

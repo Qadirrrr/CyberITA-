@@ -73,7 +73,7 @@ function ModuleList({ modules, enrolled, slug }) {
             </button>
             {isOpen && (
               <ul className="divide-y divide-white/5 border-t border-white/5">
-                {module.lessons.map((lesson) => {
+                {(module?.lessons || []).map((lesson) => {
                   const accessible = enrolled || lesson.is_free_preview;
                   return (
                     <li key={lesson.id}>
@@ -384,7 +384,7 @@ export default function CourseDetailPage() {
                   <Markdown className="mt-4">{course.description || course.summary}</Markdown>
                   {course.tags?.length > 0 && (
                     <div className="mt-6 flex flex-wrap gap-2 border-t border-white/5 pt-4">
-                      {course.tags.map((tag) => (
+                      {(course?.tags || []).map((tag) => (
                         <Badge key={tag} tone="slate">
                           {tag}
                         </Badge>
@@ -428,7 +428,7 @@ export default function CourseDetailPage() {
                 {data.labs.length === 0 ? (
                   <Alert tone="info">No standalone labs are attached to this course yet.</Alert>
                 ) : (
-                  data.labs.map((lab) => (
+                  (data?.labs || []).map((lab) => (
                     <Card key={lab.id} className="flex flex-wrap items-center gap-4 p-5">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-400/10 text-brand-300">
                         <IconTerminal size={19} />
@@ -450,7 +450,7 @@ export default function CourseDetailPage() {
 
             {tab === 'quizzes' && (
               <div className="space-y-3">
-                {data.quizzes.map((quiz) => (
+                {(data?.quizzes || []).map((quiz) => (
                   <Card key={quiz.id} className="flex flex-wrap items-center gap-4 p-5">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400/10 text-accent-300">
                       <IconZap size={19} />
@@ -486,7 +486,7 @@ export default function CourseDetailPage() {
               <Card className="p-5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assessments</p>
                 <ul className="mt-3 space-y-2">
-                  {data.quizzes.map((quiz) => (
+                  {(data?.quizzes || []).map((quiz) => (
                     <li key={quiz.id} className="flex items-center justify-between gap-3 text-sm">
                       <span className="truncate text-slate-300">{quiz.title}</span>
                       <span className="shrink-0 text-xs text-slate-500">

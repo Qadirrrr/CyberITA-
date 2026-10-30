@@ -193,7 +193,7 @@ export default function StudentLessonsPage() {
                 </div>
 
                 <ul className="divide-y divide-white/5">
-                  {course.lessons.map((lesson) => {
+                  {(course?.lessons || []).map((lesson) => {
                     const done = lesson.progress_status === 'completed';
                     return (
                       <li key={lesson.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 transition hover:bg-white/[0.025]">

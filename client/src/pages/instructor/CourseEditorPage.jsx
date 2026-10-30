@@ -136,7 +136,7 @@ export default function CourseEditorPage() {
   }, [id]);
 
   const lessons = useMemo(
-    () => (data?.modules || []).flatMap((module) => module.lessons.map((lesson) => ({ ...lesson, moduleTitle: module.title }))),
+    () => (data?.modules || []).flatMap((module) => (module?.lessons || []).map((lesson) => ({ ...lesson, moduleTitle: module.title }))),
     [data]
   );
 
@@ -327,7 +327,7 @@ export default function CourseEditorPage() {
         description: response.quiz.description || '',
         passScore: response.quiz.passScore,
         lessonId: response.quiz.lessonId || '',
-        questions: response.questions.map((question) => ({
+        questions: (response?.questions || []).map((question) => ({
           question: question.question,
           type: question.type,
           options: Array.isArray(question.options) ? question.options : ['', ''],
@@ -346,16 +346,16 @@ export default function CourseEditorPage() {
   const updateQuestion = (index, field, value) => {
     setQuizModal((current) => ({
       ...current,
-      questions: current.questions.map((question, itemIndex) => (itemIndex === index ? { ...question, [field]: value } : question)),
+      questions: (current?.questions || []).map((question, itemIndex) => (itemIndex === index ? { ...question, [field]: value } : question)),
     }));
   };
 
   const updateOption = (questionIndex, optionIndex, value) => {
     setQuizModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) =>
+      questions: (current?.questions || []).map((question, index) =>
         index === questionIndex
-          ? { ...question, options: question.options.map((option, position) => (position === optionIndex ? value : option)) }
+          ? { ...question, options: (question?.options || []).map((option, position) => (position === optionIndex ? value : option)) }
           : question
       ),
     }));
@@ -364,7 +364,7 @@ export default function CourseEditorPage() {
   const addOption = (questionIndex) => {
     setQuizModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) =>
+      questions: (current?.questions || []).map((question, index) =>
         index === questionIndex && question.options.length < 6 ? { ...question, options: [...question.options, ''] } : question
       ),
     }));
@@ -373,7 +373,7 @@ export default function CourseEditorPage() {
   const removeOption = (questionIndex, optionIndex) => {
     setQuizModal((current) => ({
       ...current,
-      questions: current.questions.map((question, index) => {
+      questions: (current?.questions || []).map((question, index) => {
         if (index !== questionIndex || question.options.length <= 2) return question;
         const options = question.options.filter((_, position) => position !== optionIndex);
         return {
@@ -400,7 +400,7 @@ export default function CourseEditorPage() {
       description: quizModal.description,
       passScore: Number(quizModal.passScore) || 0,
       lessonId: quizModal.lessonId ? Number(quizModal.lessonId) : null,
-      questions: quizModal.questions.map((question, index) => ({
+      questions: (quizModal?.questions || []).map((question, index) => ({
         question: question.question,
         type: question.type,
         options: question.options,
@@ -682,7 +682,7 @@ export default function CourseEditorPage() {
               }
             />
           ) : (
-            data.modules.map((module, moduleIndex) => (
+            (data?.modules || []).map((module, moduleIndex) => (
               <Card key={module.id} className="overflow-hidden">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 px-5 py-3.5">
                   <div>
@@ -705,7 +705,7 @@ export default function CourseEditorPage() {
                   </div>
                 </div>
                 <ul className="divide-y divide-white/5">
-                  {module.lessons.map((lesson, lessonIndex) => (
+                  {(module?.lessons || []).map((lesson, lessonIndex) => (
                     <li key={lesson.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
                       <span className="font-mono text-[10px] text-slate-600">{moduleIndex + 1}.{lessonIndex + 1}</span>
                       <div className="min-w-0 flex-1">
@@ -745,7 +745,7 @@ export default function CourseEditorPage() {
             <EmptyState icon={IconZap} title="No quizzes" message="Add a quiz to check understanding after a lesson." />
           ) : (
             <div className="space-y-2">
-              {data.quizzes.map((quiz) => (
+              {(data?.quizzes || []).map((quiz) => (
                 <Card key={quiz.id} className="flex flex-wrap items-center gap-3 p-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-400/10 text-accent-300">
                     <IconZap size={16} />
@@ -782,7 +782,7 @@ export default function CourseEditorPage() {
             <EmptyState icon={IconFileText} title="No assignments" message="Add a practical written assignment." />
           ) : (
             <div className="space-y-2">
-              {data.assignments.map((assignment) => (
+              {(data?.assignments || []).map((assignment) => (
                 <Card key={assignment.id} className="flex flex-wrap items-center gap-3 p-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
                     <IconFileText size={16} />
@@ -828,7 +828,7 @@ export default function CourseEditorPage() {
             <EmptyState icon={IconTerminal} title="No labs" message="Create a lab and add guided, auto-verified steps." />
           ) : (
             <div className="space-y-2">
-              {data.labs.map((lab) => (
+              {(data?.labs || []).map((lab) => (
                 <Card key={lab.id} className="flex flex-wrap items-center gap-3 p-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
                     <IconTerminal size={16} />
@@ -872,7 +872,7 @@ export default function CourseEditorPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {data.enrollments.map((enrollment) => (
+                  {(data?.enrollments || []).map((enrollment) => (
                     <tr key={enrollment.id}>
                       <td className="px-5 py-3">
                         <p className="text-sm text-slate-200">{enrollment.full_name}</p>
@@ -988,7 +988,7 @@ export default function CourseEditorPage() {
             </div>
 
             <div className="space-y-3">
-              {quizModal.questions.map((question, questionIndex) => (
+              {(quizModal?.questions || []).map((question, questionIndex) => (
                 <div key={questionIndex} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Question {questionIndex + 1}</p>
@@ -1010,7 +1010,7 @@ export default function CourseEditorPage() {
                     placeholder="Question text"
                   />
                   <div className="mt-3 space-y-2">
-                    {question.options.map((option, optionIndex) => (
+                    {(question?.options || []).map((option, optionIndex) => (
                       <div key={optionIndex} className="flex items-center gap-2">
                         <input
                           type="radio"

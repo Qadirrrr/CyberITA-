@@ -266,7 +266,7 @@ export default function AdminLabsPage() {
 
         {verifyResult && (
           <div className="mt-4 space-y-2">
-            {verifyResult.checks.map((check) => (
+            {(verifyResult?.checks || []).map((check) => (
               <div
                 key={check.id}
                 className={`flex items-start gap-3 rounded-xl border px-3.5 py-2.5 ${

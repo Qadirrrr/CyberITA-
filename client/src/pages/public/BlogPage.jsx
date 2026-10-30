@@ -168,7 +168,7 @@ export default function BlogPage() {
         ) : (
           <>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {data.posts.map((post) => (
+              {(data?.posts || []).map((post) => (
                 <Link key={post.id} to={`/blog/${post.slug}`} className="card card-hover group flex flex-col overflow-hidden">
                   <div className="overflow-hidden">{coverFor(post)}</div>
                   <div className="flex flex-1 flex-col p-5">

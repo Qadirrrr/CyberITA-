@@ -581,7 +581,7 @@ export default function LabSessionPage() {
                   {!instructionParts.text && instructionParts.commands.length === 0 && (
                     <p className="text-sm text-slate-500">No instructions for this step.</p>
                   )}
-                  {instructionParts.commands.map((command) => (
+                  {(instructionParts?.commands || []).map((command) => (
                     <div key={command} className="terminal-surface mt-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
                       <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Command to run</span>

@@ -57,7 +57,7 @@ export default function LearnPage() {
   const queryLesson = searchParams.get('lesson');
 
   const allLessons = useMemo(
-    () => modules.flatMap((module) => module.lessons.map((lesson) => ({ ...lesson, moduleTitle: module.title }))),
+    () => modules.flatMap((module) => (module?.lessons || []).map((lesson) => ({ ...lesson, moduleTitle: module.title }))),
     [modules]
   );
 
@@ -280,7 +280,7 @@ export default function LearnPage() {
                 <div key={module.id} className="mb-2">
                   <p className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{module.title}</p>
                   <ul className="space-y-0.5">
-                    {module.lessons.map((item) => {
+                    {(module?.lessons || []).map((item) => {
                       const itemProgress = progressByLesson.get(item.id);
                       const done = itemProgress?.status === 'completed';
                       const isCurrent = item.id === activeLessonId;
@@ -421,7 +421,7 @@ export default function LearnPage() {
                     <h2 className="font-display text-base font-semibold">Practise this lesson</h2>
                   </div>
                   <div className="mt-4 space-y-2.5">
-                    {lessonData.labs.map((lab) => (
+                    {(lessonData?.labs || []).map((lab) => (
                       <div key={lab.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-400/10 text-brand-300">
                           <IconTerminal size={16} />
@@ -437,7 +437,7 @@ export default function LearnPage() {
                         </Button>
                       </div>
                     ))}
-                    {lessonData.quizzes.map((quiz) => (
+                    {(lessonData?.quizzes || []).map((quiz) => (
                       <div key={quiz.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-400/10 text-accent-300">
                           <IconZap size={16} />
@@ -455,7 +455,7 @@ export default function LearnPage() {
                         </Button>
                       </div>
                     ))}
-                    {lessonData.assignments.map((assignment) => (
+                    {(lessonData?.assignments || []).map((assignment) => (
                       <div key={assignment.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
                           <IconFileText size={16} />

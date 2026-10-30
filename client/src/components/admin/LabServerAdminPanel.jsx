@@ -275,7 +275,7 @@ export default function LabServerAdminPanel() {
                           )}
                           {result && (
                             <div className="mt-2 space-y-1">
-                              {result.checks.map((check) => (
+                              {(result?.checks || []).map((check) => (
                                 <div key={check.id} className="flex items-start gap-1.5 text-[10px]">
                                   {check.ok ? (
                                     <IconCheckCircle size={11} className="mt-0.5 shrink-0 text-emerald-300" />
