@@ -270,40 +270,40 @@ export default function StaffDashboard() {
             <div className="mt-3 space-y-2">
               <Link
                 to="/instructor/submissions"
-                className="flex items-center justify-between rounded-xl border border-brand-400/20 bg-brand-400/[0.06] px-3 py-2.5 transition hover:border-brand-400/40"
+                className="flex items-center justify-between rounded-xl border border-brand-400/30 bg-brand-400/[0.08] px-3 py-2.5 transition hover:border-brand-400/50 hover:bg-brand-400/[0.12]"
               >
-                <span className="flex items-center gap-2 text-xs text-brand-200">
+                <span className="flex items-center gap-2 text-xs font-medium text-brand-600 dark:text-brand-300">
                   <IconCheckCircle size={14} /> Assignments to grade
                 </span>
-                <span className="font-display text-lg font-semibold text-brand-300 tabular-nums">
+                <span className="font-display text-lg font-semibold text-brand-600 dark:text-brand-300 tabular-nums">
                   <AnimatedNumber value={stats?.pending?.submissions_pending ?? 0} />
                 </span>
               </Link>
               <Link
                 to="/instructor/reports?status=submitted"
-                className="flex items-center justify-between rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2.5 transition hover:border-amber-400/40"
+                className="flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/[0.08] px-3 py-2.5 transition hover:border-amber-400/50 hover:bg-amber-400/[0.12]"
               >
-                <span className="flex items-center gap-2 text-xs text-amber-200">
+                <span className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300">
                   <IconFileText size={14} /> Practical reports
                 </span>
-                <span className="font-display text-lg font-semibold text-amber-300 tabular-nums">
+                <span className="font-display text-lg font-semibold text-amber-700 dark:text-amber-300 tabular-nums">
                   <AnimatedNumber value={stats?.pending?.reports_pending ?? 0} />
                 </span>
               </Link>
               <Link
                 to="/instructor/messages"
-                className="flex items-center justify-between rounded-xl border border-sky-400/20 bg-sky-400/[0.06] px-3 py-2.5 transition hover:border-sky-400/40"
+                className="flex items-center justify-between rounded-xl border border-sky-400/30 bg-sky-400/[0.08] px-3 py-2.5 transition hover:border-sky-400/50 hover:bg-sky-400/[0.12]"
               >
-                <span className="flex items-center gap-2 text-xs text-sky-200">
+                <span className="flex items-center gap-2 text-xs font-medium text-sky-700 dark:text-sky-300">
                   <IconBell size={14} /> Unread student messages
                 </span>
-                <span className="font-display text-lg font-semibold text-sky-300 tabular-nums">
+                <span className="font-display text-lg font-semibold text-sky-700 dark:text-sky-300 tabular-nums">
                   <AnimatedNumber value={unreadMessages} />
                 </span>
               </Link>
             </div>
             {pendingTotal === 0 && unreadMessages === 0 && (
-              <p className="mt-3 text-[10px] leading-4 text-slate-600">
+              <p className="mt-3 text-[10px] leading-4 text-slate-500 dark:text-slate-500">
                 You're all caught up. New submissions, reports and messages will appear here.
               </p>
             )}

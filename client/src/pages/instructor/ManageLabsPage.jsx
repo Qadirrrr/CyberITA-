@@ -231,17 +231,17 @@ export default function ManageLabsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link to={`/instructor/labs/${lab.id}`} className="text-sm font-semibold text-white hover:text-brand-200">
+                  <Link to={`/instructor/labs/${lab.id}`} className="text-sm font-semibold text-slate-900 hover:text-brand-600 dark:text-white dark:hover:text-brand-200">
                     {lab.title}
                   </Link>
                   <Badge tone={statusTone[lab.status]}>{lab.status}</Badge>
                   {lab.is_practice && <Badge tone="brand">practice</Badge>}
                   <Badge tone={DIFFICULTIES[lab.difficulty]?.tone || 'slate'}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
                 </div>
-                <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">
+                <p className="mt-1 line-clamp-1 text-[11px] text-slate-600 dark:text-slate-400">
                   {lab.is_practice ? 'Practice lab · open to all learners' : lab.course_title || 'Standalone lab'} · {lab.step_count} steps · {lab.estimated_minutes} min
                 </p>
-                <p className="mt-0.5 text-[10px] text-slate-600">
+                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-500">
                   {lab.session_count} sessions started
                   {lab.last_started_at ? ` · last ${new Date(lab.last_started_at).toLocaleDateString()}` : ''}
                 </p>

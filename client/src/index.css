@@ -289,6 +289,8 @@
 html:not(.dark) .border-white\/5,
 html:not(.dark) .border-white\/10,
 html:not(.dark) .border-white\/15,
+html:not(.dark) .border-white\/\[0\.05\],
+html:not(.dark) .border-white\/\[0\.06\],
 html:not(.dark) .border-white\/\[0\.08\] {
   border-color: #e2e8f0;
 }
@@ -301,7 +303,9 @@ html:not(.dark) .border-white\/25 {
 html:not(.dark) .bg-white\/5,
 html:not(.dark) .bg-white\/\[0\.02\],
 html:not(.dark) .bg-white\/\[0\.03\],
-html:not(.dark) .bg-white\/\[0\.05\] {
+html:not(.dark) .bg-white\/\[0\.04\],
+html:not(.dark) .bg-white\/\[0\.05\],
+html:not(.dark) .bg-white\/\[0\.06\] {
   background-color: #f8fafc;
 }
 
@@ -309,99 +313,131 @@ html:not(.dark) .bg-white\/10 {
   background-color: #f1f5f9;
 }
 
+/* Headings and titles with text-white must turn dark slate in light theme */
 html:not(.dark) h1.text-white,
 html:not(.dark) h2.text-white,
 html:not(.dark) h3.text-white,
 html:not(.dark) h4.text-white,
 html:not(.dark) h5.text-white,
 html:not(.dark) h6.text-white,
-html:not(.dark) p.text-white,
-html:not(.dark) span.text-white:not([class*='bg-']):not([class*='chip']):not([class*='badge']) {
-  color: #0f172a;
+html:not(.dark) p.text-white:not([class*='bg-']),
+html:not(.dark) a.text-white:not([class*='bg-']),
+html:not(.dark) span.text-white:not([class*='bg-']):not([class*='chip']):not([class*='badge']):not([class*='rounded-full']):not(.avatar),
+html:not(.dark) div.text-white:not([class*='bg-']):not([class*='badge']):not(.avatar),
+html:not(.dark) dd.text-white:not([class*='bg-']),
+html:not(.dark) dt.text-white:not([class*='bg-']),
+html:not(.dark) li.text-white:not([class*='bg-']),
+html:not(.dark) th.text-white,
+html:not(.dark) td.text-white,
+html:not(.dark) strong.text-white,
+html:not(.dark) label.text-white {
+  color: #0f172a !important;
 }
 
+/* Text slate contrast adjustments in light theme */
 html:not(.dark) .text-slate-100 {
-  color: #0f172a;
+  color: #0f172a !important;
 }
 
 html:not(.dark) .text-slate-200 {
-  color: #1e293b;
+  color: #1e293b !important;
 }
 
 html:not(.dark) .text-slate-300 {
-  color: #334155;
+  color: #334155 !important;
 }
 
-/* Dark surfaces (terminal, code blocks) must keep light text in light theme. */
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Light pastel color text to high-contrast colors in light theme */
+html:not(.dark) .text-brand-200 {
+  color: #0369a1 !important;
+}
+html:not(.dark) .text-brand-300 {
+  color: #0284c7 !important;
+}
+html:not(.dark) .text-amber-200 {
+  color: #b45309 !important;
+}
+html:not(.dark) .text-amber-300 {
+  color: #d97706 !important;
+}
+html:not(.dark) .text-emerald-200 {
+  color: #047857 !important;
+}
+html:not(.dark) .text-emerald-300 {
+  color: #059669 !important;
+}
+html:not(.dark) .text-rose-200 {
+  color: #be123c !important;
+}
+html:not(.dark) .text-rose-300 {
+  color: #e11d48 !important;
+}
+html:not(.dark) .text-sky-200 {
+  color: #0369a1 !important;
+}
+html:not(.dark) .text-sky-300 {
+  color: #0284c7 !important;
+}
+html:not(.dark) .text-accent-200 {
+  color: #6d28d9 !important;
+}
+html:not(.dark) .text-accent-300 {
+  color: #7c3aed !important;
+}
+
+/* Hover and group-hover states in light theme */
+html:not(.dark) .hover\:text-white:hover,
+html:not(.dark) .group:hover .group-hover\:text-white {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .hover\:text-brand-200:hover,
+html:not(.dark) .group:hover .group-hover\:text-brand-200 {
+  color: #0284c7 !important;
+}
+
+/* Dark surfaces (terminal, code blocks) must keep light text in light theme */
 html:not(.dark) .terminal-surface,
-html:not(.dark) .terminal-surface .text-white,
-html:not(.dark) .terminal-surface .text-slate-100,
-html:not(.dark) .terminal-surface .text-slate-200,
-html:not(.dark) .terminal-surface .text-slate-300,
-html:not(.dark) .terminal-surface .text-slate-400,
-html:not(.dark) .terminal-surface .text-slate-500 {
-  color: #e2e8f0;
-}
-
-html:not(.dark) .markdown pre,
-html:not(.dark) .markdown pre code {
-  color: #e2e8f0;
-}
-
-/* Fixed dark surfaces keep light text in light theme (bg-slate-950 variants, black, explicit dark hex). */
+html:not(.dark) .terminal-surface *,
 html:not(.dark) .bg-slate-950,
-html:not(.dark) .bg-slate-950 .text-white,
-html:not(.dark) .bg-slate-950 .text-slate-100,
-html:not(.dark) .bg-slate-950 .text-slate-200,
-html:not(.dark) .bg-slate-950 .text-slate-300,
-html:not(.dark) .bg-slate-950 .text-slate-400,
-html:not(.dark) .bg-slate-950 .text-slate-500,
-html:not(.dark) [class*="bg-slate-950/"] .text-white,
-html:not(.dark) [class*="bg-slate-950/"] .text-slate-100,
-html:not(.dark) [class*="bg-slate-950/"] .text-slate-200,
-html:not(.dark) [class*="bg-slate-950/"] .text-slate-300,
-html:not(.dark) [class*="bg-slate-950/"] .text-slate-400,
-html:not(.dark) [class*="bg-slate-950/"] .text-slate-500,
-html:not(.dark) .bg-black .text-white,
-html:not(.dark) .bg-black .text-slate-100,
-html:not(.dark) .bg-black .text-slate-200,
-html:not(.dark) .bg-black .text-slate-300,
-html:not(.dark) .bg-black .text-slate-400,
-html:not(.dark) .bg-black .text-slate-500 {
+html:not(.dark) .bg-slate-950 *,
+html:not(.dark) [class*="bg-slate-950"],
+html:not(.dark) [class*="bg-slate-950"] *,
+html:not(.dark) .bg-black,
+html:not(.dark) .bg-black *,
+html:not(.dark) .bg-slate-900,
+html:not(.dark) .bg-slate-900 * {
   color: #e2e8f0;
 }
+
+/* Pure white text on colored buttons, dark surfaces and badges */
+html:not(.dark) .terminal-surface.text-white,
+html:not(.dark) .terminal-surface .text-white,
 html:not(.dark) .bg-slate-950.text-white,
-html:not(.dark) .bg-slate-950.text-slate-100,
-html:not(.dark) .bg-slate-950.text-slate-200,
-html:not(.dark) .bg-slate-950.text-slate-300,
-html:not(.dark) .bg-slate-950.text-slate-400,
-html:not(.dark) .bg-slate-950.text-slate-500,
-html:not(.dark) [class*="bg-slate-950/"].text-white,
-html:not(.dark) [class*="bg-slate-950/"].text-slate-100,
-html:not(.dark) [class*="bg-slate-950/"].text-slate-200,
-html:not(.dark) [class*="bg-slate-950/"].text-slate-300,
-html:not(.dark) [class*="bg-slate-950/"].text-slate-400,
-html:not(.dark) [class*="bg-slate-950/"].text-slate-500,
-html:not(.dark) .bg-black.text-white,
-html:not(.dark) .bg-black.text-slate-100,
-html:not(.dark) .bg-black.text-slate-200,
-html:not(.dark) .bg-black.text-slate-300,
-html:not(.dark) .bg-black.text-slate-400,
-html:not(.dark) .bg-black.text-slate-500 {
-  color: #e2e8f0;
-}
-/* text-white on fixed dark should be pure white */
-html:not(.dark) .bg-slate-950.text-white,
-html:not(.dark) [class*="bg-slate-950/"].text-white,
-html:not(.dark) .bg-black.text-white,
-html:not(.dark) .terminal-surface.text-white {
-  color: #ffffff;
-}
 html:not(.dark) .bg-slate-950 .text-white,
-html:not(.dark) [class*="bg-slate-950/"] .text-white,
+html:not(.dark) [class*="bg-slate-950"].text-white,
+html:not(.dark) [class*="bg-slate-950"] .text-white,
+html:not(.dark) .bg-black.text-white,
 html:not(.dark) .bg-black .text-white,
-html:not(.dark) .terminal-surface .text-white {
-  color: #ffffff;
+html:not(.dark) button[class*="bg-brand"].text-white,
+html:not(.dark) button[class*="bg-brand"] .text-white,
+html:not(.dark) a[class*="bg-brand"].text-white,
+html:not(.dark) a[class*="bg-brand"] .text-white,
+html:not(.dark) button[class*="bg-rose"].text-white,
+html:not(.dark) button[class*="bg-rose"] .text-white,
+html:not(.dark) button[class*="bg-emerald"].text-white,
+html:not(.dark) button[class*="bg-emerald"] .text-white,
+html:not(.dark) [class*="bg-gradient"].text-white,
+html:not(.dark) [class*="bg-gradient"] .text-white {
+  color: #ffffff !important;
 }
 
 html:not(.dark) .markdown pre {
@@ -412,14 +448,6 @@ html:not(.dark) .markdown pre {
 html:not(.dark) .markdown pre code {
   color: #6ee7b7;
   background-color: transparent;
-}
-
-html:not(.dark) .text-slate-400 {
-  color: #64748b;
-}
-
-html:not(.dark) .text-slate-500 {
-  color: #64748b;
 }
 
 @layer utilities {
