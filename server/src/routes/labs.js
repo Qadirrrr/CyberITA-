@@ -441,6 +441,15 @@ router.post(
             }
           : null,
       });
+
+      // Automatically clean up container after lab completion/submission while preserving evidence
+      await stopSession(session, req.user).catch((cleanupErr) => {
+        logger.warn('Failed to stop lab session after submission', {
+          sessionId: session.id,
+          error: cleanupErr.message,
+        });
+      });
+
       res.status(201).json({ submission });
     } catch (error) {
       if (req.file) fs.unlink(req.file.path, () => {});

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -31,6 +31,7 @@ import {
 import { formatDateTime, timeAgo } from '../../lib/format';
 import LabServerAdminPanel from '../../components/admin/LabServerAdminPanel';
 import LabSubmissionsRecordPanel from '../../components/admin/LabSubmissionsRecordPanel';
+import DockerContainerMonitorPanel from '../../components/admin/DockerContainerMonitorPanel';
 
 const statusTone = {
   running: 'emerald',
@@ -52,7 +53,21 @@ export default function AdminLabsPage() {
   const [cleaning, setCleaning] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState(null);
-  const [tab, setTab] = useState('sessions');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const [tab, setTab] = useState(urlTab || 'containers');
+
+  const handleTabChange = (nextTab) => {
+    setTab(nextTab);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', nextTab);
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -160,14 +175,16 @@ export default function AdminLabsPage() {
 
       <Tabs
         tabs={[
+          { id: 'containers', label: 'Live Docker Containers' },
           { id: 'sessions', label: 'Sessions & health' },
           { id: 'servers', label: 'Servers & assignment' },
           { id: 'submissions', label: 'Submission record' },
         ]}
         value={tab}
-        onChange={setTab}
+        onChange={handleTabChange}
       />
 
+      {tab === 'containers' && <DockerContainerMonitorPanel />}
       {tab === 'servers' && <LabServerAdminPanel />}
       {tab === 'submissions' && <LabSubmissionsRecordPanel />}
 

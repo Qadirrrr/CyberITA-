@@ -617,7 +617,7 @@ export default function ReportReviewDetailPage() {
 
           {articleDraft && (
             <Card className="border-brand-400/25 bg-brand-400/[0.04] p-5">
-              <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand-200">
+              <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand-700 dark:text-brand-200">
                 <IconFileText size={15} /> Article draft ready
               </h2>
               <p className="mt-1 text-xs leading-6 text-slate-300">
@@ -637,7 +637,7 @@ export default function ReportReviewDetailPage() {
 
           {articlePublished && (
             <Card className="border-emerald-400/25 bg-emerald-400/[0.04] p-5">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
                 <IconCheckCircle size={15} /> Published
               </h2>
               <p className="mt-1 text-xs leading-6 text-slate-300">This report is live on the CyberITA+ blog.</p>
@@ -657,7 +657,7 @@ export default function ReportReviewDetailPage() {
 
           {report.status === 'rejected' && (
             <Card className="border-rose-400/25 bg-rose-400/[0.04] p-5">
-              <h2 className="text-sm font-semibold text-rose-200">Correction requested</h2>
+              <h2 className="text-sm font-semibold text-rose-700 dark:text-rose-200">Correction requested</h2>
               <p className="mt-1 whitespace-pre-wrap text-xs leading-6 text-slate-300">
                 {report.instructor_feedback || 'No feedback recorded.'}
               </p>

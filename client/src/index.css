@@ -334,12 +334,74 @@ html:not(.dark) .text-slate-300 {
 
 /* Dark surfaces (terminal, code blocks) must keep light text in light theme. */
 html:not(.dark) .terminal-surface,
+html:not(.dark) .terminal-surface .text-white,
 html:not(.dark) .terminal-surface .text-slate-100,
 html:not(.dark) .terminal-surface .text-slate-200,
 html:not(.dark) .terminal-surface .text-slate-300,
+html:not(.dark) .terminal-surface .text-slate-400,
+html:not(.dark) .terminal-surface .text-slate-500 {
+  color: #e2e8f0;
+}
+
 html:not(.dark) .markdown pre,
 html:not(.dark) .markdown pre code {
   color: #e2e8f0;
+}
+
+/* Fixed dark surfaces keep light text in light theme (bg-slate-950 variants, black, explicit dark hex). */
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-slate-950 .text-white,
+html:not(.dark) .bg-slate-950 .text-slate-100,
+html:not(.dark) .bg-slate-950 .text-slate-200,
+html:not(.dark) .bg-slate-950 .text-slate-300,
+html:not(.dark) .bg-slate-950 .text-slate-400,
+html:not(.dark) .bg-slate-950 .text-slate-500,
+html:not(.dark) [class*="bg-slate-950/"] .text-white,
+html:not(.dark) [class*="bg-slate-950/"] .text-slate-100,
+html:not(.dark) [class*="bg-slate-950/"] .text-slate-200,
+html:not(.dark) [class*="bg-slate-950/"] .text-slate-300,
+html:not(.dark) [class*="bg-slate-950/"] .text-slate-400,
+html:not(.dark) [class*="bg-slate-950/"] .text-slate-500,
+html:not(.dark) .bg-black .text-white,
+html:not(.dark) .bg-black .text-slate-100,
+html:not(.dark) .bg-black .text-slate-200,
+html:not(.dark) .bg-black .text-slate-300,
+html:not(.dark) .bg-black .text-slate-400,
+html:not(.dark) .bg-black .text-slate-500 {
+  color: #e2e8f0;
+}
+html:not(.dark) .bg-slate-950.text-white,
+html:not(.dark) .bg-slate-950.text-slate-100,
+html:not(.dark) .bg-slate-950.text-slate-200,
+html:not(.dark) .bg-slate-950.text-slate-300,
+html:not(.dark) .bg-slate-950.text-slate-400,
+html:not(.dark) .bg-slate-950.text-slate-500,
+html:not(.dark) [class*="bg-slate-950/"].text-white,
+html:not(.dark) [class*="bg-slate-950/"].text-slate-100,
+html:not(.dark) [class*="bg-slate-950/"].text-slate-200,
+html:not(.dark) [class*="bg-slate-950/"].text-slate-300,
+html:not(.dark) [class*="bg-slate-950/"].text-slate-400,
+html:not(.dark) [class*="bg-slate-950/"].text-slate-500,
+html:not(.dark) .bg-black.text-white,
+html:not(.dark) .bg-black.text-slate-100,
+html:not(.dark) .bg-black.text-slate-200,
+html:not(.dark) .bg-black.text-slate-300,
+html:not(.dark) .bg-black.text-slate-400,
+html:not(.dark) .bg-black.text-slate-500 {
+  color: #e2e8f0;
+}
+/* text-white on fixed dark should be pure white */
+html:not(.dark) .bg-slate-950.text-white,
+html:not(.dark) [class*="bg-slate-950/"].text-white,
+html:not(.dark) .bg-black.text-white,
+html:not(.dark) .terminal-surface.text-white {
+  color: #ffffff;
+}
+html:not(.dark) .bg-slate-950 .text-white,
+html:not(.dark) [class*="bg-slate-950/"] .text-white,
+html:not(.dark) .bg-black .text-white,
+html:not(.dark) .terminal-surface .text-white {
+  color: #ffffff;
 }
 
 html:not(.dark) .markdown pre {

@@ -273,7 +273,7 @@ export default function HomePage() {
               {steps.map((step, index) => (
                 <div key={step.title} className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/30 bg-brand-400/10 font-display text-sm font-semibold text-brand-300">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/30 bg-brand-400/10 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
                       {index + 1}
                     </span>
                     {index < steps.length - 1 && <span className="mt-2 h-full w-px bg-gradient-to-b from-brand-400/30 to-transparent" />}
@@ -324,7 +324,7 @@ export default function HomePage() {
               <Card className="p-6 text-sm text-slate-400">Learning paths are being prepared. Browse individual courses in the meantime.</Card>
             )}
             <Card className="border-brand-400/20 bg-gradient-to-br from-brand-400/[0.07] to-transparent p-6">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-300">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-brand-300">
                 <IconShield size={15} /> Career-ready evidence
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-300">

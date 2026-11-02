@@ -9,6 +9,7 @@ import { recomputeCourseProgress } from '../routes/enrollment.js';
 import { assertSessionAccess } from './access.js';
 import { hostForSession, resolveServerForNewSession } from './labServers.js';
 import { studentIdentity } from '../labs/identity.js';
+import { recordContainerEvent } from './dockerMonitor.js';
 
 const MAX_HISTORY_LINES = 400;
 
@@ -97,6 +98,21 @@ export async function startSession(user, lab) {
   }
   const session = rows[0];
 
+  if (descriptor.instanceId && descriptor.provider === 'docker') {
+    await recordContainerEvent({
+      containerId: descriptor.instanceId,
+      sessionId: session.id,
+      userId: user.id,
+      labId: lab.id,
+      event: 'created',
+      details: {
+        image: lab.container_image,
+        provider: descriptor.provider,
+        labServerId: server?.id ?? null,
+      },
+    }).catch(() => {});
+  }
+
   await withTransaction(async (client) => {
     await recordActivity(client, {
       userId: user.id,
@@ -129,14 +145,26 @@ export async function stopSession(session, user) {
     `UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1 RETURNING *`,
     [session.id]
   );
-  await withTransaction((client) =>
-    recordActivity(client, {
-      userId: user.id,
-      action: 'lab.stopped',
-      entityType: 'lab',
-      entityId: session.lab_id,
-    })
-  );
+  if (user?.id) {
+    await withTransaction((client) =>
+      recordActivity(client, {
+        userId: user.id,
+        action: 'lab.stopped',
+        entityType: 'lab',
+        entityId: session.lab_id,
+      })
+    ).catch(() => {});
+  }
+  if (session.instance_id && session.provider === 'docker') {
+    await recordContainerEvent({
+      containerId: session.instance_id,
+      sessionId: session.id,
+      userId: user?.id || session.user_id,
+      labId: session.lab_id,
+      event: 'stopped',
+      details: { stoppedBy: user?.id === session.user_id ? 'student' : 'staff' },
+    }).catch(() => {});
+  }
   return rows[0];
 }
 
@@ -366,6 +394,16 @@ export async function cleanupExpiredLabSessions({ limit = 100 } = {}) {
         [session.id]
       );
       stopped += result.rowCount;
+      if (session.instance_id && session.provider === 'docker') {
+        recordContainerEvent({
+          containerId: session.instance_id,
+          sessionId: session.id,
+          userId: session.user_id,
+          labId: session.lab_id,
+          event: 'cleanup',
+          details: { reason: 'session_expired_ttl' },
+        }).catch(() => {});
+      }
     } catch (error) {
       await query(
         `UPDATE lab_sessions SET status = 'stopped', ended_at = now()

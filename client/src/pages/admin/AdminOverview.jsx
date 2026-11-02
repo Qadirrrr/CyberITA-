@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { AnimatedNumber, Avatar, Badge, Button, Card, Skeleton, StatCard } from '../../components/ui';
@@ -183,10 +183,13 @@ export default function AdminOverview() {
           <p className="mt-1 text-sm text-slate-400">Adoption, content and community health at a glance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button as={Link} to="/admin/labs?tab=containers" size="sm" variant="secondary">
+            <IconTerminal size={14} /> Docker containers
+          </Button>
           <Button as={Link} to="/admin/users?create=1" size="sm">
             <IconPlus size={14} /> New account
           </Button>
-          <Button as={Link} to="/admin/users" size="sm" variant="secondary">
+          <Button as={Link} to="/admin/users" size="sm" variant="ghost">
             <IconUsers size={14} /> Users
           </Button>
           <Button as={Link} to="/admin/broadcast" size="sm" variant="ghost">
@@ -216,13 +219,15 @@ export default function AdminOverview() {
           hint={`${completionRate}% completion rate`}
           tone="emerald"
         />
-        <StatCard
-          icon={IconTerminal}
-          label="Lab sessions"
-          value={stats.labs.sessions}
-          hint={`${stats.labs.completed_sessions} completed · ${stats.labs.steps_completed} steps`}
-          tone="amber"
-        />
+        <Link to="/admin/labs?tab=containers" className="block transition hover:opacity-90">
+          <StatCard
+            icon={IconTerminal}
+            label="Live Docker labs"
+            value={stats.labs.sessions}
+            hint={`${stats.labs.completed_sessions} completed · live containers`}
+            tone="amber"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

@@ -3,6 +3,7 @@ import env from '../config/env.js';
 import logger from '../config/logger.js';
 import { verifyAccessToken } from '../services/authService.js';
 import { executeInSession, getSessionOr404, getLab, getSessionOverview } from '../services/labService.js';
+import { getLiveContainers } from '../services/dockerMonitor.js';
 
 /**
  * Single WebSocket endpoint (/ws) used for:
@@ -18,6 +19,46 @@ import { executeInSession, getSessionOr404, getLab, getSessionOverview } from '.
 const clientsByUser = new Map();
 /** sessionId -> Set<socket> */
 const labRooms = new Map();
+/** Admin monitoring subscribers */
+const adminMonitorSockets = new Set();
+let adminMonitorTimer = null;
+
+export function isTerminalConnected(sessionId) {
+  const room = labRooms.get(Number(sessionId));
+  return Boolean(room && room.size > 0);
+}
+
+export async function broadcastContainerUpdate() {
+  if (adminMonitorSockets.size === 0) return;
+  try {
+    const snapshot = await getLiveContainers({}, isTerminalConnected);
+    const message = JSON.stringify({ type: 'admin.containers.update', data: snapshot });
+    for (const socket of adminMonitorSockets) {
+      if (socket.readyState === socket.OPEN) socket.send(message);
+    }
+  } catch (err) {
+    logger.debug('Broadcast container update error', { error: err.message });
+  }
+}
+
+function startAdminMonitorLoop() {
+  if (adminMonitorTimer) return;
+  adminMonitorTimer = setInterval(() => {
+    if (adminMonitorSockets.size === 0) {
+      stopAdminMonitorLoop();
+      return;
+    }
+    broadcastContainerUpdate().catch(() => {});
+  }, 3500);
+  adminMonitorTimer.unref?.();
+}
+
+function stopAdminMonitorLoop() {
+  if (adminMonitorTimer) {
+    clearInterval(adminMonitorTimer);
+    adminMonitorTimer = null;
+  }
+}
 
 function parseCookies(header = '') {
   const cookies = {};
@@ -48,6 +89,8 @@ function addClient(userId, socket) {
 }
 
 function removeClient(socket) {
+  adminMonitorSockets.delete(socket);
+  if (adminMonitorSockets.size === 0) stopAdminMonitorLoop();
   if (socket.userId && clientsByUser.has(socket.userId)) {
     clientsByUser.get(socket.userId).delete(socket);
     if (clientsByUser.get(socket.userId).size === 0) clientsByUser.delete(socket.userId);
@@ -195,6 +238,22 @@ export function initWebSocket(httpServer) {
           case 'lab.exec':
             await handleLabExec(socket, message);
             break;
+          case 'admin.containers.subscribe': {
+            if (socket.user?.role !== 'admin') {
+              send(socket, { type: 'error', message: 'Forbidden. Admin role required.' });
+              break;
+            }
+            adminMonitorSockets.add(socket);
+            startAdminMonitorLoop();
+            const snapshot = await getLiveContainers({}, isTerminalConnected);
+            send(socket, { type: 'admin.containers.snapshot', data: snapshot });
+            break;
+          }
+          case 'admin.containers.unsubscribe': {
+            adminMonitorSockets.delete(socket);
+            if (adminMonitorSockets.size === 0) stopAdminMonitorLoop();
+            break;
+          }
           case 'ping':
             send(socket, { type: 'pong', at: Date.now() });
             break;

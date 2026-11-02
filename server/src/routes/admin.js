@@ -23,6 +23,17 @@ import {
   listLabSubmissions,
   submissionStats,
 } from '../services/labSubmissions.js';
+import {
+  getLiveContainers,
+  getContainerDetails,
+  getContainerLogs,
+  startContainer,
+  stopContainer,
+  restartContainer,
+  resetContainer,
+  removeContainer,
+} from '../services/dockerMonitor.js';
+import { isTerminalConnected, broadcastContainerUpdate } from '../websocket/index.js';
 
 const router = Router();
 
@@ -236,6 +247,98 @@ router.post(
       })
     );
     res.json({ ok: true, result });
+  })
+);
+
+/** ================= Live Docker Container Monitoring ================= */
+
+/** List all students' Docker containers with live CPU/RAM/Duration/Terminal status */
+router.get(
+  '/docker/containers',
+  asyncHandler(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const status = req.query.status ? String(req.query.status).trim() : 'all';
+    const search = req.query.search ? String(req.query.search).trim() : '';
+
+    const data = await getLiveContainers({ status, search, page, limit }, isTerminalConnected);
+    res.json(data);
+  })
+);
+
+/** Get container inspect details & lifecycle events */
+router.get(
+  '/docker/containers/:id',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const data = await getContainerDetails(sessionId);
+    res.json(data);
+  })
+);
+
+/** Get container stdout/stderr logs */
+router.get(
+  '/docker/containers/:id/logs',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const tail = Number(req.query.tail) || 250;
+    const data = await getContainerLogs(sessionId, { tail });
+    res.json(data);
+  })
+);
+
+/** Start container */
+router.post(
+  '/docker/containers/:id/start',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const result = await startContainer(sessionId, req.user);
+    broadcastContainerUpdate().catch(() => {});
+    res.json(result);
+  })
+);
+
+/** Stop container */
+router.post(
+  '/docker/containers/:id/stop',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const result = await stopContainer(sessionId, req.user);
+    broadcastContainerUpdate().catch(() => {});
+    res.json(result);
+  })
+);
+
+/** Restart container */
+router.post(
+  '/docker/containers/:id/restart',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const result = await restartContainer(sessionId, req.user);
+    broadcastContainerUpdate().catch(() => {});
+    res.json(result);
+  })
+);
+
+/** Reset container: re-creates a clean environment while preserving progress */
+router.post(
+  '/docker/containers/:id/reset',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const result = await resetContainer(sessionId, req.user);
+    broadcastContainerUpdate().catch(() => {});
+    res.json(result);
+  })
+);
+
+/** Remove container: deprovisions container, marks session stopped, keeps records */
+router.post(
+  '/docker/containers/:id/remove',
+  asyncHandler(async (req, res) => {
+    const sessionId = Number(req.params.id);
+    const result = await removeContainer(sessionId, req.user);
+    broadcastContainerUpdate().catch(() => {});
+    res.json(result);
   })
 );
 
