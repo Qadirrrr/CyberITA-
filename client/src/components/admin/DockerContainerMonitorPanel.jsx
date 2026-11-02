@@ -744,7 +744,7 @@ export default function DockerContainerMonitorPanel() {
                     <p className="text-slate-500 italic p-4 text-center">No lifecycle events recorded for this container.</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {inspectModal.data.lifecycleEvents.map((ev) => (
+                      {(inspectModal.data.lifecycleEvents || []).map((ev) => (
                         <div key={ev.id} className="flex items-start justify-between rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
                           <div>
                             <span className="font-semibold text-brand-300 uppercase tracking-wide text-[10px]">

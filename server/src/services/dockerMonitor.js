@@ -351,13 +351,20 @@ export async function getContainerDetails(sessionId) {
   }
 
   // Fetch recent lifecycle events for this container
-  const { rows: events } = await query(
-    `SELECT id, event, details, created_at
-     FROM container_lifecycle_events
-     WHERE session_id = $1 OR container_id = $2
-     ORDER BY created_at DESC LIMIT 50`,
-    [sessionId, session.instance_id]
-  );
+  // Wrapped in try/catch in case migration 018 hasn't run yet on the server
+  let events = [];
+  try {
+    const { rows: eventRows } = await query(
+      `SELECT id, event, details, created_at
+       FROM container_lifecycle_events
+       WHERE session_id = $1 OR container_id = $2
+       ORDER BY created_at DESC LIMIT 50`,
+      [sessionId, session.instance_id]
+    );
+    events = eventRows;
+  } catch {
+    // Table may not exist yet — return empty array gracefully
+  }
 
   return {
     session: {
