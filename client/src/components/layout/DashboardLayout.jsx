@@ -67,21 +67,46 @@ const studentNavSecondary = [
   { to: '/student/settings', label: 'Settings', icon: IconSettings },
 ];
 
-const instructorNav = [
-  { to: '/instructor', label: 'Overview', icon: IconLayout, end: true },
-  { to: '/instructor/studio', label: 'Content studio', icon: IconLayers },
-  { to: '/instructor/courses', label: 'Assigned courses', icon: IconBookOpen },
-  { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
-  { to: '/instructor/quizzes', label: 'Quizzes', icon: IconZap },
-  { to: '/instructor/assignments', label: 'Assignments', icon: IconClipboard },
-  { to: '/instructor/submissions', label: 'Submission review', icon: IconCheckCircle, badge: 'submissions' },
-  { to: '/instructor/lab-submissions', label: 'Lab submissions', icon: IconTerminal, badge: 'labSubmissions' },
-  { to: '/instructor/reports', label: 'Practical reports', icon: IconFileText },
-  { to: '/instructor/students', label: 'My students', icon: IconUsers },
-  { to: '/instructor/messages', label: 'Student chat', icon: IconChatBubble, badge: 'chat' },
-  { to: '/instructor/announcements', label: 'Announcements', icon: IconBell },
-  { to: '/instructor/blog', label: 'Articles', icon: IconBookOpen },
-  { to: '/instructor/settings', label: 'Settings', icon: IconSettings },
+const instructorNavGroups = [
+  {
+    label: 'Teaching',
+    items: [
+      { to: '/instructor', label: 'Overview', icon: IconLayout, end: true },
+      { to: '/instructor/courses', label: 'Assigned courses', icon: IconBookOpen },
+      { to: '/instructor/students', label: 'My students', icon: IconUsers },
+    ],
+  },
+  {
+    label: 'Authoring Studio',
+    items: [
+      { to: '/instructor/studio', label: 'Content studio', icon: IconLayers },
+      { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
+      { to: '/instructor/quizzes', label: 'Quizzes', icon: IconZap },
+      { to: '/instructor/assignments', label: 'Assignments', icon: IconClipboard },
+    ],
+  },
+  {
+    label: 'Evaluation & Reviews',
+    items: [
+      { to: '/instructor/submissions', label: 'Submission review', icon: IconCheckCircle, badge: 'submissions' },
+      { to: '/instructor/lab-submissions', label: 'Lab submissions', icon: IconTerminal, badge: 'labSubmissions' },
+      { to: '/instructor/reports', label: 'Practical reports', icon: IconFileText },
+    ],
+  },
+  {
+    label: 'Communication',
+    items: [
+      { to: '/instructor/messages', label: 'Student chat', icon: IconChatBubble, badge: 'chat' },
+      { to: '/instructor/announcements', label: 'Announcements', icon: IconBell },
+      { to: '/instructor/blog', label: 'Articles', icon: IconBookOpen },
+    ],
+  },
+  {
+    label: 'Preferences',
+    items: [
+      { to: '/instructor/settings', label: 'Settings', icon: IconSettings },
+    ],
+  },
 ];
 
 const adminNavGroups = [
@@ -133,7 +158,7 @@ const adminNavGroups = [
 ];
 
 function navFor(role) {
-  if (role === 'instructor') return instructorNav;
+  if (role === 'instructor') return instructorNavGroups.flatMap((g) => g.items);
   return studentNavPrimary;
 }
 
@@ -315,16 +340,16 @@ export default function DashboardLayout() {
         }}
         className={({ isActive }) =>
           cx(
-            'group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150',
-            mini ? 'mx-auto h-10 w-10 justify-center' : 'gap-3 px-3 py-2.5',
+            'group relative flex items-center rounded-xl text-xs font-medium transition-all duration-150',
+            mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-2',
             isActive
               ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
           )
         }
       >
-        <IconComponent size={18} className="shrink-0" />
-        {!mini && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+        <IconComponent size={16} className="shrink-0" />
+        {!mini && <span className="min-w-0 flex-1 truncate text-xs">{item.label}</span>}
         {badgeCount > 0 &&
           (mini ? (
             <span
@@ -486,7 +511,7 @@ export default function DashboardLayout() {
                   className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
                 >
                   {!mini && (
-                    <p className="px-2 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                       {group.label}
                     </p>
                   )}
@@ -496,15 +521,22 @@ export default function DashboardLayout() {
                 </div>
               ))
             ) : (
-              /* Flat instructor nav */
-              <>
-                {!mini && (
-                  <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">{title}</p>
-                )}
-                <nav className={cx('space-y-0.5', !mini && 'mt-2')}>
-                  {items.map((item) => renderNavItem(item, mini))}
-                </nav>
-              </>
+              /* Grouped instructor nav */
+              instructorNavGroups.map((group, index) => (
+                <div
+                  key={group.label}
+                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
+                >
+                  {!mini && (
+                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      {group.label}
+                    </p>
+                  )}
+                  <nav className="space-y-0.5">
+                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
+                  </nav>
+                </div>
+              ))
             )}
           </div>
           <div className={cx('mt-auto border-t border-white/5', mini ? 'p-2' : 'p-3')}>
