@@ -24,6 +24,7 @@ export const env = {
   isProduction: process.env.NODE_ENV === 'production',
   port: Number(process.env.PORT || 4000),
   db: {
+    url: process.env.DATABASE_URL || '',
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER || 'postgres',

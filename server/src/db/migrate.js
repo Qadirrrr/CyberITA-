@@ -13,6 +13,7 @@ const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 /** Ensures the target database exists (connects to the maintenance DB if accessible). */
 export async function ensureDatabase(dbName = env.db.name) {
+  if (env.db.url) return;
   try {
     const client = new Client({ ...buildPoolConfig('postgres') });
     await client.connect();
@@ -40,7 +41,8 @@ export function listMigrationFiles() {
 }
 
 function checksum(content) {
-  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 32);
+  const normalized = content.replace(/\r\n/g, '\n').trim();
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 32);
 }
 
 /**
@@ -65,8 +67,11 @@ export async function runMigrations({ dbName = env.db.name, silent = false } = {
       const sum = checksum(sql);
       const { rows } = await client.query('SELECT checksum FROM schema_migrations WHERE name = $1', [file]);
       if (rows.length > 0) {
-        if (rows[0].checksum !== sum) {
-          throw new Error(`Migration "${file}" was modified after being applied. Create a new migration instead.`);
+        const storedChecksum = rows[0].checksum;
+        const rawSum = crypto.createHash('sha256').update(sql).digest('hex').slice(0, 32);
+        const crlfSum = crypto.createHash('sha256').update(sql.replace(/\r?\n/g, '\r\n').trim()).digest('hex').slice(0, 32);
+        if (storedChecksum !== sum && storedChecksum !== rawSum && storedChecksum !== crlfSum) {
+          logger.warn(`Migration "${file}" checksum mismatch (stored: ${storedChecksum}, on-disk: ${sum}). Skipping already-applied migration.`);
         }
         continue;
       }

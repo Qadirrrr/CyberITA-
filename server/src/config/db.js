@@ -5,6 +5,16 @@ const { Pool } = pg;
 
 /** Builds a pool configuration from the environment (or an override, used by tests). */
 export function buildPoolConfig(dbName = env.db.name) {
+  if (env.db.url) {
+    const isSsl = env.db.ssl || env.db.url.includes('sslmode=require') || env.isProduction;
+    return {
+      connectionString: env.db.url,
+      ssl: isSsl ? { rejectUnauthorized: false } : false,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    };
+  }
   return {
     host: env.db.host,
     port: env.db.port,
