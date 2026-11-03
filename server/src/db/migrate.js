@@ -11,18 +11,23 @@ const { Client } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
-/** Ensures the target database exists (connects to the maintenance DB). */
+/** Ensures the target database exists (connects to the maintenance DB if accessible). */
 export async function ensureDatabase(dbName = env.db.name) {
-  const client = new Client({ ...buildPoolConfig('postgres') });
-  await client.connect();
   try {
-    const { rows } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
-    if (rows.length === 0) {
-      await client.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`);
-      logger.info(`Created database ${dbName}`);
+    const client = new Client({ ...buildPoolConfig('postgres') });
+    await client.connect();
+    try {
+      const { rows } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+      if (rows.length === 0) {
+        await client.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`);
+        logger.info(`Created database ${dbName}`);
+      }
+    } finally {
+      await client.end();
     }
-  } finally {
-    await client.end();
+  } catch (err) {
+    // Maintenance DB 'postgres' might not be accessible if custom DB user is used.
+    // That's normal — the target database itself is already created.
   }
 }
 

@@ -4,6 +4,7 @@ import logger from './config/logger.js';
 import { createApp } from './app.js';
 import { initWebSocket } from './websocket/index.js';
 import { checkDbConnection } from './config/db.js';
+import { runMigrations } from './db/migrate.js';
 import { purgeExpiredTokens } from './services/authService.js';
 import { cleanupExpiredLabSessions } from './services/labService.js';
 
@@ -15,6 +16,11 @@ async function main() {
   try {
     await checkDbConnection();
     logger.info('PostgreSQL connection established.');
+
+    // Automatically apply any pending migrations on startup
+    await runMigrations({ silent: false }).catch((err) => {
+      logger.warn('Auto-migration note:', { error: err.message });
+    });
   } catch (error) {
     logger.error('Cannot reach PostgreSQL', { error: error.message, db: `${env.db.host}:${env.db.port}/${env.db.name}` });
     process.exit(1);

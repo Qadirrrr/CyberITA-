@@ -60,14 +60,20 @@ router.get(
        WHERE l.status = 'published' AND l.is_practice = FALSE`,
       [userId]
     );
-    const { rows: projects } = await query(
-      `SELECT COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE status = 'submitted')::int AS pending,
-         COUNT(*) FILTER (WHERE status = 'changes_requested')::int AS changes_requested,
-         COUNT(*) FILTER (WHERE status = 'approved')::int AS approved
-       FROM student_projects WHERE user_id = $1`,
-      [userId]
-    );
+    let projectStats = { total: 0, pending: 0, changes_requested: 0, approved: 0 };
+    try {
+      const { rows: projects } = await query(
+        `SELECT COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE status = 'submitted')::int AS pending,
+           COUNT(*) FILTER (WHERE status = 'changes_requested')::int AS changes_requested,
+           COUNT(*) FILTER (WHERE status = 'approved')::int AS approved
+         FROM student_projects WHERE user_id = $1`,
+        [userId]
+      );
+      if (projects[0]) projectStats = projects[0];
+    } catch {
+      // student_projects table may not exist yet
+    }
     const { rows: streak } = await query(
       `SELECT COUNT(DISTINCT date_trunc('day', created_at))::int AS active_days
        FROM activity_events WHERE user_id = $1 AND created_at > now() - INTERVAL '30 days'`,
@@ -79,7 +85,7 @@ router.get(
       certificates: certificates[0].total,
       reports: reports[0],
       labAssignments: labAssignments[0],
-      projects: projects[0],
+      projects: projectStats,
       activeDays30: streak[0].active_days,
     });
   })
@@ -146,18 +152,27 @@ router.get(
          (SELECT COUNT(*)::int FROM certificates) AS certificates,
          (SELECT COUNT(*)::int FROM contact_messages WHERE status = 'new') AS new_messages`
     );
+    let adminProjectsPending = 0;
+    try {
+      const { rows: pp } = await query(`SELECT COUNT(*)::int AS count FROM student_projects WHERE status = 'submitted'`);
+      adminProjectsPending = pp[0]?.count ?? 0;
+    } catch {}
+
     const { rows: operations } = await query(
       `SELECT
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'running') AS active_labs,
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'provisioning') AS provisioning_labs,
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'error') AS failed_labs,
          (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'submitted') AS lab_submissions_pending,
-         (SELECT COUNT(*)::int FROM student_projects WHERE status = 'submitted') AS projects_pending,
          (SELECT COUNT(*)::int FROM reports WHERE status = 'submitted') AS reports_pending,
          (SELECT COUNT(*)::int FROM content_reports WHERE status IN ('open', 'reviewing')) AS content_flags_open,
          (SELECT COUNT(*)::int FROM refresh_tokens WHERE expires_at > now()) AS active_sessions
       `
     );
+    const operationsData = {
+      ...(operations[0] || {}),
+      projects_pending: adminProjectsPending,
+    };
     const { rows: catalog } = await query(
       `SELECT
          (SELECT COUNT(*)::int FROM learning_paths) AS learning_paths,
@@ -179,14 +194,29 @@ router.get(
        FROM activity_events a LEFT JOIN users u ON u.id = a.user_id
        ORDER BY a.created_at DESC LIMIT 8`
     );
+
+    let projectsTotal = 0;
+    let projectsApproved = 0;
+    try {
+      const { rows: prj } = await query(
+        `SELECT (SELECT COUNT(*)::int FROM student_projects) AS total,
+                (SELECT COUNT(*)::int FROM student_projects WHERE status = 'approved') AS approved`
+      );
+      projectsTotal = prj[0]?.total ?? 0;
+      projectsApproved = prj[0]?.approved ?? 0;
+    } catch {}
+
     const { rows: reviewQuality } = await query(
       `SELECT
          (SELECT COUNT(*)::int FROM lab_submissions) AS lab_submissions_total,
-         (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'approved') AS lab_submissions_approved,
-         (SELECT COUNT(*)::int FROM student_projects) AS projects_total,
-         (SELECT COUNT(*)::int FROM student_projects WHERE status = 'approved') AS projects_approved
+         (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'approved') AS lab_submissions_approved
       `
     );
+    const reviewQualityData = {
+      ...(reviewQuality[0] || {}),
+      projects_total: projectsTotal,
+      projects_approved: projectsApproved,
+    };
     const { rows: signupSeries } = await query(
       `SELECT date_trunc('week', created_at)::date AS week, COUNT(*)::int AS count
        FROM users WHERE created_at > now() - INTERVAL '12 weeks'
@@ -222,13 +252,13 @@ router.get(
       enrollments: enrollments[0],
       labs: labs[0],
       content: content[0],
-      operations: operations[0],
+      operations: operationsData,
       catalog: catalog[0],
       signupSeries,
       enrollmentSeries,
       activitySeries,
       recentActivity,
-      reviewQuality: reviewQuality[0],
+      reviewQuality: reviewQualityData,
       topCourses,
       recentUsers,
       engagement: engagement[0],
@@ -265,11 +295,49 @@ router.get(
          (SELECT COUNT(*)::int FROM lab_submissions s
             WHERE s.status = 'submitted' AND (s.instructor_id = $1 OR $2::boolean)) AS lab_submissions_pending,
          (SELECT COUNT(*)::int FROM lab_submissions s
-            WHERE s.status = 'changes_requested' AND (s.instructor_id = $1 OR $2::boolean)) AS lab_changes_requested,
-         (SELECT COUNT(*)::int FROM student_projects p
-             WHERE p.status = 'submitted' AND (p.instructor_id = $1 OR $2::boolean)) AS projects_pending`,
+            WHERE s.status = 'changes_requested' AND (s.instructor_id = $1 OR $2::boolean)) AS lab_changes_requested`,
       [instructorId, admin]
     );
+
+    let instructorProjectsPending = 0;
+    let instructorProjectsApproved = 0;
+    let recentProjects = [];
+    try {
+      const { rows: pp } = await query(
+        `SELECT COUNT(*)::int AS count FROM student_projects p
+         WHERE p.status = 'submitted' AND (p.instructor_id = $1 OR $2::boolean)`,
+        [instructorId, admin]
+      );
+      instructorProjectsPending = pp[0]?.count ?? 0;
+
+      const { rows: pa } = await query(
+        `SELECT COUNT(*)::int AS count FROM student_projects p
+         WHERE (p.instructor_id = $1 OR $2::boolean) AND p.status = 'approved'`,
+        [instructorId, admin]
+      );
+      instructorProjectsApproved = pa[0]?.count ?? 0;
+
+      const { rows: rp } = await query(
+        `SELECT p.id, p.title, p.status, p.submitted_at, p.reviewed_at,
+                u.id AS student_id, u.full_name AS student_name, u.avatar_url,
+                c.title AS course_title
+         FROM student_projects p
+         JOIN users u ON u.id = p.user_id
+         LEFT JOIN courses c ON c.id = p.course_id
+         WHERE p.instructor_id = $1 OR $2::boolean
+         ORDER BY p.submitted_at DESC LIMIT 5`,
+        [instructorId, admin]
+      );
+      recentProjects = rp;
+    } catch {
+      // student_projects table might not exist yet if migration 019 has not run
+    }
+
+    const pendingData = {
+      ...(pending[0] || {}),
+      projects_pending: instructorProjectsPending,
+    };
+
     const { rows: labs } = await query(
       `SELECT
          (SELECT COUNT(*)::int FROM labs l JOIN courses c ON c.id = l.course_id
@@ -283,12 +351,16 @@ router.get(
             WHERE c.instructor_id = $1 OR $2::boolean) AS screenshots,
          (SELECT COUNT(*)::int FROM lab_submissions s
             WHERE (s.instructor_id = $1 OR $2::boolean) AND s.status = 'approved') AS lab_submissions_approved,
-         (SELECT COUNT(*)::int FROM student_projects p
-            WHERE (p.instructor_id = $1 OR $2::boolean) AND p.status = 'approved') AS projects_approved,
          (SELECT COUNT(*)::int FROM announcements an
             WHERE an.author_id = $1 OR $2::boolean) AS announcements`,
       [instructorId, admin]
     );
+
+    const labsData = {
+      ...(labs[0] || {}),
+      projects_approved: instructorProjectsApproved,
+    };
+
     const { rows: inbox } = await query(
       `SELECT COUNT(*)::int AS unread_messages,
               COUNT(DISTINCT m.conversation_id)::int AS unread_threads
@@ -309,17 +381,6 @@ router.get(
        ORDER BY s.submitted_at DESC LIMIT 5`,
       [instructorId, admin]
     );
-    const { rows: recentProjects } = await query(
-      `SELECT p.id, p.title, p.status, p.submitted_at, p.reviewed_at,
-              u.id AS student_id, u.full_name AS student_name, u.avatar_url,
-              c.title AS course_title
-       FROM student_projects p
-       JOIN users u ON u.id = p.user_id
-       LEFT JOIN courses c ON c.id = p.course_id
-       WHERE p.instructor_id = $1 OR $2::boolean
-       ORDER BY p.submitted_at DESC LIMIT 5`,
-      [instructorId, admin]
-    );
     const { rows: recentReports } = await query(
       `SELECT r.id, r.title, r.status, r.updated_at,
               u.id AS student_id, u.full_name AS student_name, u.avatar_url,
@@ -335,8 +396,8 @@ router.get(
     res.json({
       courses: courses[0],
       students: students[0],
-      pending: pending[0],
-      labs: labs[0],
+      pending: pendingData,
+      labs: labsData,
       inbox: inbox[0],
       recentSubmissions,
       recentProjects,

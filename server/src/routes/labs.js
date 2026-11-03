@@ -13,24 +13,24 @@ import { slugify } from '../utils/helpers.js';
 import logger from '../config/logger.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import {
-  getLab,
-  getLabSteps,
-  getLab as getLabOr404,
-  getSessionOr404,
-  startSession,
-  stopSession,
-  executeInSession,
-  getSessionOverview,
-  completeManualStep,
+    getLab,
+    getLabSteps,
+    getLab as getLabOr404,
+    getSessionOr404,
+    startSession,
+    stopSession,
+    executeInSession,
+    getSessionOverview,
+    completeManualStep,
 } from '../services/labService.js';
 import { submitLabSession } from '../services/labSubmissions.js';
 import { generateLab } from '../services/labGenerator.js';
 import { getProvider } from '../labs/providers/index.js';
 import {
-  assertLabManager,
-  assertLabReadable,
-  assertSessionAccess,
-  canManageLab,
+    assertLabManager,
+    assertLabReadable,
+    assertSessionAccess,
+    canManageLab,
 } from '../services/access.js';
 
 const router = Router();
@@ -44,185 +44,185 @@ const SUBMISSION_DIR = path.resolve(process.cwd(), 'private-uploads', 'lab-submi
 fs.mkdirSync(SUBMISSION_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
-    cb(null, `shot-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.png'}`);
-  },
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
+        cb(null, `shot-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.png'}`);
+    },
 });
 
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const upload = multer({
-  storage,
-  limits: { fileSize: env.upload.maxBytes, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_MIME.includes(file.mimetype)) {
-      return cb(new Error('Only PNG, JPEG, WEBP and GIF images are allowed.'));
-    }
-    cb(null, true);
-  },
+    storage,
+    limits: { fileSize: env.upload.maxBytes, files: 1 },
+    fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME.includes(file.mimetype)) {
+            return cb(new Error('Only PNG, JPEG, WEBP and GIF images are allowed.'));
+        }
+        cb(null, true);
+    },
 });
 
 const uploadMiddleware = (req, res, next) => {
-  upload.single('file')(req, res, (error) => {
-    if (error) return next(badRequest(error.message));
-    next();
-  });
+    upload.single('file')(req, res, (error) => {
+        if (error) return next(badRequest(error.message));
+        next();
+    });
 };
 
 // Evidence upload for a finished lab (screenshots or a PDF report).
 const SUBMISSION_MIME = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 const submissionUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, SUBMISSION_DIR),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
-      cb(null, `labsub-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.bin'}`);
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, SUBMISSION_DIR),
+        filename: (_req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
+            cb(null, `labsub-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext || '.bin'}`);
+        },
+    }),
+    limits: { fileSize: env.upload.maxBytes, files: 1 },
+    fileFilter: (_req, file, cb) => {
+        if (!SUBMISSION_MIME.includes(file.mimetype)) {
+            return cb(new Error('Attach a PNG, JPEG, WEBP screenshot or a PDF report.'));
+        }
+        cb(null, true);
     },
-  }),
-  limits: { fileSize: env.upload.maxBytes, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    if (!SUBMISSION_MIME.includes(file.mimetype)) {
-      return cb(new Error('Attach a PNG, JPEG, WEBP screenshot or a PDF report.'));
-    }
-    cb(null, true);
-  },
 });
 
 const submissionUploadMiddleware = (req, res, next) => {
-  submissionUpload.single('file')(req, res, (error) => {
-    if (error) return next(badRequest(error.message));
-    next();
-  });
+    submissionUpload.single('file')(req, res, (error) => {
+        if (error) return next(badRequest(error.message));
+        next();
+    });
 };
 
 const stepSchema = z.object({
-  title: z.string().trim().min(2).max(200),
-  instruction: z.string().trim().min(2).max(5000),
-  hint: z.string().trim().max(2000).optional().nullable(),
-  verification: z.enum(['command', 'output', 'manual']).default('command'),
-  expectedCommand: z.string().trim().max(500).optional().nullable(),
-  expectedOutputPattern: z.string().trim().max(500).optional().nullable(),
-  points: z.coerce.number().int().min(0).max(1000).default(10),
-  isOptional: z.boolean().default(false),
-  position: z.coerce.number().int().min(0).optional(),
+    title: z.string().trim().min(2).max(200),
+    instruction: z.string().trim().min(2).max(5000),
+    hint: z.string().trim().max(2000).optional().nullable(),
+    verification: z.enum(['command', 'output', 'manual']).default('command'),
+    expectedCommand: z.string().trim().max(500).optional().nullable(),
+    expectedOutputPattern: z.string().trim().max(500).optional().nullable(),
+    points: z.coerce.number().int().min(0).max(1000).default(10),
+    isOptional: z.boolean().default(false),
+    position: z.coerce.number().int().min(0).optional(),
 });
 
 const labSchema = z.object({
-  title: z.string().trim().min(3).max(200),
-  courseId: z.coerce.number().int().optional().nullable(),
-  lessonId: z.coerce.number().int().optional().nullable(),
-  slug: z.string().trim().max(160).optional(),
-  summary: z.string().trim().max(400).default(''),
-  description: z.string().trim().max(20000).default(''),
-  objectives: z.string().trim().max(4000).default(''),
-  submissionRequirements: z.string().trim().max(4000).default(''),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
-  estimatedMinutes: z.coerce.number().int().min(5).max(600).default(30),
-  terminalWelcome: z.string().trim().max(2000).default('Welcome to your CyberITA+ lab environment.'),
-  initialCwd: z.string().trim().max(300).default('/home/student'),
-  initialFiles: z.record(z.any()).default({}),
-  isPractice: z.boolean().default(false),
-  dueAt: z.coerce.date().optional().nullable(),
-  containerImage: z
-    .string()
-    .trim()
-    .max(255)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9._/:@-]*$/, 'Use a valid Docker image reference.')
-    .optional()
-    .nullable(),
-  networkEnabled: z.boolean().optional(),
-  status: z.enum(['draft', 'published']).default('draft'),
+    title: z.string().trim().min(3).max(200),
+    courseId: z.coerce.number().int().optional().nullable(),
+    lessonId: z.coerce.number().int().optional().nullable(),
+    slug: z.string().trim().max(160).optional(),
+    summary: z.string().trim().max(400).default(''),
+    description: z.string().trim().max(20000).default(''),
+    objectives: z.string().trim().max(4000).default(''),
+    submissionRequirements: z.string().trim().max(4000).default(''),
+    difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
+    estimatedMinutes: z.coerce.number().int().min(5).max(600).default(30),
+    terminalWelcome: z.string().trim().max(2000).default('Welcome to your CyberITA+ lab environment.'),
+    initialCwd: z.string().trim().max(300).default('/home/student'),
+    initialFiles: z.record(z.any()).default({}),
+    isPractice: z.boolean().default(false),
+    dueAt: z.coerce.date().optional().nullable(),
+    containerImage: z
+        .string()
+        .trim()
+        .max(255)
+        .regex(/^[A-Za-z0-9][A-Za-z0-9._/:@-]*$/, 'Use a valid Docker image reference.')
+        .optional()
+        .nullable(),
+    networkEnabled: z.boolean().optional(),
+    status: z.enum(['draft', 'published']).default('draft'),
 });
 
 async function assertLabParticipation(lab, user) {
-  // Practice labs are open to every learner; course labs require enrollment.
-  if (lab.is_practice || isStaff(user) || !lab.course_id) return;
-  const { rows } = await query(
-    `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status <> 'dropped'`,
-    [user.id, lab.course_id]
-  );
-  if (!rows[0]) throw badRequest('Enroll in the course before using its labs.');
+    // Practice labs are open to every learner; course labs require enrollment.
+    if (lab.is_practice || isStaff(user) || !lab.course_id) return;
+    const { rows } = await query(
+        `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status <> 'dropped'`, [user.id, lab.course_id]
+    );
+    if (!rows[0]) throw badRequest('Enroll in the course before using its labs.');
 }
 
 // ---------- status ----------
 
 router.get(
-  '/status',
-  asyncHandler(async (_req, res) => {
-    const provider = getProvider();
-    const availability = await provider.isAvailable();
-    res.json({
-      provider: provider.name,
-      available: availability.ok,
-      reason: availability.reason || null,
-      practice: {
-        // Practice terminals are in-process, so they are always available
-        // even when the Docker engine is down.
-        provider: 'practice',
-        available: true,
-        reason: 'In-browser practice terminal (no container required).',
-      },
-      sessionTtlMinutes: env.labs.sessionTtlMinutes,
-    });
-  })
+    '/status',
+    asyncHandler(async(_req, res) => {
+        const provider = getProvider();
+        const availability = await provider.isAvailable();
+        res.json({
+            provider: provider.name,
+            available: availability.ok,
+            reason: availability.reason || null,
+            practice: {
+                // Practice terminals are in-process, so they are always available
+                // even when the Docker engine is down.
+                provider: 'practice',
+                available: true,
+                reason: 'In-browser practice terminal (no container required).',
+            },
+            sessionTtlMinutes: env.labs.sessionTtlMinutes,
+        });
+    })
 );
 
 // ---------- catalog (students + staff) ----------
 
 router.get(
-  '/',
-  asyncHandler(async (req, res) => {
-    const parsed = z
-      .object({
-        courseId: z.coerce.number().int().optional(),
-        status: z.enum(['draft', 'published']).optional(),
-        search: z.string().trim().max(120).optional(),
-        mine: z.enum(['true', 'false']).optional(),
-        page: z.coerce.number().int().min(1).default(1),
-        limit: z.coerce.number().int().min(1).max(60).default(24),
-      })
-      .safeParse(req.query);
-    if (!parsed.success) throw badRequest('Invalid query parameters.');
-    const { courseId, status, search, mine, page, limit } = parsed.data;
+        '/',
+        asyncHandler(async(req, res) => {
+                const parsed = z
+                    .object({
+                        courseId: z.coerce.number().int().optional(),
+                        status: z.enum(['draft', 'published']).optional(),
+                        search: z.string().trim().max(120).optional(),
+                        mine: z.enum(['true', 'false']).optional(),
+                        page: z.coerce.number().int().min(1).default(1),
+                        limit: z.coerce.number().int().min(1).max(60).default(24),
+                    })
+                    .safeParse(req.query);
+                if (!parsed.success) throw badRequest('Invalid query parameters.');
+                const { courseId, status, search, mine, page, limit } = parsed.data;
 
-    const where = [];
-    const params = [];
-    const staffView = isStaff(req.user);
-    if (!staffView) where.push(`l.status = 'published'`);
-    else if (status) {
-      params.push(status);
-      where.push(`l.status = $${params.length}`);
-    }
-    // Instructors only see other people's published labs; drafts stay private
-    // to the instructor who owns the course or created the lab.
-    if (staffView && req.user.role === 'instructor') {
-      params.push(req.user.id);
-      where.push(
-        `(l.status = 'published' OR l.created_by = $${params.length} OR c.instructor_id = $${params.length})`
-      );
-    }
-    if (courseId) {
-      params.push(courseId);
-      where.push(`l.course_id = $${params.length}`);
-    }
-    if (search) {
-      params.push(`%${search}%`);
-      where.push(`(l.title ILIKE $${params.length} OR l.summary ILIKE $${params.length})`);
-    }
-    if (mine === 'true' && req.user) {
-      params.push(req.user.id);
-      where.push(`EXISTS (SELECT 1 FROM lab_sessions s WHERE s.lab_id = l.id AND s.user_id = $${params.length})`);
-    }
+                const where = [];
+                const params = [];
+                const staffView = isStaff(req.user);
+                if (!staffView) where.push(`l.status = 'published'`);
+                else if (status) {
+                    params.push(status);
+                    where.push(`l.status = $${params.length}`);
+                }
+                // Instructors only see other people's published labs; drafts stay private
+                // to the instructor who owns the course or created the lab.
+                if (staffView && req.user.role === 'instructor') {
+                    params.push(req.user.id);
+                    where.push(
+                        `(l.status = 'published' OR l.created_by = $${params.length} OR c.instructor_id = $${params.length})`
+                    );
+                }
+                if (courseId) {
+                    params.push(courseId);
+                    where.push(`l.course_id = $${params.length}`);
+                }
+                if (search) {
+                    params.push(`%${search}%`);
+                    where.push(`(l.title ILIKE $${params.length} OR l.summary ILIKE $${params.length})`);
+                }
+                if (mine === 'true' && req.user) {
+                    params.push(req.user.id);
+                    where.push(`EXISTS (SELECT 1 FROM lab_sessions s WHERE s.lab_id = l.id AND s.user_id = $${params.length})`);
+                }
 
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const { rows: countRows } = await query(
-      `SELECT COUNT(*)::int AS total FROM labs l LEFT JOIN courses c ON c.id = l.course_id ${whereSql}`,
-      params
-    );
-    params.push(limit, (page - 1) * limit);
-    const { rows } = await query(
-      `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
+                const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+                const { rows: countRows } = await query(
+                    `SELECT COUNT(*)::int AS total FROM labs l LEFT JOIN courses c ON c.id = l.course_id ${whereSql}`,
+                    params
+                );
+                const offset = (page - 1) * limit;
+                const paginatedParams = [...params, limit, offset];
+                const { rows } = await query(
+                        `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
          l.is_practice, l.course_id, l.lesson_id, l.due_at, c.title AS course_title, c.slug AS course_slug,
          l.lab_server_id, srv.name AS lab_server_name,
          (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count,
@@ -233,8 +233,8 @@ router.get(
        LEFT JOIN lab_servers srv ON srv.id = l.lab_server_id
        ${whereSql}
        ORDER BY l.updated_at DESC
-       LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params
+       LIMIT $${paginatedParams.length - 1} OFFSET $${paginatedParams.length}`,
+      paginatedParams
     );
     res.json({ labs: rows, total: countRows[0].total, page, limit });
   })
