@@ -10,6 +10,7 @@ import { asyncHandler, badRequest, conflict, forbidden, notFound } from '../util
 import { validateBody } from '../middleware/validate.js';
 import { requireAuth, requireRole, isStaff } from '../middleware/auth.js';
 import { slugify } from '../utils/helpers.js';
+import logger from '../config/logger.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import {
   getLab,
@@ -122,6 +123,7 @@ const labSchema = z.object({
   initialCwd: z.string().trim().max(300).default('/home/student'),
   initialFiles: z.record(z.any()).default({}),
   isPractice: z.boolean().default(false),
+  dueAt: z.coerce.date().optional().nullable(),
   containerImage: z
     .string()
     .trim()
@@ -221,7 +223,7 @@ router.get(
     params.push(limit, (page - 1) * limit);
     const { rows } = await query(
       `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
-         l.is_practice, l.course_id, l.lesson_id, c.title AS course_title, c.slug AS course_slug,
+         l.is_practice, l.course_id, l.lesson_id, l.due_at, c.title AS course_title, c.slug AS course_slug,
          l.lab_server_id, srv.name AS lab_server_name,
          (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count,
          (SELECT COUNT(*)::int FROM lab_sessions s WHERE s.lab_id = l.id) AS session_count,
@@ -310,6 +312,8 @@ router.get(
         terminal_welcome: lab.terminal_welcome,
         submission_requirements: lab.submission_requirements || '',
         is_practice: Boolean(lab.is_practice),
+        course_id: lab.course_id,
+        due_at: lab.due_at,
       },
     });
   })
@@ -659,12 +663,13 @@ router.post(
     const { rows } = await query(
       `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
          submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-         initial_cwd, container_image, network_enabled, status, created_by, is_practice)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+         initial_cwd, container_image, network_enabled, status, created_by, is_practice, due_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
       [slug, b.title, labCourseId, labLessonId, b.summary, b.description,
        b.objectives, b.submissionRequirements, b.difficulty, b.estimatedMinutes, b.terminalWelcome,
        JSON.stringify(b.initialFiles), b.initialCwd, b.containerImage || null,
-       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, b.isPractice]
+       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, b.isPractice,
+       labCourseId ? b.dueAt ?? null : null]
     );
     res.status(201).json({ lab: rows[0] });
   })
@@ -715,7 +720,8 @@ router.put(
          network_enabled = COALESCE($16, network_enabled),
          objectives = COALESCE($18, objectives),
          submission_requirements = COALESCE($19, submission_requirements),
-         is_practice = COALESCE($20, is_practice)
+         is_practice = COALESCE($20, is_practice),
+         due_at = CASE WHEN $21::boolean THEN $22::timestamptz ELSE due_at END
        WHERE id = $17 RETURNING *`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.difficulty ?? null,
@@ -725,6 +731,7 @@ router.put(
         'containerImage' in b, b.containerImage || null, 'networkEnabled' in b ? b.networkEnabled : null,
         lab.id, b.objectives ?? null, b.submissionRequirements ?? null,
         'isPractice' in b ? b.isPractice : null,
+        'dueAt' in b, nextIsPractice ? null : b.dueAt ?? null,
       ]
     );
     res.json({ lab: rows[0] });

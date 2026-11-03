@@ -88,7 +88,7 @@ export default function StudentCalendarPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">Calendar</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Assignment deadlines from all your courses, grouped by date so nothing slips through.
+            Lab assignment deadlines from all your courses, grouped by date so nothing slips through.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -120,10 +120,10 @@ export default function StudentCalendarPage() {
         <EmptyState
           icon={IconCalendarGrid}
           title="No deadlines on the calendar"
-          message="Assignments with due dates will appear here automatically. You can still browse your courses and labs."
+          message="Lab assignments with due dates will appear here automatically. You can still browse your courses and labs."
           action={
-            <Button as={Link} to="/student/assignments" variant="secondary">
-              View assignments <IconArrowRight size={14} />
+            <Button as={Link} to="/student/lab-assignments" variant="secondary">
+              View lab assignments <IconArrowRight size={14} />
             </Button>
           }
         />
@@ -220,7 +220,7 @@ export default function StudentCalendarPage() {
                   {selectedEvents.map((event) => (
                     <li key={event.id}>
                       <Link
-                        to={`/learn/assignments/${event.id}`}
+                        to={`/labs/${event.id}`}
                         className="group block rounded-xl border border-white/10 bg-white/[0.02] p-3 transition hover:border-brand-400/30 hover:bg-white/[0.04]"
                       >
                         <div className="flex items-start gap-2">
@@ -254,7 +254,7 @@ export default function StudentCalendarPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <Link
-                          to={`/learn/assignments/${event.id}`}
+                          to={`/labs/${event.id}`}
                           className="block truncate text-xs font-medium text-slate-200 transition hover:text-brand-200"
                         >
                           {event.title}

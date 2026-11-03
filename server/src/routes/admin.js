@@ -557,8 +557,9 @@ router.get(
               COALESCE((SELECT ROUND(AVG(e.progress_percent), 1) FROM enrollments e WHERE e.course_id = c.id), 0) AS avg_progress,
               (SELECT COUNT(*)::int FROM modules m WHERE m.course_id = c.id) AS module_count,
               (SELECT COUNT(*)::int FROM lessons l WHERE l.course_id = c.id) AS lesson_count,
-              (SELECT COUNT(*)::int FROM quizzes q WHERE q.course_id = c.id) AS quiz_count,
-              (SELECT COUNT(*)::int FROM assignments a WHERE a.course_id = c.id) AS assignment_count,
+              (SELECT COUNT(*)::int FROM lab_submissions s
+                 JOIN labs l ON l.id = s.lab_id WHERE l.course_id = c.id) AS lab_submission_count,
+              (SELECT COUNT(*)::int FROM student_projects p WHERE p.course_id = c.id) AS project_count,
               (SELECT COUNT(*)::int FROM labs l WHERE l.course_id = c.id) AS lab_count,
               (SELECT COUNT(*)::int FROM certificates ct WHERE ct.course_id = c.id) AS certificate_count,
               (SELECT COUNT(*)::int FROM learning_path_courses lp WHERE lp.course_id = c.id) AS path_count
@@ -929,9 +930,8 @@ router.get(
          (SELECT COUNT(*)::int FROM certificates) AS certificates,
          (SELECT COUNT(*)::int FROM certificates WHERE issued_at > now() - INTERVAL '30 days') AS certificates_30d,
          (SELECT COUNT(DISTINCT user_id)::int FROM activity_events WHERE created_at > now() - INTERVAL '7 days') AS active_users_7d,
-         (SELECT COALESCE(ROUND(AVG(CASE WHEN max_points > 0 THEN score / max_points * 100 END), 1), 0)
-            FROM quiz_attempts) AS avg_quiz_percent,
-         (SELECT COUNT(*)::int FROM assignment_submissions WHERE status = 'submitted') AS pending_submissions`
+         (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'submitted') AS pending_lab_submissions,
+         (SELECT COUNT(*)::int FROM student_projects WHERE status = 'submitted') AS pending_projects`
     );
     const { rows: topCourses } = await query(
       `SELECT c.id, c.title, c.slug,

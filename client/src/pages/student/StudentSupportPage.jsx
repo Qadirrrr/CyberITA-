@@ -19,7 +19,7 @@ const topics = [
   'Account & access',
   'Course content',
   'Lab environment',
-  'Quiz or assignment issue',
+  'Lab assignment issue',
   'Certificate problem',
   'Technical bug',
   'Billing & enrollment',
@@ -38,9 +38,9 @@ const faqs = [
       'Labs run in a real Docker container on the server. If the terminal will not start, send us a support request with the lab name, time and any error text you saw — the administrator can check the Docker engine.',
   },
   {
-    question: 'Can I resubmit an assignment?',
+    question: 'Can I resubmit a lab assignment?',
     answer:
-      'Yes. You can revise and resubmit until your instructor grades the assignment. A resubmission resets the previous grade while the new version is reviewed.',
+      'Yes. If your instructor requests changes, complete the lab again and resubmit the updated evidence for review.',
   },
   {
     question: 'Where is my certificate?',
@@ -107,7 +107,7 @@ export default function StudentSupportPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">Support centre</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Get help with your account, labs, quizzes, assignments or certificates. We usually reply within one working day.
+            Get help with your account, labs, lab assignments, reports or certificates. We usually reply within one working day.
           </p>
         </div>
         <Badge tone="emerald">

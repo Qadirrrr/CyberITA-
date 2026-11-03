@@ -25,13 +25,11 @@ import {
   IconTarget,
   IconUser,
   IconUsers,
-  IconZap,
 } from '../../components/icons';
 import { activityToneClasses, describeActivity } from '../../lib/activity';
 import { formatDateTime, timeAgo } from '../../lib/format';
 
 const REPORT_TONE = { draft: 'slate', submitted: 'amber', approved: 'emerald', rejected: 'rose', published: 'brand' };
-const SUBMISSION_TONE = { submitted: 'amber', graded: 'emerald', returned: 'rose', draft: 'slate' };
 
 const pct = (value) => {
   const num = Number(value);
@@ -150,7 +148,7 @@ export default function StudentsPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">My students</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Progress, quiz scores and practical work for learners enrolled in your courses.
+            Progress, lab submissions and practical work for learners enrolled in your courses.
           </p>
         </div>
         <Badge tone="brand">
@@ -171,7 +169,7 @@ export default function StudentsPage() {
           icon={IconFileText}
           label="Reviews waiting"
           value={totals.pending}
-          hint="Reports and assignments on this page"
+          hint="Reports and lab submissions on this page"
           tone="amber"
         />
       </div>
@@ -231,7 +229,7 @@ export default function StudentsPage() {
                     <th className="px-5 py-2.5 font-medium">Learner</th>
                     <th className="px-3 py-2.5 font-medium">Courses</th>
                     <th className="px-3 py-2.5 font-medium">Progress</th>
-                    <th className="px-3 py-2.5 font-medium">Quiz average</th>
+                    <th className="px-3 py-2.5 font-medium">Lab submissions</th>
                     <th className="px-3 py-2.5 font-medium">Pending review</th>
                     <th className="px-3 py-2.5 font-medium">Last activity</th>
                     <th className="px-5 py-2.5 text-right font-medium">Analytics</th>
@@ -272,11 +270,8 @@ export default function StudentsPage() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-[11px] text-slate-300">
-                          {Number(student.quiz_attempts || 0) === 0 ? (
-                            <span className="text-slate-600">No attempts</span>
-                          ) : (
-                            <span className="font-mono text-emerald-300">{pct(student.avg_quiz_percent)}%</span>
-                          )}
+                          <span className="font-mono text-slate-300">{Number(student.lab_submissions_total || 0)}</span>
+                          {Number(student.lab_submissions_pending || 0) > 0 && <span className="ml-1 text-amber-300">({student.lab_submissions_pending} pending)</span>}
                         </td>
                         <td className="px-3 py-3">
                           {pending > 0 ? (
@@ -357,14 +352,14 @@ export default function StudentsPage() {
                 hint={`Avg progress ${pct(detail.summary.avgProgress)}%`}
               />
               <SummaryTile
-                label="Quiz average"
-                value={`${pct(detail.summary.avgQuizPercent)}%`}
-                hint={`${detail.quizzes.length} quizzes`}
+                label="Lab submissions"
+                value={detail.summary.labSubmissionsTotal}
+                hint={`${detail.summary.labSubmissionsPending} pending`}
               />
               <SummaryTile
-                label="Assignment average"
-                value={detail.summary.gradedSubmissions ? pct(detail.summary.avgGrade) : 'N/A'}
-                hint={`${detail.summary.gradedSubmissions} graded`}
+                label="Projects"
+                value={detail.summary.projectsTotal}
+                hint={`${detail.summary.projectsPending} pending`}
               />
               <SummaryTile
                 label="Practical reports"
@@ -372,9 +367,9 @@ export default function StudentsPage() {
                 hint={`${detail.summary.reportsPending} awaiting review`}
               />
               <SummaryTile
-                label="Pending submissions"
-                value={detail.summary.pendingSubmissions}
-                hint="Assignments to grade"
+                label="Approved labs"
+                value={detail.summary.labSubmissionsApproved}
+                hint="Completed practical work"
               />
               <SummaryTile
                 label="Lab sessions"
@@ -425,67 +420,26 @@ export default function StudentsPage() {
 
             <section>
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <IconZap size={13} /> Quiz performance
+                <IconCheckCircle size={13} /> Lab submissions
               </h3>
-              {detail.quizzes.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">No quizzes in your courses yet.</p>
+              {detail.labSubmissions.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">No lab submissions yet.</p>
               ) : (
                 <ul className="mt-2 divide-y divide-white/5 rounded-lg border border-white/10">
-                  {(detail?.quizzes || []).map((quiz) => (
-                    <li key={quiz.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  {(detail?.labSubmissions || []).map((submission) => (
+                    <li key={submission.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <div className="min-w-0">
-                        <p className="truncate text-xs text-slate-200">{quiz.title}</p>
-                        <p className="text-[10px] text-slate-500">{quiz.course_title}</p>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px]">
-                        <span className="text-slate-500">
-                          {quiz.attempt_count} {Number(quiz.attempt_count) === 1 ? 'attempt' : 'attempts'}
-                        </span>
-                        {quiz.best_percent != null ? (
-                          <Badge tone={quiz.has_passed ? 'emerald' : 'amber'}>
-                            best {pct(quiz.best_percent)}%
-                          </Badge>
-                        ) : (
-                          <Badge tone="slate">not attempted</Badge>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            <section>
-              <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <IconCheckCircle size={13} /> Assignments
-              </h3>
-              {detail.assignments.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">No assignments in your courses yet.</p>
-              ) : (
-                <ul className="mt-2 divide-y divide-white/5 rounded-lg border border-white/10">
-                  {(detail?.assignments || []).map((assignment) => (
-                    <li key={assignment.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs text-slate-200">{assignment.title}</p>
+                        <p className="truncate text-xs text-slate-200">{submission.lab_title}</p>
                         <p className="text-[10px] text-slate-500">
-                          {assignment.course_title}
-                          {assignment.due_at ? ` · due ${formatDateTime(assignment.due_at)}` : ''}
+                          {submission.course_title}
+                          {submission.due_at ? ` · due ${formatDateTime(submission.due_at)}` : ''}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
-                        {assignment.grade != null ? (
-                          <span className="font-mono text-emerald-300">
-                            {pct(assignment.grade)}
-                            {assignment.points ? ` / ${pct(assignment.points)}` : ''}
-                          </span>
-                        ) : (
-                          <Badge tone={SUBMISSION_TONE[assignment.submission_status] || 'slate'}>
-                            {assignment.submission_status || 'not submitted'}
-                          </Badge>
-                        )}
+                        <Badge tone={submission.status === 'approved' ? 'emerald' : submission.status === 'changes_requested' ? 'rose' : 'amber'}>{submission.status}</Badge>
                         <Button
                           as={Link}
-                          to={`/instructor/submissions?assignment=${assignment.id}`}
+                          to="/instructor/lab-submissions"
                           size="sm"
                           variant="ghost"
                         >

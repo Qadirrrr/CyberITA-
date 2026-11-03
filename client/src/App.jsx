@@ -24,10 +24,7 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import MyCoursesPage from './pages/student/MyCoursesPage';
 import StudentLessonsPage from './pages/student/StudentLessonsPage';
 import LearnPage from './pages/student/LearnPage';
-import StudentQuizzesPage from './pages/student/StudentQuizzesPage';
-import QuizPage from './pages/student/QuizPage';
-import StudentAssignmentsPage from './pages/student/StudentAssignmentsPage';
-import AssignmentPage from './pages/student/AssignmentPage';
+import LabAssignmentsPage from './pages/student/LabAssignmentsPage';
 import StudentCalendarPage from './pages/student/StudentCalendarPage';
 import LabsPage from './pages/student/LabsPage';
 import LabDetailPage from './pages/student/LabDetailPage';
@@ -46,14 +43,11 @@ import ManageCoursesPage from './pages/instructor/ManageCoursesPage';
 import CourseEditorPage from './pages/instructor/CourseEditorPage';
 import ManageLabsPage from './pages/instructor/ManageLabsPage';
 import LabEditorPage from './pages/instructor/LabEditorPage';
-import SubmissionsPage from './pages/instructor/SubmissionsPage';
 import LabSubmissionsPage from './pages/instructor/LabSubmissionsPage';
 import ReportsReviewPage from './pages/instructor/ReportsReviewPage';
 import ReportReviewDetailPage from './pages/instructor/ReportReviewDetailPage';
 import BlogManagePage from './pages/instructor/BlogManagePage';
 import StudentsPage from './pages/instructor/StudentsPage';
-import InstructorQuizzesPage from './pages/instructor/InstructorQuizzesPage';
-import InstructorAssignmentsPage from './pages/instructor/InstructorAssignmentsPage';
 import ContentStudioPage from './pages/instructor/ContentStudioPage';
 import InstructorAnnouncementsPage from './pages/instructor/InstructorAnnouncementsPage';
 
@@ -98,8 +92,7 @@ export default function App() {
           <Route path="student/courses" element={<MyCoursesPage />} />
           <Route path="student/lessons" element={<StudentLessonsPage />} />
           <Route path="student/labs" element={<LabsPage />} />
-          <Route path="student/quizzes" element={<StudentQuizzesPage />} />
-          <Route path="student/assignments" element={<StudentAssignmentsPage />} />
+          <Route path="student/lab-assignments" element={<LabAssignmentsPage />} />
           <Route path="student/calendar" element={<StudentCalendarPage />} />
           <Route path="student/chat" element={<ChatPage />} />
           <Route path="student/reports" element={<ReportsPage />} />
@@ -112,8 +105,6 @@ export default function App() {
           <Route path="student/profile" element={<ProfilePage />} />
 
           <Route path="learn/:slug" element={<LearnPage />} />
-          <Route path="learn/quizzes/:id" element={<QuizPage />} />
-          <Route path="learn/assignments/:id" element={<AssignmentPage />} />
           <Route path="labs/:id" element={<LabDetailPage />} />
           <Route path="labs/session/:sessionId" element={<LabSessionPage />} />
 
@@ -125,9 +116,6 @@ export default function App() {
             <Route path="instructor/labs" element={<ManageLabsPage />} />
             <Route path="instructor/studio" element={<ContentStudioPage />} />
             <Route path="instructor/labs/:id" element={<LabEditorPage />} />
-            <Route path="instructor/quizzes" element={<InstructorQuizzesPage />} />
-            <Route path="instructor/assignments" element={<InstructorAssignmentsPage />} />
-            <Route path="instructor/submissions" element={<SubmissionsPage />} />
             <Route path="instructor/lab-submissions" element={<LabSubmissionsPage />} />
             <Route path="instructor/announcements" element={<InstructorAnnouncementsPage />} />
             <Route path="instructor/reports" element={<ReportsReviewPage />} />

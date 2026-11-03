@@ -128,6 +128,7 @@ export default function LabDetailPage() {
               ) : (
                 <Badge tone="sky">Course</Badge>
               )}
+              {!isPractice && lab.due_at && <Badge tone={new Date(lab.due_at) < new Date() ? 'rose' : 'amber'}><IconClock size={11} /> Due {formatDateTime(lab.due_at)}</Badge>}
               {running && <Badge tone="emerald">Session running</Badge>}
             </div>
             <h1 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">{lab.title}</h1>
@@ -169,7 +170,7 @@ export default function LabDetailPage() {
             <p className="max-w-[220px] text-xs leading-5 text-slate-500">
               {isPractice
                 ? 'Not graded. Start as many sessions as you like.'
-                : 'Finish the required steps to unlock your practical report.'}
+                 : 'Finish the required steps, then submit this lab assignment for instructor review.'}
             </p>
           </div>
         </div>

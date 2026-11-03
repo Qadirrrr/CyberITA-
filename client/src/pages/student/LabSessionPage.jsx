@@ -19,6 +19,7 @@ import {
   IconFileText,
   IconPlay,
   IconRefresh,
+  IconSend,
   IconServer,
   IconShield,
   IconTerminal,
@@ -54,6 +55,7 @@ export default function LabSessionPage() {
   const [stopping, setStopping] = useState(false);
   const [starting, setStarting] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   const fileRef = useRef(null);
@@ -287,6 +289,23 @@ export default function LabSessionPage() {
     }
   };
 
+  const submitLabAssignment = async () => {
+    if (!data?.progress?.allRequiredCompleted || isPractice || data.submission?.status === 'approved') return;
+    if (!window.confirm('Submit this completed lab assignment for instructor review?')) return;
+    setSubmitting(true);
+    try {
+      const form = new FormData();
+      form.append('note', 'Submitted from the completed lab session.');
+      await api.post(`/labs/sessions/${sessionId}/submit`, form);
+      toast.success('Lab assignment submitted for instructor review.');
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not submit this lab assignment.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleExit = () => {
     if (window.opener) {
       window.close();
@@ -387,15 +406,26 @@ export default function LabSessionPage() {
 
         <div className="flex shrink-0 items-center gap-2">
           {progress.allRequiredCompleted && !isPractice && (
-            report ? (
-              <Button as={Link} to={`/student/reports/${report.id}`} target="_blank" size="xs" variant="secondary" className="gap-1">
-                <IconFileText size={12} /> View Report
-              </Button>
-            ) : (
-              <Button size="xs" onClick={generateReport} loading={generating} className="gap-1 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
-                <IconZap size={12} /> Get Report
-              </Button>
-            )
+            <div className="flex items-center gap-2">
+              {data.submission?.status === 'approved' ? (
+                <Badge tone="emerald"><IconCheckCircle size={12} /> Approved</Badge>
+              ) : data.submission?.status === 'submitted' ? (
+                <Badge tone="amber"><IconClock size={12} /> Pending review</Badge>
+              ) : (
+                <Button size="xs" onClick={submitLabAssignment} loading={submitting} className="gap-1 bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20">
+                  <IconSend size={12} /> Submit lab
+                </Button>
+              )}
+              {report ? (
+                <Button as={Link} to={`/student/reports/${report.id}`} target="_blank" size="xs" variant="secondary" className="gap-1">
+                  <IconFileText size={12} /> Report
+                </Button>
+              ) : (
+                <Button size="xs" onClick={generateReport} loading={generating} variant="ghost" className="gap-1">
+                  <IconZap size={12} /> Get report
+                </Button>
+              )}
+            </div>
           )}
 
           <Button variant="ghost" size="xs" onClick={() => load({ silent: true })} title="Sync session state">

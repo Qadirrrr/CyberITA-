@@ -39,7 +39,7 @@ const features = [
   {
     icon: IconZap,
     title: 'Feedback that lands',
-    body: 'Quizzes are graded instantly and assignments come back with focused, actionable instructor feedback.',
+    body: 'Lab assignments are reviewed by instructors with focused, actionable feedback on your practical work.',
   },
 ];
 

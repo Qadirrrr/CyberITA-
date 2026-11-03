@@ -22,12 +22,10 @@ import {
   IconBookOpen,
   IconCheckCircle,
   IconEdit,
-  IconFileText,
   IconPlus,
   IconTerminal,
   IconTrash,
   IconUsers,
-  IconZap,
 } from '../../components/icons';
 import { CATEGORIES, DIFFICULTIES, SUBCATEGORY_SUGGESTIONS } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
@@ -35,9 +33,7 @@ import { formatDate, formatDateTime } from '../../lib/format';
 const tabs = [
   { id: 'details', label: 'Details' },
   { id: 'curriculum', label: 'Curriculum' },
-  { id: 'quizzes', label: 'Quizzes' },
-  { id: 'assignments', label: 'Assignments' },
-  { id: 'labs', label: 'Labs' },
+  { id: 'labs', label: 'Lab assignments' },
   { id: 'students', label: 'Students' },
 ];
 
@@ -56,18 +52,6 @@ const emptyDetails = {
   instructorId: '',
 };
 
-function toLocalInput(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (part) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function emptyQuestion() {
-  return { question: '', type: 'mcq', options: ['', ''], correctOption: 0, explanation: '', points: 1 };
-}
-
 export default function CourseEditorPage() {
   const { id } = useParams();
   const isNew = !id;
@@ -85,6 +69,13 @@ export default function CourseEditorPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (isNew && user && !isAdmin) {
+      toast.error('Only administrators can create courses. Courses assigned to you appear in your course list.');
+      navigate('/instructor/courses', { replace: true });
+    }
+  }, [isNew, user, isAdmin, navigate, toast]);
+
+  useEffect(() => {
     if (isAdmin) {
       api.get('/users', { params: { role: 'instructor', limit: 100 } })
         .then((res) => setInstructors(res.data.users || []))
@@ -95,9 +86,6 @@ export default function CourseEditorPage() {
   const [moduleModal, setModuleModal] = useState(null);
   const [lessonModal, setLessonModal] = useState(null);
   const [lessonLoading, setLessonLoading] = useState(false);
-  const [quizModal, setQuizModal] = useState(null);
-  const [quizLoading, setQuizLoading] = useState(false);
-  const [assignmentModal, setAssignmentModal] = useState(null);
   const [labModal, setLabModal] = useState(null);
   const [modalSaving, setModalSaving] = useState(false);
 
@@ -305,187 +293,6 @@ export default function CourseEditorPage() {
     }
   };
 
-  // ---------- quizzes ----------
-
-  const openQuiz = async (quiz) => {
-    if (!quiz) {
-      setQuizModal({
-        title: '',
-        description: '',
-        passScore: 60,
-        lessonId: '',
-        questions: [emptyQuestion()],
-      });
-      return;
-    }
-    setQuizLoading(true);
-    try {
-      const { data: response } = await api.get(`/quizzes/${quiz.id}`);
-      setQuizModal({
-        id: quiz.id,
-        title: response.quiz.title,
-        description: response.quiz.description || '',
-        passScore: response.quiz.passScore,
-        lessonId: response.quiz.lessonId || '',
-        questions: (response?.questions || []).map((question) => ({
-          question: question.question,
-          type: question.type,
-          options: Array.isArray(question.options) ? question.options : ['', ''],
-          correctOption: question.correctOption ?? 0,
-          explanation: question.explanation || '',
-          points: question.points,
-        })),
-      });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not load the quiz.'));
-    } finally {
-      setQuizLoading(false);
-    }
-  };
-
-  const updateQuestion = (index, field, value) => {
-    setQuizModal((current) => ({
-      ...current,
-      questions: (current?.questions || []).map((question, itemIndex) => (itemIndex === index ? { ...question, [field]: value } : question)),
-    }));
-  };
-
-  const updateOption = (questionIndex, optionIndex, value) => {
-    setQuizModal((current) => ({
-      ...current,
-      questions: (current?.questions || []).map((question, index) =>
-        index === questionIndex
-          ? { ...question, options: (question?.options || []).map((option, position) => (position === optionIndex ? value : option)) }
-          : question
-      ),
-    }));
-  };
-
-  const addOption = (questionIndex) => {
-    setQuizModal((current) => ({
-      ...current,
-      questions: (current?.questions || []).map((question, index) =>
-        index === questionIndex && question.options.length < 6 ? { ...question, options: [...question.options, ''] } : question
-      ),
-    }));
-  };
-
-  const removeOption = (questionIndex, optionIndex) => {
-    setQuizModal((current) => ({
-      ...current,
-      questions: (current?.questions || []).map((question, index) => {
-        if (index !== questionIndex || question.options.length <= 2) return question;
-        const options = question.options.filter((_, position) => position !== optionIndex);
-        return {
-          ...question,
-          options,
-          correctOption: Math.min(question.correctOption, options.length - 1),
-        };
-      }),
-    }));
-  };
-
-  const saveQuiz = async (event) => {
-    event.preventDefault();
-    const invalid = quizModal.questions.some(
-      (question) => !question.question.trim() || question.options.some((option) => !option.trim())
-    );
-    if (invalid) {
-      toast.error('Every question needs text and non-empty options.');
-      return;
-    }
-    setModalSaving(true);
-    const payload = {
-      title: quizModal.title,
-      description: quizModal.description,
-      passScore: Number(quizModal.passScore) || 0,
-      lessonId: quizModal.lessonId ? Number(quizModal.lessonId) : null,
-      questions: (quizModal?.questions || []).map((question, index) => ({
-        question: question.question,
-        type: question.type,
-        options: question.options,
-        correctOption: question.correctOption,
-        explanation: question.explanation || null,
-        points: Number(question.points) || 1,
-        position: index,
-      })),
-    };
-    try {
-      if (quizModal.id) await api.put(`/quizzes/${quizModal.id}`, payload);
-      else await api.post(`/quizzes/courses/${id}`, payload);
-      toast.success(quizModal.id ? 'Quiz updated.' : 'Quiz created.');
-      setQuizModal(null);
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not save the quiz.'));
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const deleteQuiz = async (quiz) => {
-    if (!window.confirm(`Delete quiz "${quiz.title}" and all attempts?`)) return;
-    try {
-      await api.delete(`/quizzes/${quiz.id}`);
-      toast.success('Quiz deleted.');
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not delete the quiz.'));
-    }
-  };
-
-  // ---------- assignments ----------
-
-  const openAssignment = (assignment) =>
-    setAssignmentModal(
-      assignment
-        ? {
-            id: assignment.id,
-            title: assignment.title,
-            description: assignment.description || '',
-            dueAt: toLocalInput(assignment.due_at),
-            points: assignment.points,
-            isPublished: Boolean(assignment.is_published),
-            lessonId: assignment.lesson_id || '',
-          }
-        : { title: '', description: '', dueAt: '', points: 100, isPublished: true, lessonId: '' }
-    );
-
-  const saveAssignment = async (event) => {
-    event.preventDefault();
-    setModalSaving(true);
-    const payload = {
-      title: assignmentModal.title,
-      description: assignmentModal.description,
-      dueAt: assignmentModal.dueAt ? new Date(assignmentModal.dueAt).toISOString() : null,
-      points: Number(assignmentModal.points) || 1,
-      isPublished: Boolean(assignmentModal.isPublished),
-      lessonId: assignmentModal.lessonId ? Number(assignmentModal.lessonId) : null,
-    };
-    try {
-      if (assignmentModal.id) await api.put(`/assignments/${assignmentModal.id}`, payload);
-      else await api.post(`/assignments/courses/${id}`, payload);
-      toast.success(assignmentModal.id ? 'Assignment updated.' : 'Assignment created.');
-      setAssignmentModal(null);
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not save the assignment.'));
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const deleteAssignment = async (assignment) => {
-    if (!window.confirm(`Delete assignment "${assignment.title}"?`)) return;
-    try {
-      await api.delete(`/assignments/${assignment.id}`);
-      toast.success('Assignment deleted.');
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not delete the assignment.'));
-    }
-  };
-
   // ---------- labs ----------
 
   const saveLab = async (event) => {
@@ -498,6 +305,7 @@ export default function CourseEditorPage() {
         description: labModal.description,
         difficulty: labModal.difficulty,
         estimatedMinutes: Number(labModal.estimatedMinutes) || 30,
+        dueAt: labModal.dueAt ? new Date(labModal.dueAt).toISOString() : null,
         courseId: Number(id),
         lessonId: labModal.lessonId ? Number(labModal.lessonId) : null,
         status: labModal.status,
@@ -537,8 +345,6 @@ export default function CourseEditorPage() {
   const course = data?.course;
   const counts = {
     curriculum: lessons.length,
-    quizzes: data?.quizzes?.length || 0,
-    assignments: data?.assignments?.length || 0,
     labs: data?.labs?.length || 0,
     students: data?.enrollments?.length || 0,
   };
@@ -664,7 +470,7 @@ export default function CourseEditorPage() {
       {!isNew && tab === 'curriculum' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Structure lessons into modules. Labs, quizzes and assignments attach to individual lessons.</p>
+            <p className="text-xs text-slate-500">Structure lessons into modules, then attach hands-on lab assignments with verified steps.</p>
             <Button size="sm" variant="secondary" onClick={() => setModuleModal({ title: '', description: '' })}>
               <IconPlus size={13} /> Add module
             </Button>
@@ -733,83 +539,6 @@ export default function CourseEditorPage() {
         </div>
       )}
 
-      {!isNew && tab === 'quizzes' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Quizzes can be attached to a lesson and gate progress.</p>
-            <Button size="sm" variant="secondary" onClick={() => openQuiz(null)}>
-              <IconPlus size={13} /> New quiz
-            </Button>
-          </div>
-          {(data.quizzes || []).length === 0 ? (
-            <EmptyState icon={IconZap} title="No quizzes" message="Add a quiz to check understanding after a lesson." />
-          ) : (
-            <div className="space-y-2">
-              {(data?.quizzes || []).map((quiz) => (
-                <Card key={quiz.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-400/10 text-accent-300">
-                    <IconZap size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-200">{quiz.title}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {quiz.question_count} questions · pass {Math.round(Number(quiz.pass_score))}%
-                      {quiz.lesson_id ? ` · lesson #${quiz.lesson_id}` : ' · course-wide'}
-                    </p>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => openQuiz(quiz)} disabled={quizLoading}>
-                    <IconEdit size={13} /> Edit
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => deleteQuiz(quiz)}>
-                    <IconTrash size={13} className="text-slate-500" />
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!isNew && tab === 'assignments' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Written work graded by instructors. Submissions appear in submission review.</p>
-            <Button size="sm" variant="secondary" onClick={() => openAssignment(null)}>
-              <IconPlus size={13} /> New assignment
-            </Button>
-          </div>
-          {(data.assignments || []).length === 0 ? (
-            <EmptyState icon={IconFileText} title="No assignments" message="Add a practical written assignment." />
-          ) : (
-            <div className="space-y-2">
-              {(data?.assignments || []).map((assignment) => (
-                <Card key={assignment.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
-                    <IconFileText size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                      {assignment.title}
-                      <Badge tone={assignment.is_published ? 'emerald' : 'slate'}>{assignment.is_published ? 'published' : 'hidden'}</Badge>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      {assignment.points} points · {assignment.submission_count} submissions
-                      {assignment.due_at ? ` · due ${formatDateTime(assignment.due_at)}` : ''}
-                    </p>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => openAssignment(assignment)}>
-                    <IconEdit size={13} /> Edit
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => deleteAssignment(assignment)}>
-                    <IconTrash size={13} className="text-slate-500" />
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {!isNew && tab === 'labs' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -818,7 +547,7 @@ export default function CourseEditorPage() {
               size="sm"
               variant="secondary"
               onClick={() =>
-                setLabModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, lessonId: '', status: 'draft' })
+                setLabModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, dueAt: '', lessonId: '', status: 'draft' })
               }
             >
               <IconPlus size={13} /> New lab
@@ -958,151 +687,6 @@ export default function CourseEditorPage() {
         )}
       </Modal>
 
-      {/* ---------- quiz modal ---------- */}
-      <Modal
-        open={Boolean(quizModal)}
-        onClose={() => setQuizModal(null)}
-        title={quizModal?.id ? 'Edit quiz' : 'New quiz'}
-        size="xl"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setQuizModal(null)}>Cancel</Button>
-            <Button onClick={saveQuiz} loading={modalSaving}>{quizModal?.id ? 'Save quiz' : 'Create quiz'}</Button>
-          </>
-        }
-      >
-        {quizLoading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : quizModal ? (
-          <form onSubmit={saveQuiz} className="space-y-5">
-            <Input label="Quiz title" value={quizModal.title} onChange={(event) => setQuizModal((current) => ({ ...current, title: event.target.value }))} required />
-            <Textarea label="Description" rows={2} value={quizModal.description} onChange={(event) => setQuizModal((current) => ({ ...current, description: event.target.value }))} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Pass score (%)" type="number" min="0" max="100" value={quizModal.passScore} onChange={(event) => setQuizModal((current) => ({ ...current, passScore: event.target.value }))} />
-              <Select label="Attach to lesson" value={quizModal.lessonId} onChange={(event) => setQuizModal((current) => ({ ...current, lessonId: event.target.value }))}>
-                <option value="">Course-wide</option>
-                {lessons.map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle}, {lesson.title}</option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              {(quizModal?.questions || []).map((question, questionIndex) => (
-                <div key={questionIndex} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Question {questionIndex + 1}</p>
-                    {quizModal.questions.length > 1 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setQuizModal((current) => ({ ...current, questions: current.questions.filter((_, index) => index !== questionIndex) }))}
-                      >
-                        <IconTrash size={13} />
-                      </Button>
-                    )}
-                  </div>
-                  <Textarea
-                    rows={2}
-                    className="mt-2"
-                    value={question.question}
-                    onChange={(event) => updateQuestion(questionIndex, 'question', event.target.value)}
-                    placeholder="Question text"
-                  />
-                  <div className="mt-3 space-y-2">
-                    {(question?.options || []).map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name={`correct-${questionIndex}`}
-                          checked={question.correctOption === optionIndex}
-                          onChange={() => updateQuestion(questionIndex, 'correctOption', optionIndex)}
-                          className="h-3.5 w-3.5 accent-brand-400"
-                          aria-label={`Mark option ${optionIndex + 1} correct`}
-                        />
-                        <Input
-                          value={option}
-                          onChange={(event) => updateOption(questionIndex, optionIndex, event.target.value)}
-                          placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`}
-                          className="h-9 text-[13px]"
-                        />
-                        {question.options.length > 2 && (
-                          <Button size="sm" variant="ghost" onClick={() => removeOption(questionIndex, optionIndex)}>
-                            <IconTrash size={12} />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => addOption(questionIndex)} disabled={question.options.length >= 6}>
-                      <IconPlus size={12} /> Option
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500">Points</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={question.points}
-                        onChange={(event) => updateQuestion(questionIndex, 'points', event.target.value)}
-                        className="input h-8 w-16 text-center text-xs"
-                      />
-                    </div>
-                  </div>
-                  <Input
-                    value={question.explanation}
-                    onChange={(event) => updateQuestion(questionIndex, 'explanation', event.target.value)}
-                    placeholder="Explanation shown after submission (optional)"
-                    className="mt-2 h-9 text-xs"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setQuizModal((current) => ({ ...current, questions: [...current.questions, emptyQuestion()] }))}
-            >
-              <IconPlus size={13} /> Add question
-            </Button>
-          </form>
-        ) : null}
-      </Modal>
-
-      {/* ---------- assignment modal ---------- */}
-      <Modal
-        open={Boolean(assignmentModal)}
-        onClose={() => setAssignmentModal(null)}
-        title={assignmentModal?.id ? 'Edit assignment' : 'New assignment'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setAssignmentModal(null)}>Cancel</Button>
-            <Button onClick={saveAssignment} loading={modalSaving}>{assignmentModal?.id ? 'Save assignment' : 'Create assignment'}</Button>
-          </>
-        }
-      >
-        {assignmentModal && (
-          <form onSubmit={saveAssignment} className="space-y-4">
-            <Input label="Title" value={assignmentModal.title} onChange={(event) => setAssignmentModal((current) => ({ ...current, title: event.target.value }))} required />
-            <Textarea label="Description (markdown)" rows={6} value={assignmentModal.description} onChange={(event) => setAssignmentModal((current) => ({ ...current, description: event.target.value }))} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Due date" type="datetime-local" value={assignmentModal.dueAt} onChange={(event) => setAssignmentModal((current) => ({ ...current, dueAt: event.target.value }))} />
-              <Input label="Points" type="number" min="1" value={assignmentModal.points} onChange={(event) => setAssignmentModal((current) => ({ ...current, points: event.target.value }))} />
-              <Select label="Attach to lesson" value={assignmentModal.lessonId} onChange={(event) => setAssignmentModal((current) => ({ ...current, lessonId: event.target.value }))}>
-                <option value="">Course-wide</option>
-                {lessons.map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle}, {lesson.title}</option>
-                ))}
-              </Select>
-              <div className="flex items-end pb-2">
-                <Checkbox label="Visible to learners" checked={assignmentModal.isPublished} onChange={(event) => setAssignmentModal((current) => ({ ...current, isPublished: event.target.checked }))} />
-              </div>
-            </div>
-          </form>
-        )}
-      </Modal>
-
       {/* ---------- lab modal ---------- */}
       <Modal
         open={Boolean(labModal)}
@@ -1127,6 +711,7 @@ export default function CourseEditorPage() {
                 ))}
               </Select>
               <Input label="Minutes" type="number" min="5" value={labModal.estimatedMinutes} onChange={(event) => setLabModal((current) => ({ ...current, estimatedMinutes: event.target.value }))} />
+              <Input label="Due date (optional)" type="datetime-local" value={labModal.dueAt || ''} onChange={(event) => setLabModal((current) => ({ ...current, dueAt: event.target.value }))} />
               <Select label="Status" value={labModal.status} onChange={(event) => setLabModal((current) => ({ ...current, status: event.target.value }))}>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>

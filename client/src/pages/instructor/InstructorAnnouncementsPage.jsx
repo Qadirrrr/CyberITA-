@@ -23,8 +23,7 @@ import { formatDateTime } from '../../lib/format';
 
 const LINK_OPTIONS = [
   { value: '', label: 'No link' },
-  { value: '/student/assignments', label: 'Assignments' },
-  { value: '/student/quizzes', label: 'Quizzes' },
+  { value: '/student/lab-assignments', label: 'Lab assignments' },
   { value: '/student/courses', label: 'My courses' },
   { value: '/student/chat', label: 'Chat with instructor' },
   { value: '/student/calendar', label: 'Calendar' },

@@ -71,7 +71,7 @@ export default function ManageCoursesPage() {
   };
 
   const remove = async (course) => {
-    if (!window.confirm(`Delete "${course.title}"? Lessons, quizzes, labs and enrollments will be removed.`)) return;
+    if (!window.confirm(`Delete "${course.title}"? Lessons, labs and enrollments will be removed.`)) return;
     setBusyId(course.id);
     try {
       await api.delete(`/courses/${course.id}`);
@@ -94,12 +94,14 @@ export default function ManageCoursesPage() {
           <p className="mt-1 text-sm text-slate-400">
             {user?.role === 'admin'
               ? 'Create, publish and maintain every course on the platform.'
-              : 'Create, publish and maintain the courses assigned to you.'}
+              : 'Manage curriculum, lessons and hands-on lab exercises for courses assigned to you by the administrator.'}
           </p>
         </div>
-        <Button as={Link} to="/instructor/courses/new" size="sm">
-          <IconPlus size={14} /> New course
-        </Button>
+        {user?.role === 'admin' && (
+          <Button as={Link} to="/instructor/courses/new" size="sm">
+            <IconPlus size={14} /> New course
+          </Button>
+        )}
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -138,12 +140,26 @@ export default function ManageCoursesPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={IconBookOpen}
-          title={courses.length === 0 ? 'No courses yet' : 'No courses match those filters'}
-          message={courses.length === 0 ? 'Create your first course and start adding modules, lessons and labs.' : 'Try a different status or search term.'}
+          title={
+            courses.length === 0
+              ? user?.role === 'admin'
+                ? 'No courses yet'
+                : 'No assigned courses'
+              : 'No courses match those filters'
+          }
+          message={
+            courses.length === 0
+              ? user?.role === 'admin'
+                ? 'Create your first course and start adding modules, lessons and labs.'
+                : 'You have not been assigned any courses yet. Once an administrator assigns courses to your account, you will see them here.'
+              : 'Try a different status or search term.'
+          }
           action={
-            <Button as={Link} to="/instructor/courses/new" size="sm">
-              <IconPlus size={13} /> New course
-            </Button>
+            user?.role === 'admin' && (
+              <Button as={Link} to="/instructor/courses/new" size="sm">
+                <IconPlus size={13} /> New course
+              </Button>
+            )
           }
         />
       ) : (

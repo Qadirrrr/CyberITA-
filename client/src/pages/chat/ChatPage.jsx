@@ -450,7 +450,7 @@ export default function ChatPage() {
                     </span>
                     <p className="mt-3 text-sm font-semibold text-white">Start the conversation</p>
                     <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">
-                      Ask about a lesson, lab, quiz or assignment. You can attach PDFs, documents and screenshots.
+                      Ask about a lesson, lab assignment or practical report. You can attach PDFs, documents and screenshots.
                     </p>
                   </div>
                 ) : (
@@ -599,7 +599,7 @@ export default function ChatPage() {
                 message={
                   isInstructor
                     ? 'Choose a student from your inbox or start a new conversation to answer a question.'
-                    : 'Ask your instructor about a lesson, lab, quiz or assignment. You can attach documents and screenshots.'
+                    : 'Ask your instructor about a lesson, lab assignment or practical report. You can attach documents and screenshots.'
                 }
                 action={
                   <Button onClick={openNewChat}>

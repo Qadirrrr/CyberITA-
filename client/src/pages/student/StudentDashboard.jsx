@@ -9,7 +9,6 @@ import {
   IconBookOpen,
   IconCalendar,
   IconChatBubble,
-  IconClipboard,
   IconClock,
   IconFileText,
   IconFlame,
@@ -24,16 +23,14 @@ import { formatDate, formatDateTime, timeAgo } from '../../lib/format';
 const quickLinks = [
   { to: '/student/courses', label: 'My courses', icon: IconBookOpen, hint: 'Continue where you left off' },
   { to: '/student/lessons', label: 'My lessons', icon: IconPlay, hint: 'Every lesson in one place' },
-  { to: '/student/quizzes', label: 'Quizzes', icon: IconZap, hint: 'Check your understanding' },
-  { to: '/student/assignments', label: 'Assignments', icon: IconClipboard, hint: 'Submit work and track grades' },
+  { to: '/student/lab-assignments', label: 'Lab assignments', icon: IconTerminal, hint: 'Complete and submit practical labs' },
   { to: '/student/labs', label: 'Open a lab', icon: IconTerminal, hint: 'Real Linux terminal' },
   { to: '/student/chat', label: 'Chat', icon: IconChatBubble, hint: 'Ask your instructor a question' },
 ];
 
-function assignmentState(assignment) {
-  if (!assignment.submission_id) return 'pending';
-  if (assignment.submission_status === 'returned') return 'pending';
-  if (assignment.submission_status === 'graded') return 'graded';
+function labAssignmentState(assignment) {
+  if (!assignment.submission_id || assignment.submission_status === 'changes_requested') return 'pending';
+  if (assignment.submission_status === 'approved') return 'approved';
   return 'submitted';
 }
 
@@ -43,8 +40,7 @@ export default function StudentDashboard() {
   const [enrollments, setEnrollments] = useState([]);
   const [events, setEvents] = useState([]);
   const [reports, setReports] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [assignments, setAssignments] = useState([]);
+  const [labAssignments, setLabAssignments] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -56,18 +52,16 @@ export default function StudentDashboard() {
       api.get('/my-courses'),
       api.get('/me/history', { params: { limit: 8 } }),
       api.get('/reports/mine'),
-      api.get('/me/quizzes'),
-      api.get('/me/assignments'),
+      api.get('/me/lab-assignments'),
       api.get('/messages/unread-count'),
     ])
-      .then(([statsRes, coursesRes, historyRes, reportsRes, quizzesRes, assignmentsRes, unreadRes]) => {
+      .then(([statsRes, coursesRes, historyRes, reportsRes, labAssignmentsRes, unreadRes]) => {
         if (!active) return;
         setStats(statsRes.data);
         setEnrollments(coursesRes.data.enrollments || []);
         setEvents(historyRes.data.events || []);
         setReports(reportsRes.data.reports || []);
-        setQuizzes(quizzesRes.data.quizzes || []);
-        setAssignments(assignmentsRes.data.assignments || []);
+        setLabAssignments(labAssignmentsRes.data.labAssignments || []);
         setUnreadMessages(Number(unreadRes.data.unread) || 0);
       })
       .catch((err) => active && setError(getErrorMessage(err, 'Unable to load your dashboard.')))
@@ -82,15 +76,13 @@ export default function StudentDashboard() {
   const feedback = reports.filter((report) => report.status === 'rejected' && report.instructor_feedback);
   const awaitingReview = reports.filter((report) => report.status === 'submitted');
 
-  const pendingAssignments = assignments.filter((assignment) => assignmentState(assignment) === 'pending');
+  const pendingAssignments = labAssignments.filter((assignment) => labAssignmentState(assignment) === 'pending');
   const overdueAssignments = pendingAssignments.filter((assignment) => assignment.is_overdue);
-  const returnedAssignments = pendingAssignments.filter((assignment) => assignment.submission_status === 'returned');
+  const returnedAssignments = pendingAssignments.filter((assignment) => assignment.submission_status === 'changes_requested');
   const upcomingAssignments = pendingAssignments
     .filter((assignment) => assignment.due_at)
     .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
     .slice(0, 4);
-  const unpassedQuizCount = quizzes.filter((quiz) => !quiz.has_passed).length;
-  const quizzesToTake = quizzes.filter((quiz) => !quiz.has_passed).slice(0, 3);
 
   if (loading) {
     return (
@@ -158,20 +150,20 @@ export default function StudentDashboard() {
           tone="accent"
         />
         <StatCard
-          icon={IconZap}
-          label="Quizzes passed"
-          value={quizzes.filter((quiz) => quiz.has_passed).length}
-          hint={`${quizzes.length} available · ${unpassedQuizCount} to try`}
+          icon={IconTerminal}
+          label="Lab assignments"
+          value={labAssignments.length - pendingAssignments.length}
+          hint={`${pendingAssignments.length} to complete`}
           tone="emerald"
         />
         <StatCard
-          icon={IconClipboard}
-          label="Assignments to do"
+          icon={IconTerminal}
+          label="Labs to complete"
           value={pendingAssignments.length}
           hint={
             overdueAssignments.length > 0
               ? `${overdueAssignments.length} overdue`
-              : `${assignments.length} assigned in total`
+              : `${labAssignments.length} assigned in total`
           }
           tone="amber"
         />
@@ -182,13 +174,13 @@ export default function StudentDashboard() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300">
-                <IconClipboard size={19} />
+                <IconTerminal size={19} />
               </span>
               <div>
                 <p className="text-sm font-semibold text-white">
                   {returnedAssignments.length > 0
-                    ? `${returnedAssignments.length} assignment${returnedAssignments.length === 1 ? '' : 's'} need${returnedAssignments.length === 1 ? 's' : ''} attention`
-                    : `${overdueAssignments.length} overdue assignment${overdueAssignments.length === 1 ? '' : 's'}`}
+                    ? `${returnedAssignments.length} lab assignment${returnedAssignments.length === 1 ? '' : 's'} need${returnedAssignments.length === 1 ? 's' : ''} attention`
+                    : `${overdueAssignments.length} overdue lab assignment${overdueAssignments.length === 1 ? '' : 's'}`}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">
                   {returnedAssignments.length > 0
@@ -197,8 +189,8 @@ export default function StudentDashboard() {
                 </p>
               </div>
             </div>
-            <Button as={Link} to="/student/assignments" variant="secondary" size="sm">
-              Open assignments <IconArrowRight size={14} />
+            <Button as={Link} to="/student/lab-assignments" variant="secondary" size="sm">
+              Open lab assignments <IconArrowRight size={14} />
             </Button>
           </div>
         </Card>
@@ -244,7 +236,7 @@ export default function StudentDashboard() {
             <EmptyState
               icon={IconTarget}
               title="No active courses yet"
-              message="Enroll in a course to unlock lessons, labs, quizzes and instructor-reviewed reports."
+              message="Enroll in a course to unlock lessons, lab assignments and instructor-reviewed reports."
               action={
                 <Button as={Link} to="/courses">
                   Find your first course
@@ -291,19 +283,14 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {(pendingAssignments.length > 0 || quizzesToTake.length > 0) && (
+          {pendingAssignments.length > 0 && (
             <Card className="p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-display text-base font-semibold">Coming up next</h2>
                 <div className="flex items-center gap-2">
-                  {pendingAssignments.length > 0 && (
-                    <Link to="/student/assignments" className="text-[11px] text-slate-400 hover:text-brand-300">
-                      {pendingAssignments.length} assignment{pendingAssignments.length === 1 ? '' : 's'}
-                    </Link>
-                  )}
-                  {quizzesToTake.length > 0 && (
-                    <Link to="/student/quizzes" className="text-[11px] text-slate-400 hover:text-brand-300">
-                      {quizzesToTake.length} quiz{quizzesToTake.length === 1 ? '' : 'zes'}
+                    {pendingAssignments.length > 0 && (
+                    <Link to="/student/lab-assignments" className="text-[11px] text-slate-400 hover:text-brand-300">
+                      {pendingAssignments.length} lab assignment{pendingAssignments.length === 1 ? '' : 's'}
                     </Link>
                   )}
                 </div>
@@ -312,12 +299,12 @@ export default function StudentDashboard() {
                 {pendingAssignments.slice(0, 2).map((assignment) => (
                   <Link
                     key={assignment.id}
-                    to={`/learn/assignments/${assignment.id}`}
+                    to={`/labs/${assignment.id}`}
                     className="group rounded-xl border border-white/10 bg-white/[0.02] p-3 transition hover:border-amber-400/30 hover:bg-white/[0.04]"
                   >
                     <div className="flex items-start gap-2.5">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
-                        <IconClipboard size={15} />
+                        <IconTerminal size={15} />
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium text-slate-100 group-hover:text-white">{assignment.title}</p>
@@ -325,26 +312,6 @@ export default function StudentDashboard() {
                         <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
                           <IconClock size={10} />
                           {assignment.due_at ? formatDateTime(assignment.due_at) : 'No deadline'}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-                {quizzesToTake.slice(0, 2).map((quiz) => (
-                  <Link
-                    key={quiz.id}
-                    to={`/learn/quizzes/${quiz.id}`}
-                    className="group rounded-xl border border-white/10 bg-white/[0.02] p-3 transition hover:border-brand-400/30 hover:bg-white/[0.04]"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 text-brand-300">
-                        <IconZap size={15} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-slate-100 group-hover:text-white">{quiz.title}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-slate-500">{quiz.course_title}</p>
-                        <p className="mt-1 text-[10px] text-slate-500">
-                          {quiz.question_count} questions · pass at {Math.round(Number(quiz.pass_score))}%
                         </p>
                       </div>
                     </div>
@@ -387,7 +354,7 @@ export default function StudentDashboard() {
             </div>
             {upcomingAssignments.length === 0 ? (
               <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-                No pending assignment deadlines. You are all caught up.
+                No pending lab assignment deadlines. You are all caught up.
               </p>
             ) : (
               <ul className="mt-4 space-y-3">
@@ -397,7 +364,7 @@ export default function StudentDashboard() {
                   return (
                     <li key={assignment.id}>
                       <Link
-                        to={`/learn/assignments/${assignment.id}`}
+                        to={`/labs/${assignment.id}`}
                         className="group flex items-start gap-2.5 rounded-xl border border-white/5 bg-white/[0.02] p-3 transition hover:border-brand-400/25 hover:bg-white/[0.04]"
                       >
                         <span
@@ -490,9 +457,9 @@ export default function StudentDashboard() {
               </div>
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
                 <p className="font-display text-xl font-semibold text-white tabular-nums">
-                  <AnimatedNumber value={stats?.quizzes?.passed ?? 0} />
+                  <AnimatedNumber value={stats?.labAssignments?.approved ?? 0} />
                 </p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-500">Quizzes passed</p>
+                <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-500">Labs approved</p>
               </div>
             </div>
             <p className="mt-3 text-[11px] leading-5 text-slate-500">

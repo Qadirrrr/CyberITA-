@@ -15,7 +15,6 @@ import {
   IconAward,
   IconBarChart,
   IconBookOpen,
-  IconClipboard,
   IconClock,
   IconFileText,
   IconLayout,
@@ -29,7 +28,6 @@ import {
   IconTerminal,
   IconUsers,
   IconX,
-  IconZap,
   // Student sidebar custom icons
   IconGrid,
   IconBookWifi,
@@ -49,8 +47,7 @@ const studentNavPrimary = [
   { to: '/student/courses', label: 'My courses', icon: IconBookWifi },
   { to: '/student/lessons', label: 'My lessons', icon: IconLessons },
   { to: '/student/labs', label: 'Labs', icon: IconTerminal },
-  { to: '/student/quizzes', label: 'Quizzes', icon: IconZap, badge: 'quizzes' },
-  { to: '/student/assignments', label: 'Assignments', icon: IconClipboard, badge: 'assignments' },
+  { to: '/student/lab-assignments', label: 'Lab assignments', icon: IconTerminal, badge: 'labAssignments' },
   { to: '/student/calendar', label: 'Calendar', icon: IconCalendarGrid },
   { to: '/student/chat', label: 'Chat', icon: IconChatBubble, badge: 'chat' },
 ];
@@ -80,15 +77,12 @@ const instructorNavGroups = [
     label: 'Authoring Studio',
     items: [
       { to: '/instructor/studio', label: 'Content studio', icon: IconLayers },
-      { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
-      { to: '/instructor/quizzes', label: 'Quizzes', icon: IconZap },
-      { to: '/instructor/assignments', label: 'Assignments', icon: IconClipboard },
+      { to: '/instructor/labs', label: 'Lab assignments', icon: IconTerminal },
     ],
   },
   {
     label: 'Evaluation & Reviews',
     items: [
-      { to: '/instructor/submissions', label: 'Submission review', icon: IconCheckCircle, badge: 'submissions' },
       { to: '/instructor/lab-submissions', label: 'Lab submissions', icon: IconTerminal, badge: 'labSubmissions' },
       { to: '/instructor/reports', label: 'Practical reports', icon: IconFileText },
     ],
@@ -129,7 +123,7 @@ const adminNavGroups = [
       { to: '/instructor/studio', label: 'Content Studio', icon: IconLayers },
       { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
       { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
-      { to: '/instructor/submissions', label: 'Submission Review', icon: IconCheckCircle },
+       { to: '/instructor/lab-submissions', label: 'Lab Submission Review', icon: IconCheckCircle },
       { to: '/instructor/blog', label: 'Blog Publication', icon: IconBookOpen },
     ],
   },
@@ -178,7 +172,6 @@ export default function DashboardLayout() {
   const profileRef = useRef(null);
   useClickOutside(profileRef, () => setProfileOpen(false), profileOpen);
   const [chatUnread, setChatUnread] = useState(0);
-  const [pendingQuizzes, setPendingQuizzes] = useState(0);
   const location = useLocation();
   const { notifications = [], unread = 0, markCategoryRead } = useNotifications() || {};
 
@@ -200,15 +193,9 @@ export default function DashboardLayout() {
   const title = user?.role === 'admin' ? 'Admin workspace' : user?.role === 'instructor' ? 'Instructor workspace' : 'Learning workspace';
 
   // Calculate unread notification counts per category
-  const quizNotifs = useMemo(() => {
+  const labAssignmentNotifs = useMemo(() => {
     return (notifications || []).filter(
-      (n) => !n.read_at && (n.type === 'quiz' || n.link?.includes('quiz') || n.title?.toLowerCase().includes('quiz'))
-    ).length;
-  }, [notifications]);
-
-  const assignmentNotifs = useMemo(() => {
-    return (notifications || []).filter(
-      (n) => !n.read_at && (n.type === 'assignment' || n.link?.includes('assignment') || n.title?.toLowerCase().includes('assignment'))
+      (n) => !n.read_at && (n.type === 'lab' || n.link?.includes('lab-assignment') || n.title?.toLowerCase().includes('lab'))
     ).length;
   }, [notifications]);
 
@@ -230,14 +217,12 @@ export default function DashboardLayout() {
   // When student or instructor visits a section, automatically mark notifications for that section as read
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith('/student/quizzes') || path.startsWith('/quizzes')) {
-      if (quizNotifs > 0) markCategoryRead?.('quiz');
-    } else if (path.startsWith('/student/assignments') || path.startsWith('/assignments')) {
-      if (assignmentNotifs > 0) markCategoryRead?.('assignment');
-    } else if (path.startsWith('/instructor/submissions')) {
+    if (path.startsWith('/student/lab-assignments')) {
+      if (labAssignmentNotifs > 0) markCategoryRead?.('lab');
+    } else if (path.startsWith('/instructor/lab-submissions')) {
       if (submissionNotifs > 0) markCategoryRead?.('submission');
     }
-  }, [location.pathname, quizNotifs, assignmentNotifs, submissionNotifs, markCategoryRead]);
+  }, [location.pathname, labAssignmentNotifs, submissionNotifs, markCategoryRead]);
 
   useEffect(() => {
     if (!user || !['student', 'instructor'].includes(user.role)) {
@@ -308,11 +293,8 @@ export default function DashboardLayout() {
     if (item.badge === 'chat') {
       badgeCount = chatUnread;
       badgeTone = 'brand';
-    } else if (item.badge === 'quizzes') {
-      badgeCount = quizNotifs;
-      badgeTone = 'amber';
-    } else if (item.badge === 'assignments') {
-      badgeCount = assignmentNotifs;
+    } else if (item.badge === 'labAssignments') {
+      badgeCount = labAssignmentNotifs;
       badgeTone = 'emerald';
     } else if (item.badge === 'notifications') {
       badgeCount = unread;
@@ -333,8 +315,7 @@ export default function DashboardLayout() {
         title={mini ? item.label : undefined}
         onClick={() => {
           setMobileOpen(false);
-          if (item.badge === 'quizzes') markCategoryRead?.('quiz');
-          if (item.badge === 'assignments') markCategoryRead?.('assignment');
+          if (item.badge === 'labAssignments') markCategoryRead?.('lab');
           if (item.badge === 'submissions') markCategoryRead?.('submission');
           if (item.badge === 'labSubmissions') markCategoryRead?.('lab');
         }}

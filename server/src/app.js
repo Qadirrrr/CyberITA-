@@ -12,8 +12,6 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import courseRoutes from './routes/courses.js';
 import enrollmentRoutes from './routes/enrollment.js';
-import quizRoutes from './routes/quizzes.js';
-import assignmentRoutes from './routes/assignments.js';
 import labRoutes from './routes/labs.js';
 import reportRoutes from './routes/reports.js';
 import postRoutes from './routes/posts.js';
@@ -30,6 +28,7 @@ import instructorRoutes from './routes/instructor.js';
 import contentReportRoutes from './routes/contentReports.js';
 import contentRoutes from './routes/content.js';
 import labSubmissionRoutes from './routes/labSubmissions.js';
+import projectRoutes from './routes/projects.js';
 
 export function createApp() {
   const app = express();
@@ -65,10 +64,9 @@ export function createApp() {
   app.use('/api/users', userRoutes);
   app.use('/api/courses', courseRoutes);
   app.use('/api', enrollmentRoutes);
-  app.use('/api/quizzes', quizRoutes);
-  app.use('/api/assignments', assignmentRoutes);
   app.use('/api/labs', labRoutes);
-app.use('/api/lab-submissions', labSubmissionRoutes);
+  app.use('/api/lab-submissions', labSubmissionRoutes);
+  app.use('/api/projects', projectRoutes);
   app.use('/api/reports', reportRoutes);
   app.use('/api/posts', postRoutes);
   app.use('/api/notifications', notificationRoutes);

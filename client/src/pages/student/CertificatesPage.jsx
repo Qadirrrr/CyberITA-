@@ -67,7 +67,7 @@ export default function CertificatesPage() {
         <EmptyState
           icon={IconAward}
           title="No certificates yet"
-          message="Complete every lesson in a course, including its quizzes, assignments and labs, to earn a verifiable certificate."
+          message="Complete every lesson and lab assignment in a course to earn a verifiable certificate."
           action={
             <Button as={Link} to="/student/courses" size="sm">
               Continue learning <IconArrowRight size={14} />

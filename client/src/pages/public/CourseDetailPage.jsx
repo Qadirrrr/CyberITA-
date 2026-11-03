@@ -348,7 +348,7 @@ export default function CourseDetailPage() {
                     [IconTerminal, `${data.labs.length} browser-based labs`],
                     [IconFileText, 'Auto-generated practical report'],
                     [IconAward, 'Certificate on completion'],
-                    [IconZap, 'Instant quiz grading'],
+                    [IconZap, 'Verified lab steps and evidence'],
                   ].map(([IconComponent, label]) => (
                     <div key={label} className="flex items-center gap-2.5 text-slate-300">
                       <IconComponent size={15} className="shrink-0 text-brand-400" />
@@ -371,7 +371,6 @@ export default function CourseDetailPage() {
             { id: 'overview', label: 'Overview' },
             { id: 'curriculum', label: 'Curriculum', count: lessons },
             { id: 'labs', label: 'Labs', count: data.labs.length },
-            ...(data.quizzes.length ? [{ id: 'quizzes', label: 'Quizzes', count: data.quizzes.length }] : []),
           ]}
         />
 
@@ -448,26 +447,6 @@ export default function CourseDetailPage() {
               </div>
             )}
 
-            {tab === 'quizzes' && (
-              <div className="space-y-3">
-                {(data?.quizzes || []).map((quiz) => (
-                  <Card key={quiz.id} className="flex flex-wrap items-center gap-4 p-5">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400/10 text-accent-300">
-                      <IconZap size={19} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-white">{quiz.title}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {quiz.question_count} questions · pass at {Math.round(Number(quiz.pass_score))}%
-                      </p>
-                    </div>
-                    <Button as={Link} to={enrollment ? `/learn/quizzes/${quiz.id}` : '/login'} variant="secondary" size="sm">
-                      {enrollment ? 'Start quiz' : 'Sign in'} <IconArrowRight size={14} />
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
           </div>
 
           <aside className="space-y-4">
@@ -482,21 +461,6 @@ export default function CourseDetailPage() {
                     : 'For practitioners ready to go deeper into production scenarios.'}
               </p>
             </Card>
-            {data.quizzes.length > 0 && (
-              <Card className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assessments</p>
-                <ul className="mt-3 space-y-2">
-                  {(data?.quizzes || []).map((quiz) => (
-                    <li key={quiz.id} className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate text-slate-300">{quiz.title}</span>
-                      <span className="shrink-0 text-xs text-slate-500">
-                        {quiz.question_count} Q · {Math.round(Number(quiz.pass_score))}% to pass
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
             <Card className="p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Need guidance?</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">

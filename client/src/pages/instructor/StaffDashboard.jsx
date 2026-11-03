@@ -17,14 +17,12 @@ import {
   IconBell,
   IconBookOpen,
   IconCheckCircle,
-  IconClipboard,
   IconFileText,
   IconGraduationCap,
   IconLayers,
   IconPlus,
   IconTerminal,
   IconUsers,
-  IconZap,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
 import { formatDateTime } from '../../lib/format';
@@ -59,7 +57,7 @@ export default function StaffDashboard() {
   }, [user]);
 
   const published = useMemo(() => courses.filter((course) => course.status === 'published').length, [courses]);
-  const pendingTotal = (stats?.pending?.reports_pending ?? 0) + (stats?.pending?.submissions_pending ?? 0);
+  const pendingTotal = (stats?.pending?.reports_pending ?? 0) + (stats?.pending?.lab_submissions_pending ?? 0) + (stats?.pending?.projects_pending ?? 0);
   const unreadMessages = stats?.inbox?.unread_messages ?? 0;
 
   if (loading) {
@@ -84,16 +82,22 @@ export default function StaffDashboard() {
             Welcome back, {user?.full_name?.split(' ')[0] || 'instructor'}
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Manage courses, assessments and learner conversations from one workspace.
+            Manage courses, lab assignments and learner conversations from one workspace.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button as={Link} to="/instructor/announcements" size="sm" variant="secondary">
             <IconBell size={14} /> Announcement
           </Button>
-          <Button as={Link} to="/instructor/courses/new" size="sm">
-            <IconPlus size={14} /> New course
-          </Button>
+          {user?.role === 'admin' ? (
+            <Button as={Link} to="/instructor/courses/new" size="sm">
+              <IconPlus size={14} /> New course
+            </Button>
+          ) : (
+            <Button as={Link} to="/instructor/labs" size="sm">
+              <IconTerminal size={14} /> Lab builder
+            </Button>
+          )}
         </div>
       </div>
 
@@ -114,17 +118,17 @@ export default function StaffDashboard() {
           tone="accent"
         />
         <StatCard
-          icon={IconZap}
-          label="Quizzes"
-          value={stats?.assessments?.quizzes ?? 0}
-          hint={`${stats?.assessments?.attempts ?? 0} attempts · ${Number(stats?.assessments?.avg_quiz_percent ?? 0)}% avg`}
+          icon={IconTerminal}
+          label="Lab assignments"
+          value={stats?.labs?.labs ?? 0}
+          hint={`${stats?.labs?.published_labs ?? 0} published`}
           tone="emerald"
         />
         <StatCard
-          icon={IconClipboard}
-          label="Assignments"
-          value={stats?.assessments?.assignments ?? 0}
-          hint={`${stats?.pending?.submissions_pending ?? 0} awaiting grading`}
+          icon={IconCheckCircle}
+          label="Lab reviews"
+          value={stats?.pending?.lab_submissions_pending ?? 0}
+          hint="Waiting for review"
           tone="amber"
         />
       </div>
@@ -145,10 +149,20 @@ export default function StaffDashboard() {
             </div>
             {courses.length === 0 ? (
               <div className="px-5 py-10 text-center">
-                <p className="text-sm text-slate-400">You haven't created a course yet.</p>
-                <Button as={Link} to="/instructor/courses/new" size="sm" className="mt-3">
-                  <IconPlus size={13} /> Create your first course
-                </Button>
+                <p className="text-sm text-slate-400">
+                  {user?.role === 'admin'
+                    ? "You haven't created a course yet."
+                    : 'No courses assigned to you yet.'}
+                </p>
+                {user?.role === 'admin' ? (
+                  <Button as={Link} to="/instructor/courses/new" size="sm" className="mt-3">
+                    <IconPlus size={13} /> Create your first course
+                  </Button>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Courses assigned to you by the administrator will appear here.
+                  </p>
+                )}
               </div>
             ) : (
               <ul className="divide-y divide-white/5">
@@ -189,7 +203,7 @@ export default function StaffDashboard() {
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
                 <h2 className="font-display text-base font-semibold">Recent learner activity</h2>
-                <p className="text-[11px] text-slate-500">Latest submissions and quiz attempts in your courses.</p>
+                <p className="text-[11px] text-slate-500">Latest lab submissions and project reviews in your courses.</p>
               </div>
               <Button as={Link} to="/instructor/students" variant="ghost" size="sm">
                 My students <IconArrowRight size={13} />
@@ -198,7 +212,7 @@ export default function StaffDashboard() {
             <div className="grid gap-0 divide-y divide-white/5 md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="px-5 py-4">
                 <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  <IconClipboard size={12} /> Submissions
+                   <IconTerminal size={12} /> Lab submissions
                 </p>
                 {stats?.recentSubmissions?.length ? (
                   <ul className="space-y-2.5">
@@ -207,13 +221,13 @@ export default function StaffDashboard() {
                         <Avatar name={item.student_name} src={item.avatar_url} size="sm" />
                         <div className="min-w-0 flex-1">
                           <Link
-                            to={`/instructor/submissions?assignment=${item.assignment_id}`}
+                             to="/instructor/lab-submissions"
                             className="block truncate text-xs font-medium text-slate-200 hover:text-brand-300"
                           >
                             {item.student_name}
                           </Link>
                           <p className="truncate text-[10px] text-slate-500">
-                            {item.assignment_title} · {formatDateTime(item.submitted_at)}
+                             {item.lab_title || 'Lab submission'} · {formatDateTime(item.submitted_at)}
                           </p>
                         </div>
                         <Badge tone={item.status === 'submitted' ? 'amber' : 'emerald'}>
@@ -226,40 +240,22 @@ export default function StaffDashboard() {
                   <p className="py-3 text-[11px] text-slate-500">No submissions yet.</p>
                 )}
               </div>
-              <div className="px-5 py-4">
-                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  <IconZap size={12} /> Quiz attempts
-                </p>
-                {stats?.recentAttempts?.length ? (
-                  <ul className="space-y-2.5">
-                    {(stats?.recentAttempts || []).map((item) => {
-                      const percent =
-                        Number(item.max_points) > 0
-                          ? Math.round((Number(item.score) / Number(item.max_points)) * 100)
-                          : 0;
-                      return (
-                        <li key={`attempt-${item.id}`} className="flex items-center gap-2.5">
-                          <Avatar name={item.student_name} src={item.avatar_url} size="sm" />
-                          <div className="min-w-0 flex-1">
-                            <Link
-                              to="/instructor/quizzes"
-                              className="block truncate text-xs font-medium text-slate-200 hover:text-brand-300"
-                            >
-                              {item.student_name}
-                            </Link>
-                            <p className="truncate text-[10px] text-slate-500">
-                              {item.quiz_title} · {formatDateTime(item.created_at)}
-                            </p>
-                          </div>
-                          <Badge tone={item.passed ? 'emerald' : 'rose'}>{percent}%</Badge>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="py-3 text-[11px] text-slate-500">No quiz attempts yet.</p>
-                )}
-              </div>
+               <div className="px-5 py-4">
+                 <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                   <IconFileText size={12} /> Project reviews
+                 </p>
+                 {stats?.recentProjects?.length ? (
+                   <ul className="space-y-2.5">
+                     {(stats.recentProjects || []).map((item) => (
+                       <li key={`project-${item.id}`} className="flex items-center gap-2.5">
+                         <Avatar name={item.student_name} src={item.avatar_url} size="sm" />
+                         <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-slate-200">{item.student_name}</p><p className="truncate text-[10px] text-slate-500">{item.title} · {formatDateTime(item.submitted_at)}</p></div>
+                         <Badge tone={item.status === 'submitted' ? 'amber' : 'emerald'}>{item.status}</Badge>
+                       </li>
+                     ))}
+                   </ul>
+                 ) : <p className="py-3 text-[11px] text-slate-500">No project reviews yet.</p>}
+               </div>
             </div>
           </Card>
         </div>
@@ -269,14 +265,14 @@ export default function StaffDashboard() {
             <h2 className="font-display text-base font-semibold">Needs your attention</h2>
             <div className="mt-3 space-y-2">
               <Link
-                to="/instructor/submissions"
+                to="/instructor/lab-submissions"
                 className="flex items-center justify-between rounded-xl border border-brand-400/30 bg-brand-400/[0.08] px-3 py-2.5 transition hover:border-brand-400/50 hover:bg-brand-400/[0.12]"
               >
                 <span className="flex items-center gap-2 text-xs font-medium text-brand-600 dark:text-brand-300">
-                  <IconCheckCircle size={14} /> Assignments to grade
+                  <IconCheckCircle size={14} /> Lab submissions to review
                 </span>
                 <span className="font-display text-lg font-semibold text-brand-600 dark:text-brand-300 tabular-nums">
-                  <AnimatedNumber value={stats?.pending?.submissions_pending ?? 0} />
+                  <AnimatedNumber value={stats?.pending?.lab_submissions_pending ?? 0} />
                 </span>
               </Link>
               <Link
@@ -313,8 +309,8 @@ export default function StaffDashboard() {
             <h2 className="font-display text-base font-semibold">Quick actions</h2>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[
-                { to: '/instructor/quizzes', label: 'Create quiz', icon: IconZap },
-                { to: '/instructor/assignments', label: 'New assignment', icon: IconClipboard },
+                { to: '/instructor/labs', label: 'New lab assignment', icon: IconTerminal },
+                { to: '/instructor/lab-submissions', label: 'Review lab work', icon: IconCheckCircle },
                 { to: '/instructor/announcements', label: 'Announcement', icon: IconBell },
                 { to: '/instructor/messages', label: 'Student chat', icon: IconUsers },
                 { to: '/instructor/labs', label: 'Lab builder', icon: IconTerminal },
@@ -348,13 +344,13 @@ export default function StaffDashboard() {
               </div>
               <div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Avg. quiz score</span>
+                  <span className="text-slate-400">Approved lab work</span>
                   <span className="font-mono text-slate-300">
-                    <AnimatedNumber value={Math.round(Number(stats?.assessments?.avg_quiz_percent ?? 0))} />%
+                    <AnimatedNumber value={stats?.labs?.lab_submissions_approved ?? 0} />
                   </span>
                 </div>
                 <ProgressBar
-                  value={Number(stats?.assessments?.avg_quiz_percent ?? 0)}
+                  value={Math.min(100, Number(stats?.labs?.lab_submissions_approved ?? 0))}
                   tone="emerald"
                   size="sm"
                   className="mt-2"
@@ -362,8 +358,7 @@ export default function StaffDashboard() {
               </div>
             </div>
             <p className="mt-3 text-[10px] leading-4 text-slate-600">
-              Across {stats?.students?.enrollments ?? 0} enrollments, {stats?.assessments?.attempts ?? 0} quiz attempts
-              and {stats?.labs?.sessions ?? 0} lab sessions.
+              Across {stats?.students?.enrollments ?? 0} enrollments and {stats?.labs?.sessions ?? 0} lab sessions.
             </p>
           </Card>
         </div>

@@ -414,7 +414,7 @@ export default function LearnPage() {
                 </div>
               </Card>
 
-              {(lessonData.labs.length > 0 || lessonData.quizzes.length > 0 || lessonData.assignments.length > 0) && (
+              {lessonData.labs.length > 0 && (
                 <Card className="p-5">
                   <div className="flex items-center gap-2">
                     <IconZap size={17} className="text-brand-400" />
@@ -434,42 +434,6 @@ export default function LearnPage() {
                         </div>
                         <Button as={Link} to={`/labs/${lab.id}`} size="sm" variant="secondary">
                           Open lab <IconArrowRight size={14} />
-                        </Button>
-                      </div>
-                    ))}
-                    {(lessonData?.quizzes || []).map((quiz) => (
-                      <div key={quiz.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-400/10 text-accent-300">
-                          <IconZap size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white">{quiz.title}</p>
-                          <p className="text-[11px] text-slate-500">
-                            Pass at {Math.round(Number(quiz.pass_score))}%
-                            {quiz.best_score != null ? ` · best ${quiz.best_score}` : ''}
-                            {quiz.has_passed ? ' · passed' : ''}
-                          </p>
-                        </div>
-                        <Button as={Link} to={`/learn/quizzes/${quiz.id}`} size="sm" variant="secondary">
-                          {quiz.has_passed ? 'Retake' : 'Start'} <IconArrowRight size={14} />
-                        </Button>
-                      </div>
-                    ))}
-                    {(lessonData?.assignments || []).map((assignment) => (
-                      <div key={assignment.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
-                          <IconFileText size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white">{assignment.title}</p>
-                          <p className="text-[11px] capitalize text-slate-500">
-                            {assignment.points} points
-                            {assignment.submission_status ? ` · ${assignment.submission_status}` : ' · not submitted'}
-                            {assignment.grade != null ? ` · ${assignment.grade} pts` : ''}
-                          </p>
-                        </div>
-                        <Button as={Link} to={`/learn/assignments/${assignment.id}`} size="sm" variant="secondary">
-                          Open <IconArrowRight size={14} />
                         </Button>
                       </div>
                     ))}

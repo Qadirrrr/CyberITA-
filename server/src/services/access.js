@@ -128,6 +128,29 @@ export function canReviewLabSubmission(user, submission) {
 }
 
 /**
+ * Access to a student project. The student owns their project, the instructor
+ * of the linked course reviews it, and admins keep the platform record.
+ */
+export function canAccessProject(user, project) {
+  if (!user || !project) return false;
+  if (project.user_id === user.id) return true;
+  if (isAdmin(user)) return true;
+  return user.role === 'instructor' && project.instructor_id === user.id;
+}
+
+export function assertProjectAccess(user, project) {
+  if (canAccessProject(user, project)) return;
+  throw forbidden('You do not have access to this project.');
+}
+
+/** Only the linked instructor (or an admin) may review a project. */
+export function canReviewProject(user, project) {
+  if (!user || !project) return false;
+  if (isAdmin(user)) return true;
+  return user.role === 'instructor' && project.instructor_id === user.id;
+}
+
+/**
  * Access to a blog article. Instructors may manage their own articles and
  * articles generated from reports for their courses.
  */

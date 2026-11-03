@@ -34,7 +34,7 @@ const values = [
   {
     icon: IconUsers,
     title: 'Feedback from practitioners',
-    body: 'Instructors review reports and grade assignments with the kind of feedback you would get on a real team.',
+    body: 'Instructors review lab assignments and reports with the kind of feedback you would get on a real team.',
   },
 ];
 

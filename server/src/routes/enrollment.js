@@ -175,11 +175,11 @@ router.get(
        WHERE l.course_id = $2 ORDER BY l.position, l.id`,
       [req.user.id, courseId]
     );
-    const { rows: quizAttempts } = await query(
-      `SELECT qa.id, qa.quiz_id, qa.score, qa.max_points, qa.passed, qa.created_at, q.title
-       FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id
-       WHERE qa.user_id = $1 AND q.course_id = $2
-       ORDER BY qa.created_at DESC`,
+    const { rows: labSubmissions } = await query(
+      `SELECT s.id, s.lab_id, s.status, s.submitted_at, s.reviewed_at, l.title
+       FROM lab_submissions s JOIN labs l ON l.id = s.lab_id
+       WHERE s.user_id = $1 AND s.course_id = $2
+       ORDER BY s.submitted_at DESC`,
       [req.user.id, courseId]
     );
     const { rows: certRows } = await query(
@@ -189,7 +189,7 @@ router.get(
     res.json({
       enrollment: enrollmentRows[0],
       lessons,
-      quizAttempts,
+      labSubmissions,
       certificate: certRows[0] || null,
       percent: Number(enrollmentRows[0].progress_percent),
     });

@@ -40,28 +40,32 @@ router.get(
        FROM reports WHERE user_id = $1`,
       [userId]
     );
-    const { rows: quiz } = await query(
-      `SELECT
-         (SELECT COUNT(*)::int FROM quiz_attempts WHERE user_id = $1) AS attempts,
-         (SELECT COUNT(DISTINCT quiz_id)::int FROM quiz_attempts WHERE user_id = $1) AS attempted,
-         (SELECT COUNT(DISTINCT quiz_id)::int FROM quiz_attempts WHERE user_id = $1 AND passed) AS passed,
-         (SELECT COUNT(*)::int FROM quizzes q
-            JOIN courses c ON c.id = q.course_id
-            JOIN enrollments e ON e.course_id = c.id AND e.user_id = $1 AND e.status <> 'dropped') AS available`,
+    const { rows: labAssignments } = await query(
+      `SELECT COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE sub.id IS NULL)::int AS pending,
+         COUNT(*) FILTER (WHERE sub.status = 'submitted')::int AS submitted,
+         COUNT(*) FILTER (WHERE sub.status = 'changes_requested')::int AS changes_requested,
+         COUNT(*) FILTER (WHERE sub.status = 'approved')::int AS approved,
+         COUNT(*) FILTER (WHERE sub.id IS NULL AND l.due_at IS NOT NULL AND l.due_at < now())::int AS overdue
+       FROM labs l
+       JOIN courses c ON c.id = l.course_id
+       JOIN enrollments e ON e.course_id = c.id AND e.user_id = $1 AND e.status <> 'dropped'
+       LEFT JOIN LATERAL (
+         SELECT ls.id, ls.status
+         FROM lab_submissions ls
+         WHERE ls.lab_id = l.id AND ls.user_id = $1
+         ORDER BY ls.submitted_at DESC
+         LIMIT 1
+       ) sub ON TRUE
+       WHERE l.status = 'published' AND l.is_practice = FALSE`,
       [userId]
     );
-    const { rows: assignments } = await query(
+    const { rows: projects } = await query(
       `SELECT COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE s.id IS NULL)::int AS pending,
-         COUNT(*) FILTER (WHERE s.status = 'submitted')::int AS submitted,
-         COUNT(*) FILTER (WHERE s.status = 'graded')::int AS graded,
-         COUNT(*) FILTER (WHERE s.status = 'returned')::int AS returned,
-         COUNT(*) FILTER (WHERE s.id IS NULL AND a.due_at IS NOT NULL AND a.due_at < now())::int AS overdue
-       FROM assignments a
-       JOIN courses c ON c.id = a.course_id
-       JOIN enrollments e ON e.course_id = c.id AND e.user_id = $1 AND e.status <> 'dropped'
-       LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.user_id = $1
-       WHERE a.is_published = TRUE`,
+         COUNT(*) FILTER (WHERE status = 'submitted')::int AS pending,
+         COUNT(*) FILTER (WHERE status = 'changes_requested')::int AS changes_requested,
+         COUNT(*) FILTER (WHERE status = 'approved')::int AS approved
+       FROM student_projects WHERE user_id = $1`,
       [userId]
     );
     const { rows: streak } = await query(
@@ -74,8 +78,8 @@ router.get(
       labs: { ...labs[0], stepsCompleted: labSteps[0].steps },
       certificates: certificates[0].total,
       reports: reports[0],
-      quizzes: quiz[0],
-      assignments: assignments[0],
+      labAssignments: labAssignments[0],
+      projects: projects[0],
       activeDays30: streak[0].active_days,
     });
   })
@@ -147,7 +151,8 @@ router.get(
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'running') AS active_labs,
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'provisioning') AS provisioning_labs,
          (SELECT COUNT(*)::int FROM lab_sessions WHERE status = 'error') AS failed_labs,
-         (SELECT COUNT(*)::int FROM assignment_submissions WHERE status = 'submitted') AS submissions_pending,
+         (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'submitted') AS lab_submissions_pending,
+         (SELECT COUNT(*)::int FROM student_projects WHERE status = 'submitted') AS projects_pending,
          (SELECT COUNT(*)::int FROM reports WHERE status = 'submitted') AS reports_pending,
          (SELECT COUNT(*)::int FROM content_reports WHERE status IN ('open', 'reviewing')) AS content_flags_open,
          (SELECT COUNT(*)::int FROM refresh_tokens WHERE expires_at > now()) AS active_sessions
@@ -174,13 +179,12 @@ router.get(
        FROM activity_events a LEFT JOIN users u ON u.id = a.user_id
        ORDER BY a.created_at DESC LIMIT 8`
     );
-    const { rows: assessmentQuality } = await query(
+    const { rows: reviewQuality } = await query(
       `SELECT
-         (SELECT COALESCE(ROUND(AVG(CASE WHEN qa.max_points > 0 THEN qa.score / qa.max_points * 100 END), 1), 0)
-          FROM quiz_attempts qa) AS avg_quiz_percent,
-         (SELECT COUNT(*)::int FROM quiz_attempts) AS quiz_attempts,
-         (SELECT COUNT(*)::int FROM assignment_submissions) AS submissions_total,
-         (SELECT COUNT(*)::int FROM assignment_submissions WHERE status = 'graded') AS submissions_graded
+         (SELECT COUNT(*)::int FROM lab_submissions) AS lab_submissions_total,
+         (SELECT COUNT(*)::int FROM lab_submissions WHERE status = 'approved') AS lab_submissions_approved,
+         (SELECT COUNT(*)::int FROM student_projects) AS projects_total,
+         (SELECT COUNT(*)::int FROM student_projects WHERE status = 'approved') AS projects_approved
       `
     );
     const { rows: signupSeries } = await query(
@@ -224,7 +228,7 @@ router.get(
       enrollmentSeries,
       activitySeries,
       recentActivity,
-      assessmentQuality: assessmentQuality[0],
+      reviewQuality: reviewQuality[0],
       topCourses,
       recentUsers,
       engagement: engagement[0],
@@ -257,36 +261,30 @@ router.get(
       `SELECT
          (SELECT COUNT(*)::int FROM reports r JOIN labs l ON l.id = r.lab_id
             LEFT JOIN courses c2 ON c2.id = l.course_id
-            WHERE r.status = 'submitted' AND (c2.instructor_id = $1 OR $2::boolean)) AS reports_pending,
-         (SELECT COUNT(*)::int FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
-            JOIN courses c3 ON c3.id = a.course_id
-            WHERE s.status = 'submitted' AND (c3.instructor_id = $1 OR $2::boolean)) AS submissions_pending`,
+            WHERE r.status = 'submitted' AND (COALESCE(c2.instructor_id, l.created_by) = $1 OR $2::boolean)) AS reports_pending,
+         (SELECT COUNT(*)::int FROM lab_submissions s
+            WHERE s.status = 'submitted' AND (s.instructor_id = $1 OR $2::boolean)) AS lab_submissions_pending,
+         (SELECT COUNT(*)::int FROM lab_submissions s
+            WHERE s.status = 'changes_requested' AND (s.instructor_id = $1 OR $2::boolean)) AS lab_changes_requested,
+         (SELECT COUNT(*)::int FROM student_projects p
+             WHERE p.status = 'submitted' AND (p.instructor_id = $1 OR $2::boolean)) AS projects_pending`,
       [instructorId, admin]
     );
     const { rows: labs } = await query(
-      `SELECT COUNT(*)::int AS labs,
-         (SELECT COUNT(*)::int FROM lab_sessions s JOIN labs l2 ON l2.id = s.lab_id
-           LEFT JOIN courses c4 ON c4.id = l2.course_id WHERE c4.instructor_id = $1 OR $2::boolean) AS sessions,
-         (SELECT COUNT(*)::int FROM screenshots sc JOIN lab_sessions s2 ON s2.id = sc.session_id
-           JOIN labs l3 ON l3.id = s2.lab_id LEFT JOIN courses c5 ON c5.id = l3.course_id
-           WHERE c5.instructor_id = $1 OR $2::boolean) AS screenshots
-       FROM labs l JOIN courses c ON c.id = l.course_id WHERE c.instructor_id = $1 OR $2::boolean`,
-      [instructorId, admin]
-    );
-    const { rows: assessments } = await query(
       `SELECT
-         (SELECT COUNT(*)::int FROM quizzes q JOIN courses c ON c.id = q.course_id
-            WHERE c.instructor_id = $1 OR $2::boolean) AS quizzes,
-         (SELECT COUNT(*)::int FROM assignments a JOIN courses c ON c.id = a.course_id
-            WHERE c.instructor_id = $1 OR $2::boolean) AS assignments,
-         (SELECT COUNT(*)::int FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id
-            JOIN courses c ON c.id = q.course_id WHERE c.instructor_id = $1 OR $2::boolean) AS attempts,
-         (SELECT COALESCE(ROUND(AVG(CASE WHEN qa.max_points > 0 THEN qa.score / qa.max_points * 100 END)::numeric, 1), 0)
-            FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id
-            JOIN courses c ON c.id = q.course_id WHERE c.instructor_id = $1 OR $2::boolean) AS avg_quiz_percent,
-         (SELECT COUNT(*)::int FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
-            JOIN courses c ON c.id = a.course_id
-            WHERE (c.instructor_id = $1 OR $2::boolean) AND s.status = 'graded') AS graded,
+         (SELECT COUNT(*)::int FROM labs l JOIN courses c ON c.id = l.course_id
+            WHERE c.instructor_id = $1 OR $2::boolean) AS labs,
+         (SELECT COUNT(*)::int FROM labs l JOIN courses c ON c.id = l.course_id
+            WHERE (c.instructor_id = $1 OR $2::boolean) AND l.status = 'published') AS published_labs,
+         (SELECT COUNT(*)::int FROM lab_sessions s JOIN labs l ON l.id = s.lab_id
+            LEFT JOIN courses c ON c.id = l.course_id WHERE c.instructor_id = $1 OR $2::boolean) AS sessions,
+         (SELECT COUNT(*)::int FROM screenshots sc JOIN lab_sessions s ON s.id = sc.session_id
+            JOIN labs l ON l.id = s.lab_id LEFT JOIN courses c ON c.id = l.course_id
+            WHERE c.instructor_id = $1 OR $2::boolean) AS screenshots,
+         (SELECT COUNT(*)::int FROM lab_submissions s
+            WHERE (s.instructor_id = $1 OR $2::boolean) AND s.status = 'approved') AS lab_submissions_approved,
+         (SELECT COUNT(*)::int FROM student_projects p
+            WHERE (p.instructor_id = $1 OR $2::boolean) AND p.status = 'approved') AS projects_approved,
          (SELECT COUNT(*)::int FROM announcements an
             WHERE an.author_id = $1 OR $2::boolean) AS announcements`,
       [instructorId, admin]
@@ -299,29 +297,39 @@ router.get(
       [instructorId, admin]
     );
     const { rows: recentSubmissions } = await query(
-      `SELECT s.id, s.status, s.grade, s.submitted_at, s.graded_at,
-              a.id AS assignment_id, a.title AS assignment_title,
+      `SELECT s.id, s.status, s.submitted_at, s.reviewed_at, s.student_note,
+              s.lab_id, s.session_id, l.title AS lab_title,
               u.id AS student_id, u.full_name AS student_name, u.avatar_url,
               c.title AS course_title
-       FROM assignment_submissions s
-       JOIN assignments a ON a.id = s.assignment_id
-       JOIN courses c ON c.id = a.course_id
+       FROM lab_submissions s
+       JOIN labs l ON l.id = s.lab_id
+       LEFT JOIN courses c ON c.id = s.course_id
        JOIN users u ON u.id = s.user_id
-       WHERE c.instructor_id = $1 OR $2::boolean
+       WHERE s.instructor_id = $1 OR $2::boolean
        ORDER BY s.submitted_at DESC LIMIT 5`,
       [instructorId, admin]
     );
-    const { rows: recentAttempts } = await query(
-      `SELECT qa.id, qa.score, qa.max_points, qa.passed, qa.created_at,
-              q.id AS quiz_id, q.title AS quiz_title,
+    const { rows: recentProjects } = await query(
+      `SELECT p.id, p.title, p.status, p.submitted_at, p.reviewed_at,
               u.id AS student_id, u.full_name AS student_name, u.avatar_url,
               c.title AS course_title
-       FROM quiz_attempts qa
-       JOIN quizzes q ON q.id = qa.quiz_id
-       JOIN courses c ON c.id = q.course_id
-       JOIN users u ON u.id = qa.user_id
-       WHERE c.instructor_id = $1 OR $2::boolean
-       ORDER BY qa.created_at DESC LIMIT 5`,
+       FROM student_projects p
+       JOIN users u ON u.id = p.user_id
+       LEFT JOIN courses c ON c.id = p.course_id
+       WHERE p.instructor_id = $1 OR $2::boolean
+       ORDER BY p.submitted_at DESC LIMIT 5`,
+      [instructorId, admin]
+    );
+    const { rows: recentReports } = await query(
+      `SELECT r.id, r.title, r.status, r.updated_at,
+              u.id AS student_id, u.full_name AS student_name, u.avatar_url,
+              l.title AS lab_title, c.title AS course_title
+       FROM reports r
+       JOIN labs l ON l.id = r.lab_id
+       LEFT JOIN courses c ON c.id = l.course_id
+       JOIN users u ON u.id = r.user_id
+       WHERE COALESCE(c.instructor_id, l.created_by) = $1 OR $2::boolean
+       ORDER BY r.updated_at DESC LIMIT 5`,
       [instructorId, admin]
     );
     res.json({
@@ -329,10 +337,10 @@ router.get(
       students: students[0],
       pending: pending[0],
       labs: labs[0],
-      assessments: assessments[0],
       inbox: inbox[0],
       recentSubmissions,
-      recentAttempts,
+      recentProjects,
+      recentReports,
     });
   })
 );

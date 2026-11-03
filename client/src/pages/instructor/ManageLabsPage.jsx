@@ -89,6 +89,7 @@ export default function ManageLabsPage() {
         courseId: modal.courseId ? Number(modal.courseId) : null,
         status: modal.status,
         isPractice: Boolean(modal.isPractice),
+        dueAt: modal.isPractice || !modal.dueAt ? null : new Date(modal.dueAt).toISOString(),
       });
       toast.success('Lab created. Add its steps now.');
       navigate(`/instructor/labs/${data.lab.id}`);
@@ -169,7 +170,7 @@ export default function ManageLabsPage() {
           <Button
             size="sm"
             onClick={() =>
-              setModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, courseId: '', status: 'draft', isPractice: false })
+              setModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, dueAt: '', courseId: '', status: 'draft', isPractice: false })
             }
           >
             <IconPlus size={14} /> New lab
@@ -215,7 +216,7 @@ export default function ManageLabsPage() {
             <Button
               size="sm"
               onClick={() =>
-                setModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, courseId: '', status: 'draft' })
+                setModal({ title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30, dueAt: '', courseId: '', status: 'draft' })
               }
             >
               <IconPlus size={13} /> New lab
@@ -282,6 +283,7 @@ export default function ManageLabsPage() {
                 ))}
               </Select>
               <Input label="Minutes" type="number" min="5" value={modal.estimatedMinutes} onChange={(event) => setModal((current) => ({ ...current, estimatedMinutes: event.target.value }))} />
+              <Input label="Due date (optional)" type="datetime-local" value={modal.dueAt || ''} disabled={modal.isPractice} onChange={(event) => setModal((current) => ({ ...current, dueAt: event.target.value }))} />
               <Select label="Status" value={modal.status} onChange={(event) => setModal((current) => ({ ...current, status: event.target.value }))}>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>

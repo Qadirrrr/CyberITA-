@@ -446,8 +446,8 @@ export default function AdminOverview() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { to: '/admin/users?create=1', label: 'Create account', icon: IconPlus, hint: 'Admins and instructors' },
-          { to: '/instructor/courses', label: 'Manage courses', icon: IconBookOpen, hint: 'Curriculum, quizzes, labs' },
-          { to: '/instructor/submissions', label: 'Submission review', icon: IconClipboard, hint: 'Assignment submissions' },
+          { to: '/instructor/courses', label: 'Manage courses', icon: IconBookOpen, hint: 'Curriculum and lab assignments' },
+          { to: '/instructor/lab-submissions', label: 'Lab review', icon: IconClipboard, hint: 'Review completed lab work' },
           { to: '/instructor/reports', label: 'Report review', icon: IconFileText, hint: 'Approve and publish' },
         ].map((action) => (
           <Link key={action.to} to={action.to} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-brand-400/30 hover:bg-white/[0.04]">

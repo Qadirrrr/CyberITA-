@@ -245,7 +245,7 @@ export default function AdminSystemPage() {
           {[
             { label: 'Total Enrollments', value: learning.enrollments ?? 0, hint: `${learning.active ?? 0} active`, icon: IconGraduationCap, tone: 'text-brand-300' },
             { label: 'Completion Rate', value: `${learning.completionRate ?? 0}%`, hint: `${learning.completed ?? 0} completed`, icon: IconCheckCircle, tone: 'text-emerald-300' },
-            { label: 'Avg. Quiz Score', value: `${Math.round(learning.avg_quiz_percent ?? 0)}%`, hint: 'across all attempts', icon: IconBarChart, tone: 'text-amber-300' },
+            { label: 'Pending Lab Reviews', value: learning.pending_lab_submissions ?? 0, hint: `${learning.pending_projects ?? 0} projects pending`, icon: IconTerminal, tone: 'text-amber-300' },
             { label: 'Active Users (7d)', value: learning.active_users_7d ?? 0, hint: 'unique users active', icon: IconUsers, tone: 'text-accent-300' },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3.5">

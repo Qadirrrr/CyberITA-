@@ -202,22 +202,8 @@ router.get(
        WHERE user_id = $1 AND course_id = $2`,
       [req.user.id, lesson.course_id]
     );
-    const { rows: quizzes } = await query(
-      `SELECT id, title, pass_score,
-        (SELECT MAX(score) FROM quiz_attempts qa WHERE qa.quiz_id = quizzes.id AND qa.user_id = $2) AS best_score,
-        (SELECT MAX(passed::int) FROM quiz_attempts qa WHERE qa.quiz_id = quizzes.id AND qa.user_id = $2) AS has_passed
-       FROM quizzes WHERE lesson_id = $1 ORDER BY id`,
-      [lesson.id, req.user.id]
-    );
-    const { rows: assignments } = await query(
-      `SELECT a.id, a.title, a.points, a.due_at,
-         (SELECT s.status FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.user_id = $2) AS submission_status,
-         (SELECT s.grade FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.user_id = $2) AS grade
-       FROM assignments a WHERE a.lesson_id = $1 AND a.is_published = TRUE ORDER BY a.id`,
-      [lesson.id, req.user.id]
-    );
     const { rows: labs } = await query(
-      `SELECT id, slug, title, difficulty, estimated_minutes
+      `SELECT id, slug, title, difficulty, estimated_minutes, due_at
        FROM labs WHERE lesson_id = $1 AND status = 'published' ORDER BY id`,
       [lesson.id]
     );
@@ -232,8 +218,6 @@ router.get(
       },
       modules: tree,
       progress: progressRows,
-      quizzes: quizzes.map((q) => ({ ...q, has_passed: Boolean(q.has_passed) })),
-      assignments,
       labs,
       enrollment,
     });
@@ -278,18 +262,11 @@ router.get(
     }
 
     const { rows: labRows } = await query(
-      `SELECT id, slug, title, difficulty, estimated_minutes FROM labs
+      `SELECT id, slug, title, difficulty, estimated_minutes, due_at FROM labs
        WHERE course_id = $1 AND status = 'published' ORDER BY id`,
       [course.id]
     );
-    const { rows: quizRows } = await query(
-      `SELECT q.id, q.title, q.lesson_id, q.pass_score, COUNT(qq.id)::int AS question_count
-       FROM quizzes q LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
-       WHERE q.course_id = $1 GROUP BY q.id ORDER BY q.id`,
-      [course.id]
-    );
-
-    res.json({ course, modules: tree, enrollment, certificate, labs: labRows, quizzes: quizRows });
+    res.json({ course, modules: tree, enrollment, certificate, labs: labRows });
   })
 );
 
@@ -297,12 +274,12 @@ router.get(
 
 router.post(
   '/',
-  requireRole('admin', 'instructor'),
+  requireRole('admin'),
   validateBody(courseCreateSchema),
   asyncHandler(async (req, res) => {
     const body = req.body;
     const slug = uniqueSlug(body.title);
-    const assignedInstructorId = (req.user.role === 'admin' && body.instructorId) ? body.instructorId : req.user.id;
+    const assignedInstructorId = body.instructorId || null;
     const { rows } = await query(
       `INSERT INTO courses (slug, title, summary, description, category, subcategory, level, duration_hours,
          price, cover_image, status, tags, instructor_id, published_at)
@@ -376,17 +353,6 @@ router.get(
       throw forbidden('You can only manage your own courses.');
     }
     const tree = await loadCourseTree(course.id);
-    const { rows: quizzes } = await query(
-      `SELECT q.*, COUNT(qq.id)::int AS question_count FROM quizzes q
-       LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
-       WHERE q.course_id = $1 GROUP BY q.id ORDER BY q.id`,
-      [course.id]
-    );
-    const { rows: assignments } = await query(
-      `SELECT a.*, (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id) AS submission_count
-       FROM assignments a WHERE a.course_id = $1 ORDER BY a.id`,
-      [course.id]
-    );
     const { rows: labs } = await query(
       `SELECT l.*, (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count
        FROM labs l WHERE l.course_id = $1 ORDER BY l.id`,
@@ -399,7 +365,7 @@ router.get(
        WHERE e.course_id = $1 ORDER BY e.enrolled_at DESC`,
       [course.id]
     );
-    res.json({ course, modules: tree, quizzes, assignments, labs, enrollments });
+    res.json({ course, modules: tree, labs, enrollments });
   })
 );
 

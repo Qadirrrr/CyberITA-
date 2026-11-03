@@ -105,8 +105,7 @@ export function NotificationProvider({ children }) {
         const matches =
           !item.read_at &&
           (item.type === category ||
-            (category === 'quiz' && (item.link?.includes('quiz') || item.title?.toLowerCase().includes('quiz'))) ||
-            (category === 'assignment' && (item.link?.includes('assignment') || item.title?.toLowerCase().includes('assignment'))) ||
+            (category === 'lab' && (item.link?.includes('lab') || item.title?.toLowerCase().includes('lab'))) ||
             (category === 'submission' && (item.link?.includes('submission') || item.title?.toLowerCase().includes('submission'))));
         if (matches) {
           countToReduce += 1;

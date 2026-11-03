@@ -25,78 +25,169 @@ async function assertCourseAccess(user, courseId) {
   return course;
 }
 
-/** Quizzes across the instructor's courses, including attempt performance. */
+/**
+ * The exact capabilities of the signed-in staff member. The client renders this
+ * on the permissions page so the interface never promises more than the server
+ * actually allows.
+ */
 router.get(
-  '/quizzes',
+  '/permissions',
   asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      `SELECT q.id, q.title, q.description, q.pass_score, q.lesson_id, q.course_id, q.created_at,
-              c.title AS course_title, c.slug AS course_slug,
-              l.title AS lesson_title,
-              (SELECT COUNT(*)::int FROM quiz_questions qq WHERE qq.quiz_id = q.id) AS question_count,
-              (SELECT COALESCE(SUM(qq.points), 0)::int FROM quiz_questions qq WHERE qq.quiz_id = q.id) AS points_total,
-              (SELECT COUNT(*)::int FROM quiz_attempts qa WHERE qa.quiz_id = q.id) AS attempt_count,
-              (SELECT COUNT(DISTINCT qa.user_id)::int FROM quiz_attempts qa WHERE qa.quiz_id = q.id) AS learner_count,
-              (SELECT COUNT(*)::int FROM quiz_attempts qa WHERE qa.quiz_id = q.id AND qa.passed) AS pass_count,
-              (SELECT COALESCE(ROUND(AVG(CASE WHEN qa.max_points > 0 THEN qa.score / qa.max_points * 100 END)::numeric, 1), 0)
-                 FROM quiz_attempts qa WHERE qa.quiz_id = q.id) AS avg_percent
-       FROM quizzes q
-       JOIN courses c ON c.id = q.course_id
-       LEFT JOIN lessons l ON l.id = q.lesson_id
-       WHERE c.instructor_id = $1 OR $2::boolean
-       ORDER BY q.id DESC`,
-      [req.user.id, isAdmin(req.user)]
-    );
-    res.json({ quizzes: rows });
-  })
-);
+    const admin = isAdmin(req.user);
 
-/** All attempts for one of the instructor's quizzes. */
-router.get(
-  '/quizzes/:id/attempts',
-  asyncHandler(async (req, res) => {
-    const { rows: quizRows } = await query(
-      `SELECT q.id, q.title, c.instructor_id FROM quizzes q JOIN courses c ON c.id = q.course_id WHERE q.id = $1`,
-      [req.params.id]
+    const { rows: scopeRows } = await query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM courses c WHERE c.instructor_id = $1 OR $2::boolean) AS courses,
+         (SELECT COUNT(DISTINCT e.user_id)::int FROM enrollments e
+            JOIN courses c ON c.id = e.course_id
+            WHERE (c.instructor_id = $1 OR $2::boolean) AND e.status <> 'dropped') AS learners,
+         (SELECT COUNT(*)::int FROM labs l JOIN courses c ON c.id = l.course_id
+            WHERE c.instructor_id = $1 OR $2::boolean) AS labs,
+         (SELECT COUNT(*)::int FROM lab_submissions s
+            WHERE (s.instructor_id = $1 OR $2::boolean) AND s.status = 'submitted') AS lab_reviews_pending,
+         (SELECT COUNT(*)::int FROM student_projects p
+            WHERE (p.instructor_id = $1 OR $2::boolean) AND p.status = 'submitted') AS project_reviews_pending`,
+      [req.user.id, admin]
     );
-    const quiz = quizRows[0];
-    if (!quiz) throw notFound('Quiz not found.');
-    if (!isAdmin(req.user) && quiz.instructor_id !== req.user.id) {
-      throw forbidden('You can only view attempts for your own courses.');
-    }
-    const { rows } = await query(
-      `SELECT qa.id, qa.score, qa.max_points, qa.passed, qa.created_at,
-              u.id AS user_id, u.full_name, u.email, u.avatar_url
-       FROM quiz_attempts qa JOIN users u ON u.id = qa.user_id
-       WHERE qa.quiz_id = $1 ORDER BY qa.created_at DESC LIMIT 200`,
-      [quiz.id]
-    );
-    res.json({ quiz: { id: quiz.id, title: quiz.title }, attempts: rows });
-  })
-);
 
-/** Assignments across the instructor's courses with submission counts. */
-router.get(
-  '/assignments',
-  asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      `SELECT a.id, a.title, a.description, a.due_at, a.points, a.is_published, a.lesson_id,
-              a.course_id, a.created_at,
-              c.title AS course_title, c.slug AS course_slug,
-              l.title AS lesson_title,
-              (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id) AS submission_count,
-              (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'submitted') AS pending_count,
-              (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'graded') AS graded_count,
-              (SELECT COUNT(*)::int FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.status = 'returned') AS returned_count,
-              (SELECT COUNT(*)::int FROM enrollments e WHERE e.course_id = a.course_id AND e.status <> 'dropped') AS learner_count
-       FROM assignments a
-       JOIN courses c ON c.id = a.course_id
-       LEFT JOIN lessons l ON l.id = a.lesson_id
-       WHERE c.instructor_id = $1 OR $2::boolean
-       ORDER BY a.due_at ASC NULLS LAST, a.id DESC`,
-      [req.user.id, isAdmin(req.user)]
-    );
-    res.json({ assignments: rows });
+    const permission = (key, area, label, description, allowed = true) => ({
+      key,
+      area,
+      label,
+      description,
+      allowed,
+    });
+
+    const permissions = [
+      permission(
+        'courses.create',
+        'Courses',
+        'Create courses',
+        'Create new courses. New courses are automatically assigned to you as the instructor.'
+      ),
+      permission(
+        'courses.manage',
+        'Courses',
+        admin ? 'Manage every course' : 'Manage assigned courses',
+        admin
+          ? 'Edit, publish and archive any course on the platform.'
+          : 'Edit, publish and archive only the courses assigned to you.'
+      ),
+      permission(
+        'courses.delete',
+        'Courses',
+        'Delete courses',
+        'Deleting a course is reserved for administrators.',
+        admin
+      ),
+      permission(
+        'curriculum.manage',
+        'Curriculum',
+        'Manage modules and lessons',
+        admin
+          ? 'Add, edit and remove modules and lessons in any course.'
+          : 'Add, edit and remove modules and lessons inside your own courses.'
+      ),
+      permission(
+        'labs.manage',
+        'Labs',
+        'Create and manage labs',
+        admin
+          ? 'Create, edit and delete any lab, including practice labs.'
+          : 'Create labs for your courses, edit the labs you own, and author practice labs.'
+      ),
+      permission(
+        'labs.steps',
+        'Labs',
+        'Author lab steps and checks',
+        'Add, edit and delete steps, verification commands, hints and expected output.'
+      ),
+      permission(
+        'labs.sessions',
+        'Labs',
+        'Inspect learner lab sessions',
+        admin
+          ? 'Inspect every lab session, its terminal history and screenshots.'
+          : 'Inspect sessions only for labs attached to your courses or created by you.'
+      ),
+      permission(
+        'labSubmissions.review',
+        'Reviews',
+        'Review lab submissions',
+        admin
+          ? 'Approve or request changes on every lab submission.'
+          : 'Approve or request changes on submissions for labs in your courses.'
+      ),
+      permission(
+        'projects.review',
+        'Reviews',
+        'Review student projects',
+        admin
+          ? 'Approve or request changes on every student project.'
+          : 'Approve or request changes on projects linked to your courses.'
+      ),
+      permission(
+        'reports.review',
+        'Reviews',
+        'Review practical reports',
+        admin
+          ? 'Review and publish reports from every lab.'
+          : 'Review and publish reports produced from your labs.'
+      ),
+      permission(
+        'students.view',
+        'Learners',
+        'View learner analytics',
+        admin
+          ? 'See every learner, their progress, submissions and activity.'
+          : 'See only learners enrolled in at least one of your courses.'
+      ),
+      permission(
+        'announcements.send',
+        'Communication',
+        'Send announcements',
+        admin
+          ? 'Send announcements to any course or the whole platform.'
+          : 'Send announcements to learners enrolled in your courses.'
+      ),
+      permission(
+        'messages.respond',
+        'Communication',
+        'Reply to learner messages',
+        admin
+          ? 'Access every conversation on the platform.'
+          : 'Access conversations where you are the assigned instructor.'
+      ),
+      permission(
+        'content.generate',
+        'Content Studio',
+        'Generate labs with Content Studio',
+        admin
+          ? 'Generate labs for any course or as practice labs.'
+          : 'Generate labs for your own courses or as practice labs.'
+      ),
+      permission(
+        'blog.manage',
+        'Content',
+        'Manage blog articles',
+        admin
+          ? 'Create, edit and publish any article.'
+          : 'Manage your own articles and articles generated from reports for your courses.'
+      ),
+      permission(
+        'admin.manage',
+        'Administration',
+        'Manage users, infrastructure and settings',
+        'User accounts, lab servers, content flags and platform settings are administrator-only.',
+        admin
+      ),
+    ];
+
+    res.json({
+      role: req.user.role,
+      scope: scopeRows[0],
+      permissions,
+    });
   })
 );
 
@@ -158,31 +249,29 @@ router.get(
            WHERE e.user_id = u.id AND ${scope} AND e.status = 'completed') AS completed_courses,
          (SELECT COUNT(*)::int FROM lab_sessions ls JOIN labs l ON l.id = ls.lab_id
            JOIN courses c ON c.id = l.course_id WHERE ls.user_id = u.id AND ${scope}) AS lab_sessions,
-         (SELECT COUNT(*)::int FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id
-           JOIN courses c ON c.id = q.course_id WHERE qa.user_id = u.id AND ${scope}) AS quiz_attempts,
-         (SELECT COALESCE(ROUND(AVG(CASE WHEN qa.max_points > 0 THEN qa.score / qa.max_points * 100 END)::numeric, 1), 0)
-           FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id JOIN courses c ON c.id = q.course_id
-           WHERE qa.user_id = u.id AND ${scope}) AS avg_quiz_percent,
+         (SELECT COUNT(*)::int FROM lab_submissions sub
+           WHERE sub.user_id = u.id AND (sub.instructor_id = $1 OR $2::boolean)) AS lab_submissions_total,
+         (SELECT COUNT(*)::int FROM lab_submissions sub
+           WHERE sub.user_id = u.id AND (sub.instructor_id = $1 OR $2::boolean) AND sub.status = 'submitted') AS lab_submissions_pending,
+         (SELECT COUNT(*)::int FROM lab_submissions sub
+           WHERE sub.user_id = u.id AND (sub.instructor_id = $1 OR $2::boolean) AND sub.status = 'approved') AS lab_submissions_approved,
+         (SELECT COUNT(*)::int FROM student_projects p
+           WHERE p.user_id = u.id AND (p.instructor_id = $1 OR $2::boolean)) AS projects_total,
+         (SELECT COUNT(*)::int FROM student_projects p
+           WHERE p.user_id = u.id AND (p.instructor_id = $1 OR $2::boolean) AND p.status = 'submitted') AS projects_pending,
          (SELECT COUNT(*)::int FROM reports r JOIN labs l ON l.id = r.lab_id
            LEFT JOIN courses c ON c.id = l.course_id WHERE r.user_id = u.id AND ${reportScope}) AS reports_total,
          (SELECT COUNT(*)::int FROM reports r JOIN labs l ON l.id = r.lab_id
            LEFT JOIN courses c ON c.id = l.course_id
            WHERE r.user_id = u.id AND ${reportScope} AND r.status = 'submitted') AS reports_pending,
-         (SELECT COUNT(*)::int FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
-           JOIN courses c ON c.id = a.course_id
-           WHERE s.user_id = u.id AND ${scope} AND s.status = 'submitted') AS submissions_pending,
-         (SELECT COALESCE(ROUND(AVG(s.grade), 1), 0) FROM assignment_submissions s
-           JOIN assignments a ON a.id = s.assignment_id JOIN courses c ON c.id = a.course_id
-           WHERE s.user_id = u.id AND ${scope} AND s.grade IS NOT NULL) AS avg_grade,
          (SELECT COUNT(DISTINCT date_trunc('day', ae.created_at))::int FROM activity_events ae
            WHERE ae.user_id = u.id AND ae.created_at > now() - INTERVAL '30 days') AS active_days_30,
          (SELECT MAX(x.at) FROM (
-            SELECT MAX(s.submitted_at) AS at FROM assignment_submissions s
-              JOIN assignments a ON a.id = s.assignment_id JOIN courses c ON c.id = a.course_id
-              WHERE s.user_id = u.id AND ${scope}
+            SELECT MAX(sub.submitted_at) AS at FROM lab_submissions sub
+              WHERE sub.user_id = u.id AND (sub.instructor_id = $1 OR $2::boolean)
             UNION ALL
-            SELECT MAX(qa.created_at) FROM quiz_attempts qa JOIN quizzes q ON q.id = qa.quiz_id
-              JOIN courses c ON c.id = q.course_id WHERE qa.user_id = u.id AND ${scope}
+            SELECT MAX(p.updated_at) FROM student_projects p
+              WHERE p.user_id = u.id AND (p.instructor_id = $1 OR $2::boolean)
             UNION ALL
             SELECT MAX(ls.last_activity_at) FROM lab_sessions ls JOIN labs l ON l.id = ls.lab_id
               JOIN courses c ON c.id = l.course_id WHERE ls.user_id = u.id AND ${scope}
@@ -242,29 +331,28 @@ router.get(
       params
     );
 
-    const { rows: quizzes } = await query(
-      `SELECT q.id, q.title, q.pass_score, c.title AS course_title, c.id AS course_id,
-              COUNT(qa.id)::int AS attempt_count,
-              MAX(CASE WHEN qa.max_points > 0 THEN ROUND(qa.score / qa.max_points * 100) END) AS best_percent,
-              MAX(qa.passed::int)::boolean AS has_passed,
-              MAX(qa.created_at) AS last_attempt_at
-       FROM quizzes q JOIN courses c ON c.id = q.course_id
-       LEFT JOIN quiz_attempts qa ON qa.quiz_id = q.id AND qa.user_id = $1
-       WHERE ${scope}
-       GROUP BY q.id, c.id
-       ORDER BY c.title, q.id`,
+    const { rows: labSubmissions } = await query(
+      `SELECT sub.id, sub.status, sub.student_note, sub.instructor_feedback,
+              sub.submitted_at, sub.reviewed_at, sub.reviewed_by,
+              l.id AS lab_id, l.title AS lab_title, l.due_at,
+              c.title AS course_title, c.id AS course_id
+       FROM lab_submissions sub
+       JOIN labs l ON l.id = sub.lab_id
+       LEFT JOIN courses c ON c.id = sub.course_id
+       WHERE sub.user_id = $1 AND (sub.instructor_id = $2 OR $3::boolean)
+       ORDER BY sub.submitted_at DESC`,
       params
     );
 
-    const { rows: assignments } = await query(
-      `SELECT a.id, a.title, a.points, a.due_at, a.is_published,
-              c.title AS course_title, c.id AS course_id,
-              s.id AS submission_id, s.status AS submission_status, s.grade, s.feedback,
-              s.submitted_at, s.graded_at
-       FROM assignments a JOIN courses c ON c.id = a.course_id
-       LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.user_id = $1
-       WHERE ${scope}
-       ORDER BY a.due_at ASC NULLS LAST, a.id DESC`,
+    const { rows: projects } = await query(
+      `SELECT p.id, p.title, p.description, p.repo_url, p.status, p.instructor_feedback,
+              p.submitted_at, p.reviewed_at, p.updated_at,
+              p.attachment_name, p.attachment_size,
+              c.title AS course_title, c.id AS course_id
+       FROM student_projects p
+       LEFT JOIN courses c ON c.id = p.course_id
+       WHERE p.user_id = $1 AND (p.instructor_id = $2 OR $3::boolean)
+       ORDER BY p.updated_at DESC`,
       params
     );
 
@@ -312,16 +400,9 @@ router.get(
            SELECT 1 FROM reports r JOIN labs l ON l.id = r.lab_id
            LEFT JOIN courses c ON c.id = l.course_id
            WHERE r.id = ae.entity_id AND (COALESCE(c.instructor_id, l.created_by) = $2 OR $3::boolean)))
-         OR (ae.entity_type = 'quiz' AND EXISTS (
-           SELECT 1 FROM quizzes q JOIN courses c ON c.id = q.course_id
-           WHERE q.id = ae.entity_id AND (c.instructor_id = $2 OR $3::boolean)))
-         OR (ae.entity_type = 'assignment' AND EXISTS (
-           SELECT 1 FROM assignments a JOIN courses c ON c.id = a.course_id
-           WHERE a.id = ae.entity_id AND (c.instructor_id = $2 OR $3::boolean)))
-         OR (ae.entity_type = 'submission' AND EXISTS (
-           SELECT 1 FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
-           JOIN courses c ON c.id = a.course_id
-           WHERE s.id = ae.entity_id AND (c.instructor_id = $2 OR $3::boolean)))
+         OR (ae.entity_type = 'project' AND EXISTS (
+           SELECT 1 FROM student_projects p
+           WHERE p.id = ae.entity_id AND (p.instructor_id = $2 OR $3::boolean)))
        )
        ORDER BY ae.created_at DESC LIMIT 40`,
       params
@@ -339,19 +420,12 @@ router.get(
     const avgProgress = enrollments.length
       ? Math.round((enrollments.reduce((sum, item) => sum + Number(item.progress_percent || 0), 0) / enrollments.length) * 10) / 10
       : 0;
-    const graded = assignments.filter((item) => item.grade != null);
-    const avgGrade = graded.length
-      ? Math.round((graded.reduce((sum, item) => sum + Number(item.grade), 0) / graded.length) * 10) / 10
-      : 0;
-    const quizPercents = quizzes
-      .map((item) => (item.best_percent == null ? null : Number(item.best_percent)))
-      .filter((value) => value != null);
 
     res.json({
       student,
       enrollments,
-      quizzes,
-      assignments,
+      labSubmissions,
+      projects,
       reports,
       labSessions,
       history,
@@ -360,14 +434,14 @@ router.get(
         completedCourses,
         completionRate: enrollments.length ? Math.round((completedCourses / enrollments.length) * 1000) / 10 : 0,
         avgProgress,
-        avgGrade,
-        gradedSubmissions: graded.length,
-        pendingSubmissions: assignments.filter((item) => item.submission_status === 'submitted').length,
+        labSubmissionsTotal: labSubmissions.length,
+        labSubmissionsPending: labSubmissions.filter((item) => item.status === 'submitted').length,
+        labSubmissionsApproved: labSubmissions.filter((item) => item.status === 'approved').length,
+        projectsTotal: projects.length,
+        projectsPending: projects.filter((item) => item.status === 'submitted').length,
+        projectsApproved: projects.filter((item) => item.status === 'approved').length,
         reportsTotal: reports.length,
         reportsPending: reports.filter((item) => item.status === 'submitted').length,
-        avgQuizPercent: quizPercents.length
-          ? Math.round((quizPercents.reduce((sum, value) => sum + value, 0) / quizPercents.length) * 10) / 10
-          : 0,
         labSessions: labSessions.length,
         activeDays30: activitySummary[0]?.active_days_30 ?? 0,
         lastActivityAt: activitySummary[0]?.last_activity_at ?? null,
@@ -384,7 +458,7 @@ const announcementSchema = z.object({
     .string()
     .trim()
     .max(300)
-    .refine((value) => !value || value.startsWith('/'), 'Link must be an internal path such as /student/assignments.')
+    .refine((value) => !value || value.startsWith('/'), 'Link must be an internal path such as /student/lab-assignments.')
     .optional()
     .nullable(),
 });

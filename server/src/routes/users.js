@@ -145,16 +145,9 @@ router.get(
              SELECT 1 FROM reports r JOIN labs l ON l.id = r.lab_id
              LEFT JOIN courses c ON c.id = l.course_id
              WHERE r.id = ae.entity_id AND COALESCE(c.instructor_id, l.created_by) = $2))
-           OR (ae.entity_type = 'quiz' AND EXISTS (
-             SELECT 1 FROM quizzes q JOIN courses c ON c.id = q.course_id
-             WHERE q.id = ae.entity_id AND c.instructor_id = $2))
-           OR (ae.entity_type = 'assignment' AND EXISTS (
-             SELECT 1 FROM assignments a JOIN courses c ON c.id = a.course_id
-             WHERE a.id = ae.entity_id AND c.instructor_id = $2))
-           OR (ae.entity_type = 'submission' AND EXISTS (
-             SELECT 1 FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
-             JOIN courses c ON c.id = a.course_id
-             WHERE s.id = ae.entity_id AND c.instructor_id = $2))
+           OR (ae.entity_type = 'project' AND EXISTS (
+             SELECT 1 FROM student_projects p
+             WHERE p.id = ae.entity_id AND p.instructor_id = $2))
            OR (ae.entity_type = 'conversation' AND EXISTS (
              SELECT 1 FROM conversations cv WHERE cv.id = ae.entity_id AND cv.instructor_id = $2))
          )
