@@ -7,7 +7,7 @@ function appendChunk(current, chunk, limit) {
   return { value: next.slice(0, limit), truncated: true };
 }
 
-export function runDocker(binary, args, { input, timeoutMs = 30000, maxOutputBytes = 1024 * 1024, env = {} } = {}) {
+export function runDocker(binary, args, { input, timeoutMs = 30000, maxOutputBytes = 1024 * 1024, env = {}, onStdout, onStderr } = {}) {
   return new Promise((resolve) => {
     let settled = false;
     let stdout = '';
@@ -46,12 +46,20 @@ export function runDocker(binary, args, { input, timeoutMs = 30000, maxOutputByt
     child.stdin.on('error', () => {});
 
     child.stdout.on('data', (chunk) => {
+      const text = chunk.toString('utf8');
+      if (typeof onStdout === 'function') {
+        try { onStdout(text); } catch { /* ignore */ }
+      }
       const appended = appendChunk(stdout, chunk, maxOutputBytes);
       stdout = appended.value;
       truncated = truncated || appended.truncated;
     });
 
     child.stderr.on('data', (chunk) => {
+      const text = chunk.toString('utf8');
+      if (typeof onStderr === 'function') {
+        try { onStderr(text); } catch { /* ignore */ }
+      }
       const appended = appendChunk(stderr, chunk, maxOutputBytes);
       stderr = appended.value;
       truncated = truncated || appended.truncated;

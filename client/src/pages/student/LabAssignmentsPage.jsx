@@ -100,7 +100,11 @@ export default function LabAssignmentsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone="slate">{item.course_title}</Badge>
-                      <Badge tone="slate">{item.step_count} verified steps</Badge>
+                      {item.lab_mode === 'real' ? (
+                        <Badge tone="rose">Real lab · {item.min_evidence || 1}+ screenshots</Badge>
+                      ) : (
+                        <Badge tone="slate">{item.step_count} verified steps</Badge>
+                      )}
                       {item.due_at ? <Badge tone={item.is_overdue ? 'rose' : 'brand'}><IconClock size={11} /> {item.is_overdue ? 'Overdue' : 'Due'} {formatDateTime(item.due_at)}</Badge> : <Badge tone="slate">No deadline</Badge>}
                       {status && <Badge tone={status.tone}>{status.label}</Badge>}
                     </div>

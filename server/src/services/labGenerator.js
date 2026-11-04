@@ -439,17 +439,30 @@ function clean(value, fallback = '') {
  * @param {number} [options.stepCount]
  * @param {boolean} [options.isPractice]
  */
-export function generateLab({ title, details = '', difficulty = 'beginner', stepCount = 8, isPractice = false } = {}) {
+export function generateLab({
+  title,
+  details = '',
+  difficulty = 'beginner',
+  stepCount = 8,
+  isPractice = false,
+  labMode = 'practice',
+  minEvidence = 1,
+} = {}) {
   const cleanTitle = clean(title, 'Practice lab');
   const cleanDetails = clean(details);
   const { key, blueprint } = detectDomain(`${cleanTitle} ${cleanDetails}`);
+  const mode = labMode === 'real' ? 'real' : 'practice';
+  const isReal = mode === 'real';
+  const evidenceTarget = Math.max(1, Math.min(20, Number(minEvidence) || 1));
 
   const requested = Math.max(3, Math.min(12, Number(stepCount) || 8));
   const available = blueprint.steps.slice(0, Math.min(requested, blueprint.steps.length));
-  const steps = available.map((item, index) => ({ ...item, position: index }));
+  // Real labs are unguided: they deliberately contain no steps or hints.
+  const steps = isReal ? [] : available.map((item, index) => ({ ...item, position: index }));
 
   const difficultyLabel = difficulty === 'advanced' ? 'advanced' : difficulty === 'intermediate' ? 'intermediate' : 'beginner';
-  const estimate = Math.min(180, Math.max(20, steps.length * (difficultyLabel === 'advanced' ? 9 : difficultyLabel === 'intermediate' ? 7 : 5)));
+  const baseSteps = isReal ? requested : steps.length;
+  const estimate = Math.min(180, Math.max(20, baseSteps * (difficultyLabel === 'advanced' ? 9 : difficultyLabel === 'intermediate' ? 7 : 5)));
 
   const detailsBlock = cleanDetails ? `\n## Brief\n${cleanDetails}\n` : '';
 
@@ -461,12 +474,12 @@ export function generateLab({ title, details = '', difficulty = 'beginner', step
     ...blueprint.objectives.map((objective) => `- ${objective}`),
     '',
     `## Environment`,
-    isPractice
-      ? 'Your session runs in a simulated Ubuntu shell inside your browser. No Docker container is created, nothing touches the server and the sandbox is discarded when you stop the session.'
-      : 'Your session runs in a real, disposable Linux container. You are root **inside** the container so you can install packages and use professional tooling, but the container has no host access, no Docker socket and is limited in CPU, memory and processes. The environment is destroyed when the session expires.',
+    'Your session runs in a real, disposable Linux container. You are root **inside** the container so you can install packages and use professional tooling, but the container has no host access, no Docker socket and is limited in CPU, memory and processes. The environment is destroyed when the session expires.',
     '',
-    `## How steps work`,
-    'Each step is verified automatically. Press **Enter** after running a command; when the expected output appears the step ticks off. Hints are available on every step.',
+    isReal ? `## How this lab works` : `## How steps work`,
+    isReal
+      ? 'This is a real, question-only assessment. Read the task brief, complete the work yourself and upload screenshot evidence for your instructor. There are no step-by-step instructions, hints or automatic verification.'
+      : 'Each step is verified automatically. Press **Enter** after running a command; when the expected output appears the step ticks off. Hints are available on every step.',
     isPractice
       ? '\n## Practice mode\nThis lab is not graded and no report is required. Start as many sessions as you like.'
       : '',
@@ -476,13 +489,36 @@ export function generateLab({ title, details = '', difficulty = 'beginner', step
 
   const objectives = blueprint.objectives.map((objective) => `- ${objective}`).join('\n');
 
-  const submissionRequirements = isPractice
-    ? ''
-    : [
-        '- A screenshot of the terminal proving each verified step',
-        '- A short explanation of what each command changed and why',
-        '- The hash of any file you created, if the lab asks for one',
-      ].join('\n');
+  const taskBrief = isReal
+    ? [
+        `## Your task`,
+        cleanDetails || blueprint.scenario,
+        '',
+        `## Scenario`,
+        blueprint.scenario,
+        '',
+        `## Requirements`,
+        ...blueprint.objectives.map((objective) => `- ${objective}`),
+        '',
+        `## Evidence to submit`,
+        `- At least ${evidenceTarget} screenshot${evidenceTarget === 1 ? '' : 's'} proving the completed work`,
+        '- A short note explaining what you did and what you found',
+      ].join('\n')
+    : '';
+
+  const submissionRequirements = isReal
+    ? [
+        `- At least ${evidenceTarget} screenshot${evidenceTarget === 1 ? '' : 's'} of the terminal or tool output proving the work`,
+        '- A short explanation of the commands or approach you used',
+        '- The hash of any file you created, if the task asks for one',
+      ].join('\n')
+    : isPractice
+      ? ''
+      : [
+          '- A screenshot of the terminal proving each verified step',
+          '- A short explanation of what each command changed and why',
+          '- The hash of any file you created, if the lab asks for one',
+        ].join('\n');
 
   return {
     title: cleanTitle,
@@ -490,14 +526,19 @@ export function generateLab({ title, details = '', difficulty = 'beginner', step
     description,
     objectives,
     submissionRequirements,
+    taskBrief,
     difficulty: difficultyLabel,
     estimatedMinutes: estimate,
-    terminalWelcome: isPractice
-      ? `Welcome to "${cleanTitle}". This is an in-browser practice shell — no container is created. Run \`help\` to see the available commands.`
-      : `Welcome to "${cleanTitle}". This is a real Linux container — run \`help\` or explore freely.`,
+    terminalWelcome: isReal
+      ? `Welcome to "${cleanTitle}". This is a real, unguided assessment — read the task brief and complete the work.`
+      : isPractice
+        ? `Welcome to "${cleanTitle}". This is a real practice lab container — install packages and explore freely. Run \`help\` for a quick reference.`
+        : `Welcome to "${cleanTitle}". This is a real Linux container — run \`help\` or explore freely.`,
     initialCwd: '/home/student',
     initialFiles: blueprint.files,
     isPractice: Boolean(isPractice),
+    labMode: mode,
+    minEvidence: evidenceTarget,
     domain: key,
     steps,
     counts: {

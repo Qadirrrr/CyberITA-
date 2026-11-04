@@ -35,6 +35,7 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
 async function loadSession(sessionId) {
   const { rows } = await query(
     `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id, l.is_practice,
+            l.lab_mode, l.task_brief, l.min_evidence,
             l.created_by, l.status AS lab_status, l.title AS lab_title,
             srv.name AS lab_server_name,
             u.full_name AS student_name
@@ -57,8 +58,8 @@ export async function getSessionOr404(sessionId, user) {
 
 /** Provisions (or reuses) a lab session for a user. */
 export async function startSession(user, lab) {
-  // Practice labs always use the in-process terminal; course labs use the
-  // configured real provider (Docker in production).
+  // Every lab runs in a real container, including open-to-all practice labs.
+  // `is_practice` only controls access and grading, never the provider.
   const provider = getProviderForLab(lab);
   const isPractice = Boolean(lab.is_practice);
   const { rows: existing } = await query(
@@ -73,16 +74,12 @@ export async function startSession(user, lab) {
     return { session: fullExisting || existing[0], reused: true };
   }
 
-  // Course labs are routed to their assigned Docker server. Practice labs are
-  // container-less, so they never touch a lab server.
-  const { host, server } = isPractice
-    ? { host: null, server: null }
-    : await resolveServerForNewSession(lab);
+  // Labs are routed to their assigned Docker server (or the default host).
+  const { host, server } = await resolveServerForNewSession(lab);
 
   const descriptor = await provider.provision({ lab, user, host, serverId: server?.id ?? null });
-  // Practice sessions stay open until the learner stops them; real labs keep
-  // the configured TTL so abandoned containers are reclaimed.
-  const expiresAt = isPractice ? null : new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
+  // Every container gets the configured TTL so abandoned sessions are reclaimed.
+  const expiresAt = new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
   let rows;
   try {
     ({ rows } = await query(
@@ -126,7 +123,7 @@ export async function startSession(user, lab) {
       type: 'lab',
       title: `Lab started: ${lab.title}`,
       body: isPractice
-        ? 'Your in-browser practice terminal is ready. No container was started.'
+        ? 'Your practice lab container is ready. Install packages and explore freely.'
         : 'Your isolated lab environment is ready in the browser terminal.',
       link: `/labs/${lab.id}`,
     });
@@ -196,6 +193,9 @@ async function markStepCompleted({ session, step, command, output, client }) {
 
 /** Checks pending steps against the executed command/output. */
 export async function verifyStepsAfterCommand({ session, command, output }) {
+  // Real labs are unguided assessments: there are no steps to verify.
+  if (session.lab_mode === 'real') return { completedSteps: [], completion: null };
+
   const pending = await getIncompleteSteps(session.id);
   const completed = [];
   let newCompletion = false;
@@ -224,6 +224,9 @@ export async function verifyStepsAfterCommand({ session, command, output }) {
 
 /** Marks a manual step as complete (self-reported, recorded in history). */
 export async function completeManualStep(session, step, user) {
+  if (session.lab_mode === 'real') {
+    throw badRequest('Real labs are unguided assessments: complete the task and upload screenshot evidence.');
+  }
   if (step.verification !== 'manual') {
     throw badRequest('This step is verified automatically, run the expected command in the terminal.');
   }
@@ -244,6 +247,7 @@ export async function completeManualStep(session, step, user) {
 
 /** Evaluates overall lab completion, notifies the learner and syncs lesson progress. */
 export async function checkLabCompletion(session) {
+  if (session.lab_mode === 'real') return { labCompleted: false };
   const { rows: remaining } = await query(
     `SELECT COUNT(*)::int AS remaining FROM lab_steps s
      WHERE s.lab_id = $1 AND s.is_optional = FALSE
@@ -302,7 +306,7 @@ export async function checkLabCompletion(session) {
  * Executes a command inside a running session through its provider terminal.
  * Persists history + filesystem state and verifies pending steps.
  */
-export async function executeInSession(session, lab, command) {
+export async function executeInSession(session, lab, command, { onOutput } = {}) {
   if (session.status !== 'running') throw badRequest('This lab session is not running. Start it again.');
   const provider = getProvider(session.provider);
   if (session.expires_at && new Date(session.expires_at) < new Date()) {
@@ -318,7 +322,7 @@ export async function executeInSession(session, lab, command) {
   }
 
   const terminal = provider.createTerminal(session, lab);
-  const result = await terminal.execute(command);
+  const result = await terminal.execute(command, { onOutput });
   const { events = [], ...exec } = result;
 
   const historyEntry = [
@@ -448,9 +452,13 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     [session.id]
   );
   const { rows: labRows } = await query(
-    'SELECT id, title, submission_requirements, is_practice FROM labs WHERE id = $1',
+    `SELECT id, title, submission_requirements, is_practice, lab_mode, task_brief, min_evidence
+     FROM labs WHERE id = $1`,
     [session.lab_id]
   );
+  const lab = labRows[0] || null;
+  const labMode = lab?.lab_mode === 'real' ? 'real' : 'practice';
+  const isRealLab = labMode === 'real';
 
   const stepViews = steps.map((step) => {
     const progress = progressByStep.get(step.id) || null;
@@ -465,6 +473,28 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
 
   const required = stepViews.filter((s) => !s.is_optional);
   const completedRequired = required.filter((s) => s.completed).length;
+
+  // Real labs are question-only assessments: progress is the number of
+  // screenshot evidence files the learner has attached to the session.
+  const evidenceCount = screenshots.length;
+  const minEvidence = Math.max(0, Number(lab?.min_evidence ?? 1));
+  const progress = isRealLab
+    ? {
+        completedRequired: Math.min(evidenceCount, minEvidence),
+        requiredTotal: minEvidence,
+        percent: minEvidence > 0 ? Math.min(100, Math.round((evidenceCount / minEvidence) * 100)) : 100,
+        allRequiredCompleted: evidenceCount >= minEvidence,
+        evidenceCount,
+        minEvidence,
+      }
+    : {
+        completedRequired,
+        requiredTotal: required.length,
+        percent: required.length > 0 ? Math.round((completedRequired / required.length) * 10000) / 100 : 100,
+        allRequiredCompleted: required.length > 0 && completedRequired === required.length,
+        evidenceCount,
+        minEvidence,
+      };
 
   return {
     session: {
@@ -488,16 +518,14 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
       hostname: student.hostname,
     },
     student,
-    steps: stepViews,
+    // Real labs never expose steps (there should be none), even if an old
+    // practice lab was converted after learners had already started it.
+    steps: isRealLab ? [] : stepViews,
     screenshots,
-    lab: labRows[0] || null,
+    lab,
+    mode: labMode,
     report: reportRows[0] || null,
     submission: submissionRows[0] || null,
-    progress: {
-      completedRequired,
-      requiredTotal: required.length,
-      percent: required.length > 0 ? Math.round((completedRequired / required.length) * 10000) / 100 : 100,
-      allRequiredCompleted: required.length > 0 && completedRequired === required.length,
-    },
+    progress,
   };
 }

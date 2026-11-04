@@ -404,6 +404,13 @@ html:not(.dark) .group:hover .group-hover\:text-brand-200 {
   color: #0284c7 !important;
 }
 
+/* Terminal scrollbar: dark, thin */
+.terminal-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.terminal-body::-webkit-scrollbar-track { background: transparent; }
+.terminal-body::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 4px; }
+.terminal-body::-webkit-scrollbar-thumb:hover { background: #3b4a63; }
+.terminal-body { scrollbar-width: thin; scrollbar-color: #2a3344 transparent; }
+
 /* Dark surfaces (terminal, code blocks) must keep light text in light theme */
 html:not(.dark) .terminal-surface,
 html:not(.dark) .terminal-surface *,

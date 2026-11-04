@@ -17,7 +17,7 @@ import {
   Skeleton,
 } from '../../components/ui';
 import { IconCheckCircle, IconCopy, IconEdit, IconPlus, IconSearch, IconShield, IconUsers } from '../../components/icons';
-import { ROLES } from '../../lib/constants';
+import { ROLES, STANDARD_ROLES } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { emailError, nameError, passwordError } from '../../lib/validation';
 
@@ -346,12 +346,23 @@ export default function UsersPage() {
               label="Role"
               value={editing.role}
               onChange={(event) => setEditing((current) => ({ ...current, role: event.target.value }))}
-              disabled={isSelf}
-              hint={isSelf ? 'You cannot change your own role.' : 'Instructors manage courses and labs. Admins manage users and messages.'}
+              disabled={isSelf || !STANDARD_ROLES.includes(editing.role)}
+              hint={
+                isSelf
+                  ? 'You cannot change your own role.'
+                  : !STANDARD_ROLES.includes(editing.role)
+                    ? 'Moderator roles are managed from Moderator Management.'
+                    : 'Instructors manage courses and labs. Admins manage users and messages.'
+              }
             >
-              {Object.entries(ROLES).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
+              {!STANDARD_ROLES.includes(editing.role) && (
+                <option value={editing.role}>{ROLES[editing.role] || editing.role}</option>
+              )}
+              {Object.entries(ROLES)
+                .filter(([key]) => STANDARD_ROLES.includes(key))
+                .map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
             </Select>
             <div>
               <Checkbox

@@ -54,4 +54,25 @@ export function requireRole(...roles) {
 
 export const isAdmin = (user) => user?.role === 'admin';
 export const isStaff = (user) => user?.role === 'admin' || user?.role === 'instructor';
+
+// ---------- moderation roles (additive) ----------
+// Moderators are deliberately NOT part of isStaff: they must never inherit
+// instructor/admin capabilities. These helpers only widen the accepted role set.
+export const MODERATOR_ROLES = ['senior_moderator', 'subject_moderator'];
+export const isModerator = (user) => MODERATOR_ROLES.includes(user?.role);
+export const isSeniorModerator = (user) => user?.role === 'senior_moderator';
+export const isSubjectModerator = (user) => user?.role === 'subject_moderator';
+
+/** Requires a moderator of one of the given tiers (defaults to any moderator). */
+export function requireModerator(...tiers) {
+  const allowed = tiers.length ? tiers : MODERATOR_ROLES;
+  return (req, _res, next) => {
+    if (!req.user) return next(unauthorized());
+    if (!allowed.includes(req.user.role)) {
+      return next(forbidden('This action requires moderator access.'));
+    }
+    next();
+  };
+}
+
 export { REFRESH_COOKIE };

@@ -7,12 +7,12 @@ import { Alert, Badge, Button, Card, Skeleton } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
+  IconCamera,
   IconCheckCircle,
   IconClock,
   IconExternalLink,
   IconPlay,
   IconTerminal,
-  IconZap,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
@@ -61,9 +61,11 @@ export default function LabDetailPage() {
         navigate(sessionUrl);
       } else {
         toast.success(
-          data?.lab?.is_practice
-            ? 'Practice terminal opened in a new tab.'
-            : 'Real lab started in a new tab.'
+          data?.lab?.lab_mode === 'real'
+            ? 'Real lab opened in a new tab. Read the task brief and collect your evidence.'
+            : data?.lab?.is_practice
+              ? 'Practice lab container opened in a new tab.'
+              : 'Guided lab started in a new tab.'
         );
         try {
           const res = await api.get(`/labs/${id}`);
@@ -104,7 +106,11 @@ export default function LabDetailPage() {
   const running = mySession?.status === 'running';
   const tone = DIFFICULTIES[lab.difficulty]?.tone || 'brand';
   const isPractice = Boolean(lab.is_practice);
-  const infrastructureReady = isPractice || !labStatus || Boolean(labStatus.available);
+  const isReal = lab.lab_mode === 'real';
+  const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
+  // Every lab — including open-to-all practice labs — needs a running Docker
+  // provider, so availability is required for all of them.
+  const infrastructureReady = !labStatus || Boolean(labStatus.available);
   const offlineReason = 'This lab cannot start right now. Please try again later.';
 
   return (
@@ -122,12 +128,13 @@ export default function LabDetailPage() {
               <Badge tone="slate">
                 <IconClock size={11} /> {lab.estimated_minutes} min
               </Badge>
-              <Badge tone="slate">{stepCounts?.total ?? steps.length} steps</Badge>
-              {isPractice ? (
-                <Badge tone="emerald">Practice</Badge>
+              <Badge tone={isReal ? 'rose' : 'sky'}>{isReal ? 'Real lab' : 'Guided practice'}</Badge>
+              {isReal ? (
+                <Badge tone="slate"><IconCamera size={11} /> {minEvidence}+ screenshots</Badge>
               ) : (
-                <Badge tone="sky">Course</Badge>
+                <Badge tone="slate">{stepCounts?.total ?? steps.length} steps</Badge>
               )}
+              {isPractice && <Badge tone="emerald">Open to all</Badge>}
               {!isPractice && lab.due_at && <Badge tone={new Date(lab.due_at) < new Date() ? 'rose' : 'amber'}><IconClock size={11} /> Due {formatDateTime(lab.due_at)}</Badge>}
               {running && <Badge tone="emerald">Session running</Badge>}
             </div>
@@ -139,7 +146,13 @@ export default function LabDetailPage() {
                   <IconExternalLink size={11} /> {data.course.title}
                 </Link>
               ) : (
-                <span>{lab.is_practice ? 'Practice lab · open to every learner' : 'Independent lab'}</span>
+                <span>
+                  {isReal
+                    ? 'Real assessment · question-only'
+                    : lab.is_practice
+                      ? 'Guided practice · open to every learner'
+                      : 'Guided lab'}
+                </span>
               )}
               <span>{sessions.length} session{sessions.length === 1 ? '' : 's'} started</span>
               {mySession?.last_activity_at && <span>Last activity {timeAgo(mySession.last_activity_at)}</span>}
@@ -161,24 +174,27 @@ export default function LabDetailPage() {
                 loading={starting}
                 size="lg"
                 disabled={!infrastructureReady}
-                title={!infrastructureReady ? offlineReason : isPractice ? 'Open the practice terminal' : 'Launch hands-on lab'}
+                title={!infrastructureReady ? offlineReason : isReal ? 'Open the real lab' : isPractice ? 'Open the practice lab' : 'Launch guided lab'}
               >
-                {isPractice ? <IconZap size={17} /> : <IconTerminal size={17} />}
-                {isPractice ? 'Start practice terminal' : 'Start real lab'}
+                <IconTerminal size={17} />
+                {isReal ? 'Start real lab' : isPractice ? 'Start practice lab' : 'Start guided lab'}
               </Button>
             )}
             <p className="max-w-[220px] text-xs leading-5 text-slate-500">
-              {isPractice
-                ? 'Not graded. Start as many sessions as you like.'
-                 : 'Finish the required steps, then submit this lab assignment for instructor review.'}
+              {isReal
+                ? `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
+                : isPractice
+                  ? 'Runs in a real isolated Linux container. Not graded — start as many sessions as you like.'
+                  : 'Finish the required steps, then submit this lab assignment for instructor review.'}
             </p>
           </div>
         </div>
       </Card>
 
-      {!isPractice && labStatus && !labStatus.available && (
+      {labStatus && !labStatus.available && (
         <Alert tone="amber" title="This lab is temporarily unavailable">
-          Course labs cannot start right now. Please try again later or ask your instructor.
+          Labs run in real containers, so they cannot start while the Docker provider is offline. Please try again
+          later or ask your instructor.
         </Alert>
       )}
 
@@ -192,24 +208,36 @@ export default function LabDetailPage() {
 
         <div className="space-y-5">
           <Card className="p-5">
-            <h2 className="font-display text-base font-semibold">What you'll do</h2>
-            <ol className="mt-3 space-y-2.5">
-              {steps.map((step, index) => (
-                <li key={step.id} className="flex gap-2.5 text-xs leading-5 text-slate-400">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/5 font-mono text-[10px] text-slate-400">
-                    {index + 1}
-                  </span>
-                  <span className={step.is_optional ? 'text-slate-500' : ''}>
-                    {step.title}
-                    {step.is_optional && <span className="ml-1 text-[10px] uppercase tracking-wider text-slate-600">optional</span>}
-                  </span>
-                </li>
-              ))}
-              {steps.length === 0 && <li className="text-xs text-slate-500">Steps are being prepared.</li>}
-            </ol>
-            <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-5 text-slate-500">
-              Steps marked <span className="text-brand-300">verified</span> complete automatically when you run the right command.
-            </p>
+            <h2 className="font-display text-base font-semibold">{isReal ? 'Your task' : "What you'll do"}</h2>
+            {isReal ? (
+              <div className="mt-3 max-h-96 overflow-y-auto pr-1">
+                <Markdown>{lab.task_brief || lab.description || 'Your instructor is preparing the task brief.'}</Markdown>
+                <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-5 text-slate-500">
+                  There are no steps or hints. Complete the task yourself and upload at least {minEvidence} screenshot
+                  {minEvidence === 1 ? '' : 's'} as evidence.
+                </p>
+              </div>
+            ) : (
+              <>
+                <ol className="mt-3 space-y-2.5">
+                  {steps.map((step, index) => (
+                    <li key={step.id} className="flex gap-2.5 text-xs leading-5 text-slate-400">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/5 font-mono text-[10px] text-slate-400">
+                        {index + 1}
+                      </span>
+                      <span className={step.is_optional ? 'text-slate-500' : ''}>
+                        {step.title}
+                        {step.is_optional && <span className="ml-1 text-[10px] uppercase tracking-wider text-slate-600">optional</span>}
+                      </span>
+                    </li>
+                  ))}
+                  {steps.length === 0 && <li className="text-xs text-slate-500">Steps are being prepared.</li>}
+                </ol>
+                <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-5 text-slate-500">
+                  Steps marked <span className="text-brand-300">verified</span> complete automatically when you run the right command.
+                </p>
+              </>
+            )}
           </Card>
 
           {sessions.length > 0 && (

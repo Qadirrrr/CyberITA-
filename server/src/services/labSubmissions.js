@@ -83,8 +83,15 @@ async function buildEvidence(session) {
     ? (await query('SELECT id, name, location FROM lab_servers WHERE id = $1', [session.lab_server_id])).rows[0] || null
     : null;
 
+  const mode = session.lab_mode === 'real' ? 'real' : 'practice';
+  const minEvidence = Math.max(0, Number(session.min_evidence ?? 1));
+  const evidenceCount = shotRows.length;
+
   return {
     lab_title: session.lab_title || null,
+    lab_mode: mode,
+    task_brief: session.task_brief || null,
+    min_evidence: minEvidence,
     lab_server: server ? { id: server.id, name: server.name, location: server.location } : null,
     session: {
       id: session.id,
@@ -96,7 +103,11 @@ async function buildEvidence(session) {
     progress: {
       completed_required: completedRequired,
       required_total: required.length,
-      all_required_completed: completedRequired === required.length,
+      all_required_completed: mode === 'real'
+        ? evidenceCount >= minEvidence
+        : completedRequired === required.length,
+      evidence_count: evidenceCount,
+      min_evidence: minEvidence,
     },
     steps,
     screenshots: shotRows.map((shot) => ({
@@ -143,14 +154,32 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
     throw badRequest('Practice labs are open-ended: there is nothing to submit for review.');
   }
 
-  const { rows: remainingRows } = await query(
-    `SELECT COUNT(*)::int AS remaining FROM lab_steps s
-     WHERE s.lab_id = $1 AND s.is_optional = FALSE
-       AND s.id NOT IN (SELECT step_id FROM lab_step_progress WHERE session_id = $2)`,
-    [lab.id, session.id]
-  );
-  if (remainingRows[0].remaining > 0) {
-    throw badRequest(`Finish all required steps first (${remainingRows[0].remaining} remaining).`);
+  if (lab.lab_mode === 'real') {
+    // Real labs are graded on evidence, not on guided steps: the learner must
+    // attach the minimum number of screenshots before submitting.
+    const minEvidence = Math.max(1, Number(lab.min_evidence ?? 1));
+    const { rows: evidenceRows } = await query(
+      'SELECT COUNT(*)::int AS total FROM screenshots WHERE session_id = $1',
+      [session.id]
+    );
+    const attached = evidenceRows[0]?.total ?? 0;
+    if (attached < minEvidence) {
+      const missing = minEvidence - attached;
+      throw badRequest(
+        `Add at least ${missing} more screenshot${missing === 1 ? '' : 's'} before submitting this lab ` +
+        `(${attached}/${minEvidence} attached).`
+      );
+    }
+  } else {
+    const { rows: remainingRows } = await query(
+      `SELECT COUNT(*)::int AS remaining FROM lab_steps s
+       WHERE s.lab_id = $1 AND s.is_optional = FALSE
+         AND s.id NOT IN (SELECT step_id FROM lab_step_progress WHERE session_id = $2)`,
+      [lab.id, session.id]
+    );
+    if (remainingRows[0].remaining > 0) {
+      throw badRequest(`Finish all required steps first (${remainingRows[0].remaining} remaining).`);
+    }
   }
 
   const existing = await getSubmissionForSession(session.id);
@@ -161,7 +190,13 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
     throw badRequest('This lab session belongs to another student.');
   }
 
-  const evidence = await buildEvidence({ ...session, lab_title: lab.title });
+  const evidence = await buildEvidence({
+    ...session,
+    lab_title: lab.title,
+    lab_mode: lab.lab_mode,
+    task_brief: lab.task_brief,
+    min_evidence: lab.min_evidence,
+  });
   const instructorId = await resolveInstructorId(lab);
 
   let submission;

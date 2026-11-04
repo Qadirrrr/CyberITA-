@@ -112,5 +112,7 @@ export function useAuth() {
 export function dashboardPath(role) {
   if (role === 'admin') return '/admin';
   if (role === 'instructor') return '/instructor';
+  if (role === 'senior_moderator') return '/moderator/senior';
+  if (role === 'subject_moderator') return '/moderator/subject';
   return '/student';
 }

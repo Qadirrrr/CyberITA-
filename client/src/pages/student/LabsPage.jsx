@@ -12,7 +12,7 @@ import {
   IconTerminal,
   IconZap,
 } from '../../components/icons';
-import { DIFFICULTIES } from '../../lib/constants';
+import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
 import { timeAgo } from '../../lib/format';
 
 const difficultyTone = { beginner: 'emerald', intermediate: 'amber', advanced: 'rose' };
@@ -23,16 +23,16 @@ const MODES = {
     label: 'Practice labs',
     tagline: 'Not graded',
     description:
-      'Open a Linux shell in your browser. Try commands, start over any time, and learn at your own pace.',
-    points: ['Instant start', 'Unlimited sessions', 'Open to everyone'],
+      'Open a real, isolated Linux container in your browser. Install packages, try commands, start over any time and learn at your own pace.',
+    points: ['Real Linux container', 'Unlimited sessions', 'Open to everyone'],
   },
   course: {
     id: 'course',
     label: 'Course labs',
     tagline: 'Graded practicals',
     description:
-      'Hands-on labs from your enrolled courses, with guided steps and a practical report when you finish.',
-    points: ['Guided steps', 'Tied to your course', 'Practical report'],
+      'Hands-on labs from your enrolled courses. Guided labs walk you through verified steps; real labs give you a question to solve and review your screenshot evidence.',
+    points: ['Guided or question-only', 'Tied to your course', 'Instructor review'],
   },
 };
 
@@ -171,7 +171,7 @@ export default function LabsPage() {
       const { data } = await api.post(`/labs/${lab.id}/sessions`, {}, { timeout: 60000 });
       navigate(`/labs/session/${data.session.id}`);
     } catch (err) {
-      setError(getErrorMessage(err, 'Could not start the practice terminal.'));
+      setError(getErrorMessage(err, 'Could not start the practice lab container.'));
     } finally {
       setStartingId(null);
     }
@@ -241,7 +241,7 @@ export default function LabsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={mode === 'practice' ? 'Search practice terminals…' : 'Search course practicals…'}
+            placeholder={mode === 'practice' ? 'Search practice labs…' : 'Search course practicals…'}
             className="input pl-9"
             aria-label="Search labs"
           />
@@ -303,7 +303,7 @@ export default function LabsPage() {
           <EmptyState
             icon={IconZap}
             title="No practice labs yet"
-            message="Instructors have not published any practice terminals yet. Course practicals are available now."
+            message="Instructors have not published any practice labs yet. Course practicals are available now."
             action={
               <Button variant="secondary" onClick={() => setMode('course')}>
                 Browse course practicals <IconArrowRight size={13} />
@@ -338,6 +338,7 @@ export default function LabsPage() {
           {filtered.map((lab) => {
             const tone = difficultyTone[lab.difficulty] || 'brand';
             const isPractice = Boolean(lab.is_practice);
+            const isReal = lab.lab_mode === 'real';
             return (
               <Card key={lab.id} className="group flex flex-col p-5 transition hover:border-brand-400">
                 <div className="flex items-start justify-between gap-3">
@@ -352,15 +353,18 @@ export default function LabsPage() {
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
                     <Badge tone={tone}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
-                    {isPractice ? <Badge tone="emerald">Practice</Badge> : <Badge tone="sky">Course</Badge>}
+                    <Badge tone={LAB_MODES[lab.lab_mode]?.tone || 'sky'}>{LAB_MODES[lab.lab_mode]?.short || 'Guided'}</Badge>
+                    {isPractice && <Badge tone="emerald">Open to all</Badge>}
                   </div>
                 </div>
                 <h3 className="mt-3 font-display text-base font-semibold leading-snug text-slate-900 dark:text-white">{lab.title}</h3>
                 {lab.summary && <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{lab.summary}</p>}
                 <p className="mt-2 text-xs text-slate-500">
-                  {isPractice
-                    ? `Open to all · ${lab.step_count} steps`
-                    : `${lab.course_title || 'Independent lab'} · ${lab.step_count} steps`}
+                  {isReal
+                    ? `Question-only · ${lab.min_evidence || 1}+ screenshots`
+                    : isPractice
+                      ? `Open to all · ${lab.step_count} steps`
+                      : `${lab.course_title || 'Independent lab'} · ${lab.step_count} steps`}
                 </p>
 
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4">

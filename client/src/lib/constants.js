@@ -2,12 +2,36 @@ export const ROLES = {
   student: 'Student',
   instructor: 'Instructor',
   admin: 'Administrator',
+  senior_moderator: 'Senior Moderator',
+  subject_moderator: 'Subject / Course Moderator',
 };
+
+/** Roles that may be assigned through the regular Users screen. */
+export const STANDARD_ROLES = ['admin', 'instructor', 'student'];
+
+/** Moderation roles are provisioned from Moderator Management only. */
+export const MODERATOR_ROLES = ['senior_moderator', 'subject_moderator'];
 
 export const DIFFICULTIES = {
   beginner: { label: 'Beginner', tone: 'emerald' },
   intermediate: { label: 'Intermediate', tone: 'amber' },
   advanced: { label: 'Advanced', tone: 'rose' },
+};
+
+/** How a lab is delivered: guided steps, or a question-only assessment. */
+export const LAB_MODES = {
+  practice: {
+    label: 'Guided practice',
+    short: 'Guided',
+    tone: 'sky',
+    description: 'Step-by-step instructions, hints and automatic step verification.',
+  },
+  real: {
+    label: 'Real assessment',
+    short: 'Real',
+    tone: 'rose',
+    description: 'Question-only task with screenshot evidence and instructor review.',
+  },
 };
 
 export const CATEGORIES = [

@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../lib/api';
-import { ROLES } from '../../lib/constants';
+import { MODERATOR_ROLES, ROLES } from '../../lib/constants';
 import { Avatar, cx } from '../ui';
 import ThemeToggle from '../ThemeToggle';
 import {
@@ -28,6 +28,7 @@ import {
   IconTerminal,
   IconUsers,
   IconX,
+  IconFlag,
   // Student sidebar custom icons
   IconGrid,
   IconBookWifi,
@@ -114,6 +115,7 @@ const adminNavGroups = [
     label: 'Users & Access',
     items: [
       { to: '/admin/users', label: 'Users & Roles', icon: IconShield },
+      { to: '/admin/moderators', label: 'Moderator Management', icon: IconFlag },
     ],
   },
   {
@@ -151,8 +153,28 @@ const adminNavGroups = [
   },
 ];
 
+function moderatorNavGroups(role) {
+  const home = role === 'senior_moderator' ? '/moderator/senior' : '/moderator/subject';
+  return [
+    {
+      label: 'Moderation',
+      items: [
+        { to: home, label: 'Dashboard', icon: IconLayout, end: true },
+        { to: '/moderator/reports', label: 'Reports & escalations', icon: IconFlag, badge: 'moderation' },
+      ],
+    },
+    {
+      label: 'Preferences',
+      items: [{ to: '/moderator/settings', label: 'Settings', icon: IconSettings }],
+    },
+  ];
+}
+
 function navFor(role) {
   if (role === 'instructor') return instructorNavGroups.flatMap((g) => g.items);
+  if (role === 'senior_moderator' || role === 'subject_moderator') {
+    return moderatorNavGroups(role).flatMap((group) => group.items);
+  }
   return studentNavPrimary;
 }
 
@@ -190,7 +212,15 @@ export default function DashboardLayout() {
   }, [sidebarCollapsed]);
 
   const items = navFor(user?.role);
-  const title = user?.role === 'admin' ? 'Admin workspace' : user?.role === 'instructor' ? 'Instructor workspace' : 'Learning workspace';
+  const isModerator = MODERATOR_ROLES.includes(user?.role);
+  const title =
+    user?.role === 'admin'
+      ? 'Admin workspace'
+      : user?.role === 'instructor'
+        ? 'Instructor workspace'
+        : isModerator
+          ? 'Moderation workspace'
+          : 'Learning workspace';
 
   // Calculate unread notification counts per category
   const labAssignmentNotifs = useMemo(() => {
@@ -214,6 +244,12 @@ export default function DashboardLayout() {
     ).length;
   }, [notifications]);
 
+  const moderationNotifs = useMemo(() => {
+    return (notifications || []).filter(
+      (n) => !n.read_at && (n.type === 'moderation' || n.link?.includes('/moderator/'))
+    ).length;
+  }, [notifications]);
+
   // When student or instructor visits a section, automatically mark notifications for that section as read
   useEffect(() => {
     const path = location.pathname;
@@ -221,8 +257,10 @@ export default function DashboardLayout() {
       if (labAssignmentNotifs > 0) markCategoryRead?.('lab');
     } else if (path.startsWith('/instructor/lab-submissions')) {
       if (submissionNotifs > 0) markCategoryRead?.('submission');
+    } else if (path.startsWith('/moderator/')) {
+      if (moderationNotifs > 0) markCategoryRead?.('moderation');
     }
-  }, [location.pathname, labAssignmentNotifs, submissionNotifs, markCategoryRead]);
+  }, [location.pathname, labAssignmentNotifs, submissionNotifs, moderationNotifs, markCategoryRead]);
 
   useEffect(() => {
     if (!user || !['student', 'instructor'].includes(user.role)) {
@@ -305,6 +343,9 @@ export default function DashboardLayout() {
     } else if (item.badge === 'labSubmissions') {
       badgeCount = labSubmissionNotifs;
       badgeTone = 'amber';
+    } else if (item.badge === 'moderation') {
+      badgeCount = moderationNotifs;
+      badgeTone = 'brand';
     }
 
     return (
@@ -318,6 +359,7 @@ export default function DashboardLayout() {
           if (item.badge === 'labAssignments') markCategoryRead?.('lab');
           if (item.badge === 'submissions') markCategoryRead?.('submission');
           if (item.badge === 'labSubmissions') markCategoryRead?.('lab');
+          if (item.badge === 'moderation') markCategoryRead?.('moderation');
         }}
         className={({ isActive }) =>
           cx(
@@ -501,6 +543,23 @@ export default function DashboardLayout() {
                   </nav>
                 </div>
               ))
+            ) : isModerator ? (
+              /* Grouped moderator nav */
+              moderatorNavGroups(user?.role).map((group, index) => (
+                <div
+                  key={group.label}
+                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
+                >
+                  {!mini && (
+                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      {group.label}
+                    </p>
+                  )}
+                  <nav className="space-y-0.5">
+                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
+                  </nav>
+                </div>
+              ))
             ) : (
               /* Grouped instructor nav */
               instructorNavGroups.map((group, index) => (
@@ -585,7 +644,9 @@ export default function DashboardLayout() {
                 <IconLayout size={15} />
                 <span className="font-medium text-slate-800 dark:text-slate-200">{title}</span>
                 {user?.role !== 'student' && <span className="text-slate-400">/</span>}
-                {user?.role !== 'student' && <span className="text-slate-500">Content management</span>}
+                {user?.role !== 'student' && (
+                  <span className="text-slate-500">{isModerator ? 'Moderation' : 'Content management'}</span>
+                )}
               </div>
               <Logo compact className="lg:hidden" />
             </div>

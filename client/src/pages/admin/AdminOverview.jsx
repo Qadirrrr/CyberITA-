@@ -192,6 +192,9 @@ export default function AdminOverview() {
           <Button as={Link} to="/admin/users" size="sm" variant="ghost">
             <IconUsers size={14} /> Users
           </Button>
+          <Button as={Link} to="/admin/moderators" size="sm" variant="ghost">
+            <IconShield size={14} /> Moderators
+          </Button>
           <Button as={Link} to="/admin/broadcast" size="sm" variant="ghost">
             <IconMessage size={14} /> Broadcast
           </Button>
@@ -446,6 +449,7 @@ export default function AdminOverview() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { to: '/admin/users?create=1', label: 'Create account', icon: IconPlus, hint: 'Admins and instructors' },
+          { to: '/admin/moderators', label: 'Moderators', icon: IconShield, hint: 'Hierarchy and scoped assignments' },
           { to: '/instructor/courses', label: 'Manage courses', icon: IconBookOpen, hint: 'Curriculum and lab assignments' },
           { to: '/instructor/lab-submissions', label: 'Lab review', icon: IconClipboard, hint: 'Review completed lab work' },
           { to: '/instructor/reports', label: 'Report review', icon: IconFileText, hint: 'Approve and publish' },

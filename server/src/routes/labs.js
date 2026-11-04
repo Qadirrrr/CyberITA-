@@ -108,6 +108,8 @@ const stepSchema = z.object({
     position: z.coerce.number().int().min(0).optional(),
 });
 
+const LAB_MODES = ['practice', 'real'];
+
 const labSchema = z.object({
     title: z.string().trim().min(3).max(200),
     courseId: z.coerce.number().int().optional().nullable(),
@@ -122,6 +124,9 @@ const labSchema = z.object({
     terminalWelcome: z.string().trim().max(2000).default('Welcome to your CyberITA+ lab environment.'),
     initialCwd: z.string().trim().max(300).default('/home/student'),
     initialFiles: z.record(z.any()).default({}),
+    labMode: z.enum(LAB_MODES).default('practice'),
+    taskBrief: z.string().trim().max(20000).default(''),
+    minEvidence: z.coerce.number().int().min(0).max(20).default(1),
     isPractice: z.boolean().default(false),
     dueAt: z.coerce.date().optional().nullable(),
     containerImage: z
@@ -155,13 +160,8 @@ router.get(
             provider: provider.name,
             available: availability.ok,
             reason: availability.reason || null,
-            practice: {
-                // Practice terminals are in-process, so they are always available
-                // even when the Docker engine is down.
-                provider: 'practice',
-                available: true,
-                reason: 'In-browser practice terminal (no container required).',
-            },
+            // Every lab, including open-to-all practice labs, runs in a real
+            // container and therefore needs the Docker provider.
             sessionTtlMinutes: env.labs.sessionTtlMinutes,
         });
     })
@@ -223,7 +223,8 @@ router.get(
                 const paginatedParams = [...params, limit, offset];
                 const { rows } = await query(
                         `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
-         l.is_practice, l.course_id, l.lesson_id, l.due_at, c.title AS course_title, c.slug AS course_slug,
+         l.is_practice, l.lab_mode, l.min_evidence, l.course_id, l.lesson_id, l.due_at,
+         c.title AS course_title, c.slug AS course_slug,
          l.lab_server_id, srv.name AS lab_server_name,
          (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count,
          (SELECT COUNT(*)::int FROM lab_sessions s WHERE s.lab_id = l.id) AS session_count,
@@ -287,8 +288,12 @@ router.post(
     const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
     await assertLabReadable(req.user, lab);
     await assertLabParticipation(lab, req.user);
-    const stepCount = await query('SELECT COUNT(*)::int AS n FROM lab_steps WHERE lab_id = $1', [lab.id]);
-    if (stepCount.rows[0].n === 0) throw badRequest('This lab has no steps configured yet.');
+    // Guided labs need at least one step. Real labs are question-only, so they
+    // start with zero steps and collect screenshot evidence instead.
+    if (lab.lab_mode !== 'real') {
+      const stepCount = await query('SELECT COUNT(*)::int AS n FROM lab_steps WHERE lab_id = $1', [lab.id]);
+      if (stepCount.rows[0].n === 0) throw badRequest('This lab has no steps configured yet.');
+    }
 
     const { session, reused } = await startSession(req.user, lab);
     const overview = await getSessionOverview(session, { includeAnswers: false });
@@ -312,6 +317,9 @@ router.get(
         terminal_welcome: lab.terminal_welcome,
         submission_requirements: lab.submission_requirements || '',
         is_practice: Boolean(lab.is_practice),
+        lab_mode: lab.lab_mode || 'practice',
+        task_brief: lab.task_brief || '',
+        min_evidence: lab.min_evidence ?? 1,
         course_id: lab.course_id,
         due_at: lab.due_at,
       },
@@ -495,6 +503,8 @@ const generateLabSchema = z.object({
   details: z.string().trim().max(4000).default(''),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
   stepCount: z.coerce.number().int().min(3).max(12).default(8),
+  labMode: z.enum(LAB_MODES).default('practice'),
+  minEvidence: z.coerce.number().int().min(1).max(20).default(1),
   isPractice: z.boolean().default(false),
   courseId: z.coerce.number().int().optional().nullable(),
   lessonId: z.coerce.number().int().optional().nullable(),
@@ -508,9 +518,15 @@ router.post(
   validateBody(generateLabSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
-    // Practice labs are open to every learner, so they never belong to a course.
-    const labCourseId = b.isPractice ? null : b.courseId ?? null;
-    const labLessonId = b.isPractice ? null : b.lessonId ?? null;
+    const labMode = b.labMode === 'real' ? 'real' : 'practice';
+    if (labMode === 'real' && b.isPractice) {
+      throw badRequest('A real lab is graded, so it cannot be open to all learners.');
+    }
+    // Open-to-all labs are not tied to a course. Real labs may still belong to
+    // a course (their screenshots are reviewed by that course's instructor).
+    const isOpenLab = labMode === 'practice' && Boolean(b.isPractice);
+    const labCourseId = isOpenLab ? null : b.courseId ?? null;
+    const labLessonId = isOpenLab ? null : b.lessonId ?? null;
 
     if (labCourseId) {
       const { rows } = await query('SELECT id, instructor_id, title FROM courses WHERE id = $1', [labCourseId]);
@@ -532,7 +548,9 @@ router.post(
       details: b.details,
       difficulty: b.difficulty,
       stepCount: b.stepCount,
-      isPractice: b.isPractice,
+      isPractice: isOpenLab,
+      labMode,
+      minEvidence: b.minEvidence,
     });
 
     if (!b.autoSave) {
@@ -547,8 +565,8 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
            submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-           initial_cwd, status, created_by, is_practice)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+           initial_cwd, status, created_by, is_practice, lab_mode, task_brief, min_evidence)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
         [
           slug,
           generated.title,
@@ -565,7 +583,10 @@ router.post(
           generated.initialCwd,
           b.status,
           req.user.id,
-          b.isPractice,
+          isOpenLab,
+          labMode,
+          generated.taskBrief || '',
+          labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
         ]
       );
       const id = rows[0].id;
@@ -593,12 +614,17 @@ router.post(
         action: 'lab.created',
         entityType: 'lab',
         entityId: id,
-        metadata: { title: generated.title, autoGenerated: true, practice: Boolean(b.isPractice) },
+        metadata: {
+          title: generated.title,
+          autoGenerated: true,
+          practice: isOpenLab,
+          mode: labMode,
+        },
       });
       return id;
     });
 
-    if (b.status === 'published' && b.isPractice) {
+    if (b.status === 'published' && isOpenLab) {
       const { rows: learners } = await query(
         `SELECT id AS user_id FROM users WHERE role = 'student' AND is_active = TRUE`
       );
@@ -620,8 +646,10 @@ router.post(
         await notify(null, {
           userIds: enrolled.map((row) => row.user_id),
           type: 'lab',
-          title: `New lab: ${generated.title}`,
-          body: `A new hands-on lab "${generated.title}" is available in your course.`,
+          title: labMode === 'real' ? `New real lab: ${generated.title}` : `New lab: ${generated.title}`,
+          body: labMode === 'real'
+            ? `A new question-only lab "${generated.title}" is available. Upload screenshot evidence when you finish.`
+            : `A new hands-on lab "${generated.title}" is available in your course.`,
           link: `/labs/${labId}`,
         });
       }
@@ -639,9 +667,17 @@ router.post(
   validateBody(labSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
-    // Practice labs are open to every learner, so they never belong to a course.
-    const labCourseId = b.isPractice ? null : b.courseId ?? null;
-    const labLessonId = b.isPractice ? null : b.lessonId ?? null;
+    const labMode = b.labMode === 'real' ? 'real' : 'practice';
+    if (labMode === 'real' && b.isPractice) {
+      throw badRequest('A real lab is graded, so it cannot be open to all learners.');
+    }
+    if (labMode === 'real' && !b.taskBrief?.trim()) {
+      throw badRequest('Add the task brief (the question learners must solve) for a real lab.');
+    }
+    // Open-to-all labs are not tied to a course.
+    const isOpenLab = labMode === 'practice' && Boolean(b.isPractice);
+    const labCourseId = isOpenLab ? null : b.courseId ?? null;
+    const labLessonId = isOpenLab ? null : b.lessonId ?? null;
     if (labCourseId) {
       const { rows } = await query('SELECT id, instructor_id FROM courses WHERE id = $1', [labCourseId]);
       if (!rows[0]) throw badRequest('Course not found.');
@@ -663,13 +699,15 @@ router.post(
     const { rows } = await query(
       `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
          submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-         initial_cwd, container_image, network_enabled, status, created_by, is_practice, due_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+         initial_cwd, container_image, network_enabled, status, created_by, is_practice, due_at,
+         lab_mode, task_brief, min_evidence)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
       [slug, b.title, labCourseId, labLessonId, b.summary, b.description,
        b.objectives, b.submissionRequirements, b.difficulty, b.estimatedMinutes, b.terminalWelcome,
        JSON.stringify(b.initialFiles), b.initialCwd, b.containerImage || null,
-       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, b.isPractice,
-       labCourseId ? b.dueAt ?? null : null]
+       'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, isOpenLab,
+       labCourseId ? b.dueAt ?? null : null, labMode, b.taskBrief || '',
+       labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1]
     );
     res.status(201).json({ lab: rows[0] });
   })
@@ -683,8 +721,20 @@ router.put(
     const lab = await getLab(req.params.id, { staff: true });
     await assertLabManager(req.user, lab);
     const b = req.body;
-    const nextIsPractice = 'isPractice' in b ? Boolean(b.isPractice) : Boolean(lab.is_practice);
-    // Practice labs are open to every learner, so they never belong to a course.
+    const nextMode = 'labMode' in b
+      ? (b.labMode === 'real' ? 'real' : 'practice')
+      : (lab.lab_mode === 'real' ? 'real' : 'practice');
+    if (nextMode === 'real' && b.isPractice === true) {
+      throw badRequest('A real lab is graded, so it cannot be open to all learners.');
+    }
+    // Real labs are always graded. Open-to-all guided labs are not tied to a course.
+    const nextIsPractice = nextMode === 'real'
+      ? false
+      : ('isPractice' in b ? Boolean(b.isPractice) : Boolean(lab.is_practice));
+    const nextTaskBrief = 'taskBrief' in b ? b.taskBrief : (lab.task_brief || '');
+    if (nextMode === 'real' && !String(nextTaskBrief || '').trim()) {
+      throw badRequest('Add the task brief (the question learners must solve) for a real lab.');
+    }
     const nextCourseId = nextIsPractice ? null : 'courseId' in b ? b.courseId ?? null : lab.course_id;
     const nextLessonId = nextIsPractice ? null : 'lessonId' in b ? b.lessonId ?? null : lab.lesson_id;
     const setCourse = nextIsPractice || 'courseId' in b;
@@ -720,8 +770,11 @@ router.put(
          network_enabled = COALESCE($16, network_enabled),
          objectives = COALESCE($18, objectives),
          submission_requirements = COALESCE($19, submission_requirements),
-         is_practice = COALESCE($20, is_practice),
-         due_at = CASE WHEN $21::boolean THEN $22::timestamptz ELSE due_at END
+         is_practice = $20,
+         due_at = CASE WHEN $21::boolean THEN $22::timestamptz ELSE due_at END,
+         lab_mode = $23,
+         task_brief = CASE WHEN $24::boolean THEN $25 ELSE task_brief END,
+         min_evidence = COALESCE($26, min_evidence)
        WHERE id = $17 RETURNING *`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.difficulty ?? null,
@@ -730,8 +783,13 @@ router.put(
         setCourse, nextCourseId, setLesson, nextLessonId,
         'containerImage' in b, b.containerImage || null, 'networkEnabled' in b ? b.networkEnabled : null,
         lab.id, b.objectives ?? null, b.submissionRequirements ?? null,
-        'isPractice' in b ? b.isPractice : null,
+        nextIsPractice,
         'dueAt' in b, nextIsPractice ? null : b.dueAt ?? null,
+        nextMode,
+        'taskBrief' in b, nextTaskBrief || '',
+        nextMode === 'real'
+          ? Math.max(1, Number('minEvidence' in b ? b.minEvidence : lab.min_evidence ?? 1))
+          : ('minEvidence' in b ? Number(b.minEvidence) : null),
       ]
     );
     res.json({ lab: rows[0] });
@@ -786,6 +844,9 @@ router.post(
   asyncHandler(async (req, res) => {
     const lab = await getLab(req.params.id, { staff: true });
     await assertLabManager(req.user, lab);
+    if (lab.lab_mode === 'real') {
+      throw badRequest('Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
+    }
     const b = req.body;
     let position = b.position;
     if (position == null) {
@@ -809,13 +870,16 @@ router.put(
   validateBody(stepSchema.partial()),
   asyncHandler(async (req, res) => {
     const { rows } = await query(
-      `SELECT s.*, l.created_by, l.course_id FROM lab_steps s
+      `SELECT s.*, l.created_by, l.course_id, l.lab_mode FROM lab_steps s
        JOIN labs l ON l.id = s.lab_id WHERE s.id = $1`,
       [req.params.stepId]
     );
     const step = rows[0];
     if (!step) throw notFound('Step not found.');
     await assertLabManager(req.user, { course_id: step.course_id, created_by: step.created_by });
+    if (step.lab_mode === 'real') {
+      throw badRequest('Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
+    }
     const b = req.body;
     const { rows: updated } = await query(
       `UPDATE lab_steps SET

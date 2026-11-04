@@ -18,6 +18,7 @@ import {
 import {
   IconArrowLeft,
   IconCheckCircle,
+  IconClipboard,
   IconEdit,
   IconEye,
   IconPlus,
@@ -25,7 +26,8 @@ import {
   IconTerminal,
   IconTrash,
 } from '../../components/icons';
-import { DIFFICULTIES } from '../../lib/constants';
+import PasteStepsModal from '../../components/lab/PasteStepsModal';
+import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
 
 const verificationTone = { command: 'brand', output: 'accent', manual: 'amber' };
 
@@ -52,6 +54,7 @@ export default function LabEditorPage() {
   const [error, setError] = useState('');
   const [stepModal, setStepModal] = useState(null);
   const [stepSaving, setStepSaving] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
 
   const load = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -71,6 +74,9 @@ export default function LabEditorPage() {
         initialCwd: response.lab.initial_cwd || '/home/student',
         containerImage: response.lab.container_image || '',
         networkEnabled: Boolean(response.lab.network_enabled),
+        labMode: response.lab.lab_mode === 'real' ? 'real' : 'practice',
+        taskBrief: response.lab.task_brief || '',
+        minEvidence: response.lab.min_evidence ?? 1,
         isPractice: Boolean(response.lab.is_practice),
         status: response.lab.status || 'draft',
       });
@@ -89,25 +95,31 @@ export default function LabEditorPage() {
 
   const update = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
 
+  const buildPayload = (overrides = {}) => ({
+    title: form.title,
+    summary: form.summary,
+    description: form.description,
+    objectives: form.objectives,
+    submissionRequirements: form.submissionRequirements,
+    difficulty: form.difficulty,
+    estimatedMinutes: Number(form.estimatedMinutes) || 30,
+    terminalWelcome: form.terminalWelcome,
+    initialCwd: form.initialCwd,
+    containerImage: form.containerImage.trim() || null,
+    networkEnabled: Boolean(form.networkEnabled),
+    labMode: form.labMode,
+    taskBrief: form.taskBrief,
+    minEvidence: Number(form.minEvidence) || 1,
+    isPractice: form.labMode === 'real' ? false : Boolean(form.isPractice),
+    status: form.status,
+    ...overrides,
+  });
+
   const saveLab = async (event) => {
     event.preventDefault();
     setSaving(true);
     try {
-      await api.put(`/labs/${id}`, {
-        title: form.title,
-        summary: form.summary,
-        description: form.description,
-        objectives: form.objectives,
-        submissionRequirements: form.submissionRequirements,
-        difficulty: form.difficulty,
-        estimatedMinutes: Number(form.estimatedMinutes) || 30,
-        terminalWelcome: form.terminalWelcome,
-        initialCwd: form.initialCwd,
-        containerImage: form.containerImage.trim() || null,
-        networkEnabled: Boolean(form.networkEnabled),
-        isPractice: Boolean(form.isPractice),
-        status: form.status,
-      });
+      await api.put(`/labs/${id}`, buildPayload());
       toast.success('Lab saved.');
       await load({ silent: true });
     } catch (err) {
@@ -121,7 +133,9 @@ export default function LabEditorPage() {
     const next = data.lab.status === 'published' ? 'draft' : 'published';
     setSaving(true);
     try {
-      await api.put(`/labs/${id}`, { status: next });
+      // Save the form too, so a freshly written task brief is part of the
+      // published lab instead of being discarded by a status-only update.
+      await api.put(`/labs/${id}`, buildPayload({ status: next }));
       toast.success(next === 'published' ? 'Lab published.' : 'Lab unpublished.');
       await load({ silent: true });
     } catch (err) {
@@ -235,7 +249,8 @@ export default function LabEditorPage() {
   }
 
   const { lab, stats } = data;
-  const canPublish = steps.length > 0;
+  const isRealMode = form.labMode === 'real';
+  const canPublish = isRealMode ? form.taskBrief.trim().length >= 10 : steps.length > 0;
 
   return (
     <div className="space-y-5">
@@ -247,7 +262,10 @@ export default function LabEditorPage() {
           <h1 className="mt-1 flex flex-wrap items-center gap-2 font-display text-2xl font-semibold">
             {lab.title}
             <Badge tone={lab.status === 'published' ? 'emerald' : 'amber'}>{lab.status}</Badge>
-            {lab.is_practice && <Badge tone="brand">Practice</Badge>}
+            <Badge tone={LAB_MODES[lab.lab_mode]?.tone || 'sky'}>
+              {LAB_MODES[lab.lab_mode]?.label || 'Guided practice'}
+            </Badge>
+            {lab.is_practice && <Badge tone="brand">Open to all</Badge>}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
             <span>
@@ -281,8 +299,21 @@ export default function LabEditorPage() {
       </div>
 
       {!canPublish && (
-        <Alert tone="warning" title="Add at least one step">
-          Learners can't start a lab without steps. Publish it once the checklist is ready.
+        isRealMode ? (
+          <Alert tone="warning" title="Add the task brief">
+            A real lab is a question-only assessment. Write the task learners must solve before publishing it.
+          </Alert>
+        ) : (
+          <Alert tone="warning" title="Add at least one step">
+            Learners can't start a guided lab without steps. Publish it once the checklist is ready.
+          </Alert>
+        )
+      )}
+
+      {isRealMode && steps.length > 0 && (
+        <Alert tone="info" title="Guided steps are hidden">
+          This lab still has {steps.length} step{steps.length === 1 ? '' : 's'} from guided mode. Real labs hide all steps
+          and hints from learners; switch back to guided practice to edit them.
         </Alert>
       )}
 
@@ -296,40 +327,97 @@ export default function LabEditorPage() {
           <p className="mt-1 font-display text-2xl font-semibold text-white">{stats?.learners ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">Steps completed</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-white">{stats?.steps_completed ?? 0}</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">{isRealMode ? 'Delivery' : 'Steps completed'}</p>
+          <p className="mt-1 font-display text-2xl font-semibold text-white">
+            {isRealMode ? 'Question' : stats?.steps_completed ?? 0}
+          </p>
         </Card>
       </div>
 
       <Card className="p-6">
         <h2 className="font-display text-lg font-semibold">Lab settings</h2>
         <form onSubmit={saveLab} className="mt-4 space-y-4">
+          <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
+            <Select
+              label="Lab mode"
+              value={form.labMode}
+              onChange={(event) => setForm((current) => ({
+                ...current,
+                labMode: event.target.value,
+                isPractice: event.target.value === 'real' ? false : current.isPractice,
+              }))}
+              hint={LAB_MODES[form.labMode]?.description}
+            >
+              <option value="practice">Guided practice — steps, hints and automatic verification</option>
+              <option value="real">Real assessment — question only, screenshot evidence</option>
+            </Select>
+          </div>
           <Input label="Title" value={form.title} onChange={update('title')} required />
           <Textarea label="Summary" rows={2} value={form.summary} onChange={update('summary')} />
-          <Textarea label="Description (markdown)" rows={5} value={form.description} onChange={update('description')} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Textarea
-              label="Learning objectives"
-              rows={4}
-              value={form.objectives}
-              onChange={update('objectives')}
-              placeholder={'- Navigate the Linux filesystem\n- Inspect file permissions\n- Explain the principle of least privilege'}
-              hint="One objective per line. Shown to learners before they start the lab."
-            />
-            <Textarea
-              label="Submission requirements"
-              rows={4}
-              value={form.submissionRequirements}
-              onChange={update('submissionRequirements')}
-              placeholder={'- Screenshot proving each step\n- A short solution article explaining your approach'}
-              hint={
-                form.isPractice
-                  ? 'Practice labs are not graded and require no practical report, so this text is not shown.'
-                  : 'What learners must include in the practical report for this lab.'
-              }
-              disabled={Boolean(form.isPractice)}
-            />
-          </div>
+          <Textarea
+            label={isRealMode ? 'Context / scenario (optional)' : 'Description (markdown)'}
+            rows={5}
+            value={form.description}
+            onChange={update('description')}
+            hint={isRealMode ? 'Extra background shown on the lab page. The question itself lives in the task brief below.' : undefined}
+          />
+          {isRealMode && (
+            <>
+              <Textarea
+                label="Task brief / question"
+                rows={8}
+                value={form.taskBrief}
+                onChange={update('taskBrief')}
+                required
+                placeholder={'## Your task\nInvestigate the suspicious login attempts in ~/practice/access.log and report:\n- the attacking IP address\n- how many attempts were made\n- whether any attempt succeeded'}
+                hint="This is the only task text learners see. Do not include step-by-step instructions, commands or hints."
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Minimum screenshots required"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={form.minEvidence}
+                  onChange={update('minEvidence')}
+                  hint="Submission is blocked until the learner attaches this many screenshots."
+                />
+                <Textarea
+                  label="Submission requirements"
+                  rows={4}
+                  value={form.submissionRequirements}
+                  onChange={update('submissionRequirements')}
+                  placeholder={'- Screenshot of the evidence you collected\n- A short note explaining your findings'}
+                  hint="Shown to learners together with the task brief."
+                />
+              </div>
+            </>
+          )}
+          {!isRealMode && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Textarea
+                label="Learning objectives"
+                rows={4}
+                value={form.objectives}
+                onChange={update('objectives')}
+                placeholder={'- Navigate the Linux filesystem\n- Inspect file permissions\n- Explain the principle of least privilege'}
+                hint="One objective per line. Shown to learners before they start the lab."
+              />
+              <Textarea
+                label="Submission requirements"
+                rows={4}
+                value={form.submissionRequirements}
+                onChange={update('submissionRequirements')}
+                placeholder={'- Screenshot proving each step\n- A short solution article explaining your approach'}
+                hint={
+                  form.isPractice
+                    ? 'Open labs are not graded and require no practical report, so this text is not shown.'
+                    : 'What learners must include in the practical report for this lab.'
+                }
+                disabled={Boolean(form.isPractice)}
+              />
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-3">
             <Select label="Difficulty" value={form.difficulty} onChange={update('difficulty')}>
               {Object.entries(DIFFICULTIES).map(([key, value]) => (
@@ -363,33 +451,41 @@ export default function LabEditorPage() {
               />
             </div>
           </div>
-          <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
-            <Checkbox
-              label="Practice lab — open to every learner, not graded"
-              checked={form.isPractice}
-              onChange={(event) => setForm((current) => ({ ...current, isPractice: event.target.checked }))}
-            />
-            <p className="mt-1.5 text-[11px] leading-5 text-slate-400">
-              Practice labs skip course enrollment, practical reports and grading. Learners can start as many sessions as
-              they like. The lab still runs in a real, isolated Docker container.
-            </p>
-          </div>
+          {!isRealMode && (
+            <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
+              <Checkbox
+                label="Open to all learners (no enrollment, not graded)"
+                checked={form.isPractice}
+                onChange={(event) => setForm((current) => ({ ...current, isPractice: event.target.checked }))}
+              />
+              <p className="mt-1.5 text-[11px] leading-5 text-slate-400">
+                Open labs skip course enrollment, practical reports and grading. Learners can start as many sessions as
+                they like. The lab still runs in a real, isolated Docker container.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end">
             <Button type="submit" loading={saving}>Save lab settings</Button>
           </div>
         </form>
       </Card>
 
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-          <div>
-            <h2 className="font-display text-base font-semibold">Steps</h2>
-            <p className="text-[11px] text-slate-500">Commands are matched exactly; output patterns are case-insensitive regular expressions.</p>
+      {!isRealMode ? (
+        <Card className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+            <div>
+              <h2 className="font-display text-base font-semibold">Steps</h2>
+              <p className="text-[11px] text-slate-500">Commands are matched exactly; output patterns are case-insensitive regular expressions.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setPasteOpen(true)}>
+                <IconClipboard size={13} /> Paste steps
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => openStep(null)}>
+                <IconPlus size={13} /> Add step
+              </Button>
+            </div>
           </div>
-          <Button size="sm" variant="secondary" onClick={() => openStep(null)}>
-            <IconPlus size={13} /> Add step
-          </Button>
-        </div>
 
         {steps.length === 0 ? (
           <div className="p-6">
@@ -436,7 +532,35 @@ export default function LabEditorPage() {
             ))}
           </ol>
         )}
-      </Card>
+        </Card>
+      ) : (
+        <Card className="p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-base font-semibold">Question-only assessment</h2>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-slate-500">
+                Real labs hide steps, hints and progress from learners. They read the task brief, solve the challenge in
+                the terminal and upload screenshot evidence. You review the evidence from the lab submissions queue.
+              </p>
+            </div>
+            <Badge tone="rose">Real</Badge>
+          </div>
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs leading-6 text-slate-400">
+            <p><span className="font-medium text-slate-200">Task brief:</span> {form.taskBrief.trim() ? 'ready' : 'not written yet'}</p>
+            <p><span className="font-medium text-slate-200">Minimum evidence:</span> {Math.max(1, Number(form.minEvidence) || 1)} screenshot{(Math.max(1, Number(form.minEvidence) || 1)) === 1 ? '' : 's'}</p>
+            {steps.length > 0 && (
+              <p className="text-amber-300/80">{steps.length} guided step{steps.length === 1 ? '' : 's'} are stored but hidden from learners.</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <PasteStepsModal
+        open={pasteOpen}
+        onClose={() => setPasteOpen(false)}
+        labId={id}
+        onImported={() => load({ silent: true })}
+      />
 
       <Modal
         open={Boolean(stepModal)}

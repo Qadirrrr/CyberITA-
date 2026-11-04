@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 import api, { getAccessToken } from '../../lib/api';
-import { IconCheckCircle, IconCopy, IconRefresh, IconTerminal } from '../icons';
+import { IconCheck, IconCopy, IconRefresh, IconTerminal } from '../icons';
 import { IconButton } from '../ui';
 
-function historyToLines(history = []) {
-  const lines = [];
-  for (const entry of history) {
-    if (entry.role === 'user') lines.push({ type: 'command', text: entry.text });
-    else if (entry.role === 'output' && entry.text) lines.push({ type: 'output', text: entry.text, exitCode: entry.exitCode });
-  }
-  return lines;
-}
-
-function promptLabel(cwd = '/home/student') {
+function promptFor(identity, cwd) {
   const short = cwd.startsWith('/home/student') ? cwd.replace('/home/student', '~') : cwd;
-  return short || '/';
+  return `${identity.shellUser}@${identity.hostname}:${short || '/'}$ `;
 }
 
 function normalizeIdentity(student) {
@@ -25,30 +19,12 @@ function normalizeIdentity(student) {
     student?.shellUser ||
     (name ? String(name).toLowerCase().trim().split(' ')[0].replace(/[^a-z0-9_-]/g, '').slice(0, 24) : '') ||
     (id ? `student-${id}` : 'student');
-
   return {
     id,
     name,
     shellUser: shellUser || 'student',
     hostname: student?.hostname || 'cyberita-lab',
   };
-}
-
-function identityBanner(identity, practice = false) {
-  const displayName = identity.name || identity.shellUser || 'Student';
-  const id = identity.id ? ` (student #${identity.id})` : '';
-  if (practice) {
-    return `Signed in as ${displayName}${id}\nIn-browser practice shell. Type help for commands.`;
-  }
-  return `Signed in as ${displayName}${id}\nPrivate Linux container with root access. Type help for commands.`;
-}
-
-function practiceWelcome(text = '') {
-  // Labs authored before the container-less practice mode may still carry a
-  // "real Linux container" welcome message; keep the copy accurate.
-  return String(text)
-    .replace(/This is a real Linux container/gi, 'This is an in-browser practice shell')
-    .replace(/Welcome to "([^"]+)"\.\s*/i, 'Welcome to $1.\n');
 }
 
 export default function LabTerminal({
@@ -63,56 +39,254 @@ export default function LabTerminal({
   onServerState,
 }) {
   const [identity, setIdentity] = useState(() => normalizeIdentity(student));
-  const welcomeText = practice ? practiceWelcome(welcome) : welcome;
-
-  useEffect(() => {
-    if (student) {
-      setIdentity(normalizeIdentity(student));
-    }
-  }, [student]);
-
-  const [lines, setLines] = useState(() => {
-    const initial = [];
-    const banner = identityBanner(normalizeIdentity(student), practice);
-    if (banner) initial.push({ type: 'system', text: banner });
-    if (welcomeText) initial.push({ type: 'system', text: welcomeText });
-    return [...initial, ...historyToLines(initialHistory)];
-  });
-  const [input, setInput] = useState('');
-  const [cwd, setCwd] = useState('/home/student');
   const [mode, setMode] = useState('connecting');
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [cwd, setCwd] = useState('/home/student');
+
+  const containerRef = useRef(null);
+  const termRef = useRef(null);
+  const fitRef = useRef(null);
   const socketRef = useRef(null);
-  const scrollRef = useRef(null);
-  const inputRef = useRef(null);
+  const modeRef = useRef('connecting');
+  const busyRef = useRef(false);
+  const identityRef = useRef(identity);
+  const cwdRef = useRef(cwd);
   const historyRef = useRef([]);
   const historyIndex = useRef(-1);
+  const inputBufferRef = useRef('');
+  const receivedChunkRef = useRef(false);
+  const welcomeRef = useRef(welcome);
+  const studentRef = useRef(student);
   const attachedRef = useRef(false);
-  const modeRef = useRef('connecting');
+  const copiedTimer = useRef(null);
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
+
+  useEffect(() => { identityRef.current = identity; }, [identity]);
+  useEffect(() => { cwdRef.current = cwd; }, [cwd]);
+  useEffect(() => { busyRef.current = busy; }, [busy]);
+  useEffect(() => { welcomeRef.current = welcome; }, [welcome]);
+
+  useEffect(() => {
+    if (student) setIdentity(normalizeIdentity(student));
+  }, [student]);
 
   const setConnectionMode = (next) => {
     modeRef.current = next;
     setMode(next);
   };
 
-  const bottomRef = useRef(null);
-
-  const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-    bottomRef.current?.scrollIntoView({ block: 'nearest' });
-  }, []);
-
+  // Initialize xterm
   useEffect(() => {
-    scrollToBottom();
-    const frame = requestAnimationFrame(scrollToBottom);
-    return () => cancelAnimationFrame(frame);
-  }, [lines, busy, cwd, scrollToBottom]);
+    if (!containerRef.current) return undefined;
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 13,
+      lineHeight: 1.25,
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Menlo', monospace",
+      theme: {
+        background: '#0a0e14',
+        foreground: '#e6edf3',
+        cursor: '#22d3ee',
+        cursorAccent: '#0a0e14',
+        selectionBackground: 'rgba(34,211,238,0.25)',
+        black: '#0a0e14',
+        red: '#ff7b72',
+        green: '#3fb950',
+        yellow: '#d29922',
+        blue: '#58a6ff',
+        magenta: '#bc8cff',
+        cyan: '#39c5cf',
+        white: '#b1bac4',
+        brightBlack: '#484f58',
+        brightRed: '#ffa198',
+        brightGreen: '#56d364',
+        brightYellow: '#e3b341',
+        brightBlue: '#79c0ff',
+        brightMagenta: '#d2a8ff',
+        brightCyan: '#56d4dd',
+        brightWhite: '#f0f6fc',
+      },
+      scrollback: 10000,
+      convertEol: true,
+      allowProposedApi: true,
+    });
+    const fit = new FitAddon();
+    term.loadAddon(fit);
+    term.open(containerRef.current);
+    fit.fit();
+    termRef.current = term;
+    fitRef.current = fit;
 
+    const writePrompt = () => {
+      term.write(promptFor(identityRef.current, cwdRef.current));
+    };
+
+    // custom key handling for copy/paste + history
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        const sel = term.getSelection();
+        if (sel) {
+          navigator.clipboard?.writeText(sel).catch(() => {});
+          return false;
+        }
+      }
+      if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        navigator.clipboard?.readText().then((t) => {
+          if (t) processInput(t);
+        }).catch(() => {});
+        return false;
+      }
+      if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+        term.clear();
+        term.write(promptFor(identityRef.current, cwdRef.current) + inputBufferRef.current);
+        return false;
+      }
+      return true;
+    });
+
+    const processInput = (data) => {
+      if (busyRef.current) return;
+      const term = termRef.current;
+      if (!term) return;
+      for (let i = 0; i < data.length; i += 1) {
+        const ch = data[i];
+        if (ch === '\r' || ch === '\n') {
+          const cmd = inputBufferRef.current;
+          inputBufferRef.current = '';
+          term.write('\r\n');
+          if (cmd.trim()) {
+            submitCommand(cmd);
+          } else {
+            term.write(promptFor(identityRef.current, cwdRef.current));
+          }
+        } else if (ch === '\x7f' || ch === '\b') {
+          if (inputBufferRef.current.length > 0) {
+            inputBufferRef.current = inputBufferRef.current.slice(0, -1);
+            term.write('\b \b');
+          }
+        } else if (ch === '\x03') {
+          if (inputBufferRef.current.length > 0) {
+            inputBufferRef.current = '';
+            term.write('^C\r\n' + promptFor(identityRef.current, cwdRef.current));
+          }
+        } else if (ch === '\x1b') {
+          // escape sequences
+          if (data[i + 1] === '[') {
+            const code = data[i + 2];
+            if (code === 'A') {
+              // arrow up
+              if (historyRef.current.length > 0) {
+                historyIndex.current = Math.min(historyRef.current.length - 1, historyIndex.current + 1);
+                const newVal = historyRef.current[historyIndex.current] || '';
+                // replace current line
+                term.write('\r\x1b[K' + promptFor(identityRef.current, cwdRef.current) + newVal);
+                inputBufferRef.current = newVal;
+              }
+              i += 2;
+            } else if (code === 'B') {
+              historyIndex.current = Math.max(-1, historyIndex.current - 1);
+              const newVal = historyIndex.current === -1 ? '' : (historyRef.current[historyIndex.current] || '');
+              term.write('\r\x1b[K' + promptFor(identityRef.current, cwdRef.current) + newVal);
+              inputBufferRef.current = newVal;
+              i += 2;
+            }
+          }
+        } else if (ch < ' ' ) {
+          // ignore other control chars
+        } else {
+          inputBufferRef.current += ch;
+          term.write(ch);
+        }
+      }
+    };
+
+    const submitCommand = (cmd) => {
+      const term = termRef.current;
+      if (!term) return;
+      historyRef.current = [cmd, ...historyRef.current.filter((x) => x !== cmd)].slice(0, 100);
+      historyIndex.current = -1;
+
+      if (cmd.trim() === 'clear' || cmd.trim() === 'cls') {
+        term.clear();
+        term.write(promptFor(identityRef.current, cwdRef.current));
+        return;
+      }
+
+      busyRef.current = true;
+      setBusy(true);
+      receivedChunkRef.current = false;
+
+      const socket = socketRef.current;
+      if (modeRef.current === 'ws' && socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'lab.exec', sessionId, command: cmd }));
+        return;
+      }
+
+      // REST fallback
+      runFallback(cmd);
+    };
+
+    const runFallback = async (cmd) => {
+      const term = termRef.current;
+      try {
+        const { data } = await api.post(`/labs/sessions/${sessionId}/exec`, { command: cmd });
+        if (term) {
+          if (!receivedChunkRef.current && data.output) term.write(data.output);
+          if (data.cwd) {
+            setCwd(data.cwd);
+            cwdRef.current = data.cwd;
+          }
+          if (data.clear) term.clear();
+          term.write('\r\n' + promptFor(identityRef.current, cwdRef.current));
+        }
+        if (data.completedSteps?.length || data.completion) onProgressRef.current?.(data);
+      } catch (error) {
+        const message = error?.response?.data?.error?.message || error?.message || 'Command failed.';
+        if (term) term.write('\r\n' + message + '\r\n' + promptFor(identityRef.current, cwdRef.current));
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+        receivedChunkRef.current = false;
+      }
+    };
+
+    // expose helpers via ref for WS handlers
+    termRef.current.__submitCommand = submitCommand;
+    termRef.current.__runFallback = runFallback;
+    termRef.current.__processInput = processInput;
+    termRef.current.__writePrompt = writePrompt;
+
+    term.onData((data) => {
+      if (busyRef.current) return;
+      processInput(data);
+    });
+
+    // initial prompt
+    term.write(promptFor(identityRef.current, cwdRef.current));
+
+    const onResize = () => { try { fit.fit(); } catch { /* ignore */ } };
+    window.addEventListener('resize', onResize);
+    const ro = new ResizeObserver(onResize);
+    if (containerRef.current) ro.observe(containerRef.current);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      ro.disconnect();
+      try { term.dispose(); } catch { /* ignore */ }
+      termRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  // WebSocket connection (same as before, but writes to xterm)
   useEffect(() => {
     if (status !== 'running') {
       setConnectionMode('offline');
+      const t = termRef.current;
+      if (t) t.write('\r\n[session not running]\r\n');
       return undefined;
     }
 
@@ -121,7 +295,6 @@ export default function LabTerminal({
     const token = getAccessToken();
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     let socket;
-
     try {
       socket = new WebSocket(`${protocol}://${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`);
       socketRef.current = socket;
@@ -131,9 +304,7 @@ export default function LabTerminal({
     }
 
     const fallbackTimer = window.setTimeout(() => {
-      if (!attachedRef.current && !disposed) {
-        setConnectionMode('rest');
-      }
+      if (!attachedRef.current && !disposed) setConnectionMode('rest');
     }, 4000);
 
     socket.addEventListener('open', () => {
@@ -142,38 +313,64 @@ export default function LabTerminal({
 
     socket.addEventListener('message', (event) => {
       let message;
-      try {
-        message = JSON.parse(event.data);
-      } catch {
-        return;
-      }
+      try { message = JSON.parse(event.data); } catch { return; }
+      const term = termRef.current;
       if (message.type === 'lab.attached') {
         attachedRef.current = true;
         window.clearTimeout(fallbackTimer);
         setConnectionMode('ws');
-        setCwd(message.cwd || '/home/student');
-        if (message.student) setIdentity(normalizeIdentity(message.student));
-        setLines(() => {
-          const next = [];
-          const banner = identityBanner(normalizeIdentity(message.student || student), practice);
-          if (banner) next.push({ type: 'system', text: banner });
-          if (message.welcome) next.push({ type: 'system', text: practice ? practiceWelcome(message.welcome) : message.welcome });
-          return [...next, ...historyToLines(message.history || [])];
-        });
+        const newCwd = message.cwd || '/home/student';
+        setCwd(newCwd);
+        cwdRef.current = newCwd;
+        if (message.student) {
+          const id = normalizeIdentity(message.student);
+          setIdentity(id);
+          identityRef.current = id;
+        }
+        if (term) {
+          term.clear();
+          const idn = identityRef.current;
+          const banner = `Signed in as ${idn.name || idn.shellUser}${idn.id ? ` (student #${idn.id})` : ''}\n${practice ? 'In-browser practice shell. Type help for commands.' : 'Private Linux container with root access. Type help for commands.'}`;
+          if (banner) term.writeln(banner);
+          if (message.welcome) term.writeln(practice ? message.welcome.replace(/This is a real Linux container/gi, 'This is an in-browser practice shell') : message.welcome);
+          for (const entry of message.history || []) {
+            if (entry.role === 'user') {
+              term.write(promptFor(identityRef.current, entry.cwd || cwdRef.current) + (entry.text || '') + '\r\n');
+            } else if (entry.role === 'output' && entry.text) {
+              term.write(entry.text.endsWith('\n') ? entry.text : entry.text + '\r\n');
+            }
+          }
+          term.write(promptFor(identityRef.current, cwdRef.current));
+        }
         onServerState?.(message);
+      } else if (message.type === 'lab.output.chunk') {
+        receivedChunkRef.current = true;
+        if (term && message.chunk) term.write(message.chunk);
       } else if (message.type === 'lab.output') {
+        if (term) {
+          if (!receivedChunkRef.current && message.output) {
+            term.write(message.output.endsWith('\n') ? message.output : message.output + '\r\n');
+          }
+          receivedChunkRef.current = false;
+          if (message.cwd) {
+            setCwd(message.cwd);
+            cwdRef.current = message.cwd;
+          }
+          if (message.clear) term.clear();
+          term.write('\r\n' + promptFor(identityRef.current, cwdRef.current));
+        }
+        busyRef.current = false;
         setBusy(false);
-        if (message.cwd) setCwd(message.cwd);
-        if (message.clear) {
-          setLines([]);
-        } else if (message.output) {
-          setLines((current) => [...current, { type: 'output', text: message.output, exitCode: message.exitCode }]);
+        if (message.completedSteps?.length || message.completion) {
+          // progress handled via separate lab.progress; noop here
         }
       } else if (message.type === 'lab.progress') {
-        onProgress?.(message);
+        onProgressRef.current?.(message);
       } else if (message.type === 'error') {
+        busyRef.current = false;
         setBusy(false);
-        setLines((current) => [...current, { type: 'error', text: message.message || 'Command failed.' }]);
+        receivedChunkRef.current = false;
+        if (term) term.write('\r\n' + (message.message || 'Command failed.') + '\r\n' + promptFor(identityRef.current, cwdRef.current));
       } else if (message.type === 'auth.error') {
         setConnectionMode('rest');
         socket.close();
@@ -186,6 +383,7 @@ export default function LabTerminal({
 
     socket.addEventListener('close', () => {
       window.clearTimeout(fallbackTimer);
+      busyRef.current = false;
       setBusy(false);
       if (!disposed && modeRef.current === 'ws') setConnectionMode('rest');
     });
@@ -193,211 +391,86 @@ export default function LabTerminal({
     return () => {
       disposed = true;
       window.clearTimeout(fallbackTimer);
-      try {
-        socket.close();
-      } catch {
-        /* ignore */
-      }
+      try { socket.close(); } catch { /* ignore */ }
       socketRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, status]);
 
-  const runFallback = useCallback(
-    async (command) => {
-      try {
-        const { data } = await api.post(`/labs/sessions/${sessionId}/exec`, { command });
-        if (data.cwd) setCwd(data.cwd);
-        if (data.clear) {
-          setLines([]);
-        } else if (data.output) {
-          setLines((current) => [...current, { type: 'output', text: data.output, exitCode: data.exitCode }]);
-        }
-        if (data.completedSteps?.length || data.completion) onProgress?.(data);
-      } catch (error) {
-        const message = error?.response?.data?.error?.message || error?.message || 'Command failed.';
-        setLines((current) => [...current, { type: 'error', text: message }]);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [sessionId, onProgress]
-  );
-
-  const runCommand = (raw) => {
-    const command = raw.trim();
-    if (!command || busy || status !== 'running') return;
-    setLines((current) => [...current, { type: 'command', text: command }]);
-    setInput('');
-    historyRef.current = [command, ...historyRef.current.filter((item) => item !== command)].slice(0, 100);
-    historyIndex.current = -1;
-
-    if (command === 'clear' || command === 'cls') {
-      setLines([]);
-      return;
-    }
-
-    const socket = socketRef.current;
-    if (modeRef.current === 'ws' && socket && socket.readyState === WebSocket.OPEN) {
-      setBusy(true);
-      socket.send(JSON.stringify({ type: 'lab.exec', sessionId, command }));
-      return;
-    }
-
-    setBusy(true);
-    runFallback(command);
-  };
-
-  const onKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      runCommand(input);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      if (!historyRef.current.length) return;
-      historyIndex.current = Math.min(historyRef.current.length - 1, historyIndex.current + 1);
-      setInput(historyRef.current[historyIndex.current] || '');
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      historyIndex.current = Math.max(-1, historyIndex.current - 1);
-      setInput(historyIndex.current === -1 ? '' : historyRef.current[historyIndex.current] || '');
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
-      event.preventDefault();
-      setLines([]);
-    }
-  };
-
-  const copyOutput = async () => {
-    const text = lines
-      .map((line) => (line.type === 'command' ? `# ${line.text}` : line.text))
-      .join('\n');
+  // copy helpers
+  const copyAll = useCallback(async () => {
+    const term = termRef.current;
+    if (!term) return;
+    term.selectAll();
+    const text = term.getSelection();
+    term.clearSelection();
     try {
-      await navigator.clipboard.writeText(text);
-      setLines((current) => [...current, { type: 'system', text: 'Terminal output copied to clipboard.' }]);
-    } catch {
-      /* clipboard unavailable */
-    }
-  };
+      if (text) await navigator.clipboard?.writeText(text);
+    } catch { /* ignore */ }
+    setCopied(true);
+    if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
+    copiedTimer.current = window.setTimeout(() => setCopied(false), 1400);
+  }, []);
 
-  const promptChar = '#';
+  const clearTerminal = useCallback(() => {
+    const term = termRef.current;
+    if (term) {
+      term.clear();
+      term.write(promptFor(identityRef.current, cwdRef.current) + inputBufferRef.current);
+    }
+  }, []);
+
+  // focus on mount
+  useEffect(() => {
+    const t = setTimeout(() => termRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div className={`terminal-surface flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-[#05070d] text-zinc-200 shadow-2xl dark:border-white/10 ${className}`}>
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-[#0b1220] px-3 py-2.5">
+    <div className={`terminal-window terminal-surface flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] text-zinc-100 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6)] ${className}`}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/5 bg-gradient-to-b from-[#161b22] to-[#0d1117] px-3 py-2">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
+          <span className="h-3 w-3 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
+          <span className="h-3 w-3 rounded-full bg-[#febc2e] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
+          <span className="h-3 w-3 rounded-full bg-[#28c840] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
         </span>
-        <span className="ml-1.5 flex min-w-0 items-center gap-1.5 font-mono text-xs text-zinc-400">
-          <IconTerminal size={12} />
-          <span className="truncate">{identity.shellUser}@{identity.hostname}</span>
+        <span className="ml-2 flex min-w-0 items-center gap-1.5 font-mono text-[11px] text-zinc-400">
+          <IconTerminal size={12} className="text-zinc-500" />
+          <span className="truncate">{identity.shellUser}@{identity.hostname}: {cwd.startsWith('/home/student') ? cwd.replace('/home/student', '~') : cwd}</span>
         </span>
-        <IconButton label="Copy terminal output" onClick={copyOutput} className="ml-auto h-8 w-8">
-          <IconCopy size={14} />
-        </IconButton>
-        <IconButton
-          label="Clear terminal"
-          onClick={() => setLines([])}
-          className="h-8 w-8"
-        >
-          <IconRefresh size={14} />
-        </IconButton>
+        <div className="ml-auto flex items-center gap-1">
+          {copied && (
+            <span className="mr-1 flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+              <IconCheck size={11} /> copied
+            </span>
+          )}
+          <IconButton label="Copy all terminal output" onClick={copyAll} className="h-7 w-7 text-zinc-400 hover:text-zinc-100">
+            <IconCopy size={13} />
+          </IconButton>
+          <IconButton label="Clear terminal" onClick={clearTerminal} className="h-7 w-7 text-zinc-400 hover:text-zinc-100">
+            <IconRefresh size={13} />
+          </IconButton>
+        </div>
       </div>
 
       <div
-        ref={scrollRef}
-        onClick={() => inputRef.current?.focus()}
-        className="flex-1 min-h-0 cursor-text overflow-y-auto bg-[#05070d] px-4 py-3 font-mono text-sm leading-7 text-zinc-200 select-text"
-      >
-        {lines.length === 0 && (
-          <p className="text-zinc-500">
-            Type <span className="text-zinc-300">help</span> to see {practice ? 'the practice command reference' : 'available commands'}.
-          </p>
-        )}
-        {lines.map((line, index) => {
-          if (line.type === 'command') {
-            return (
-              <div key={index} className="break-words">
-                <span className="text-emerald-400">{identity.shellUser}@{identity.hostname}</span>
-                <span className="text-zinc-600">:</span>
-                <span className="text-sky-300">{promptLabel(cwd)}</span>
-                <span className="text-zinc-500">{promptChar} </span>
-                <span className="text-zinc-50">{line.text}</span>
-              </div>
-            );
-          }
-          if (line.type === 'system') {
-            return (
-              <div key={index} className="mb-1 flex items-start gap-1.5 whitespace-pre-wrap break-words text-cyan-300/90">
-                <IconCheckCircle size={12} className="mt-1.5 shrink-0" />
-                <span>{line.text}</span>
-              </div>
-            );
-          }
-          if (line.type === 'error') {
-            return (
-              <pre key={index} className="whitespace-pre-wrap break-words text-rose-400">
-                {line.text}
-              </pre>
-            );
-          }
-          return (
-            <pre
-              key={index}
-              className={`whitespace-pre-wrap break-words ${line.exitCode && line.exitCode !== 0 ? 'text-rose-200/90' : 'text-zinc-200'}`}
-            >
-              {line.text}
-            </pre>
-          );
-        })}
+        ref={containerRef}
+        className="terminal-body flex-1 min-h-0 bg-[#0a0e14]"
+        style={{ padding: '8px 4px' }}
+      />
 
-        {status === 'running' ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              runCommand(input);
-            }}
-            className="mt-0.5 flex items-center gap-0"
-          >
-            <label htmlFor="terminal-input" className="shrink-0 select-none">
-              <span className="text-emerald-400">{identity.shellUser}@{identity.hostname}</span>
-              <span className="text-zinc-600">:</span>
-              <span className="text-sky-300">{promptLabel(cwd)}</span>
-              <span className="text-zinc-500">{promptChar}&nbsp;</span>
-            </label>
-            <input
-              id="terminal-input"
-              ref={inputRef}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={onKeyDown}
-              className="min-w-0 flex-1 border-none bg-transparent font-mono text-sm leading-7 text-zinc-50 caret-cyan-300 outline-none"
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              disabled={busy}
-              placeholder={busy ? 'running…' : ''}
-              aria-label="Terminal command"
-              autoFocus
-            />
-          </form>
-        ) : (
-          <p className="mt-2 text-rose-300/80">
-            This {practice ? 'practice session' : 'session'} is no longer running. Start a new session to continue.
-          </p>
-        )}
-        <div ref={bottomRef} className="h-0.5 shrink-0" />
-      </div>
-
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 bg-[#0b1220] px-3 py-1.5 text-xs text-zinc-500">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/5 bg-[#0d1117] px-3 py-1.5 text-[11px] text-zinc-500">
         <span className="truncate font-mono">
           {identity.name ? `${identity.name}${identity.id ? ` · student #${identity.id}` : ''} · ` : ''}
-          {practice ? 'practice shell · ' : ''}session #{sessionId}
+          {practice ? 'practice container' : 'isolated container'} · session #{sessionId}
+          {busy ? ' · running…' : ''}
         </span>
-        <span className="hidden shrink-0 sm:block">
-          <span className="kbd">↑</span> history · <span className="kbd">Ctrl</span>+<span className="kbd">L</span> clear
-          {practice ? ' · simulated in-browser' : ''}
+        <span className="hidden shrink-0 items-center gap-2 sm:flex">
+          <span className="flex items-center gap-1">
+            <span className={`h-1.5 w-1.5 rounded-full ${mode === 'ws' ? 'bg-emerald-400' : mode === 'rest' ? 'bg-amber-400' : 'bg-zinc-500'}`} />
+            <span>{mode === 'ws' ? 'live' : mode === 'rest' ? 'rest' : mode}</span>
+          </span>
+          <span>Ctrl+Shift+C copy · Ctrl+V paste · Ctrl+L clear</span>
         </span>
       </div>
     </div>

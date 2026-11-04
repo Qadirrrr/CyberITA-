@@ -61,6 +61,11 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminCoursesPage from './pages/admin/AdminCoursesPage';
 import AdminContentPage from './pages/admin/AdminContentPage';
 import AdminSystemPage from './pages/admin/AdminSystemPage';
+import ModeratorManagementPage from './pages/admin/ModeratorManagementPage';
+
+import SeniorModeratorDashboard from './pages/moderator/SeniorModeratorDashboard';
+import SubjectModeratorDashboard from './pages/moderator/SubjectModeratorDashboard';
+import ModerationReportsPage from './pages/moderator/ModerationReportsPage';
 
 export default function App() {
   return (
@@ -126,9 +131,23 @@ export default function App() {
             <Route path="instructor/settings" element={<ProfilePage />} />
           </Route>
 
+          <Route element={<ProtectedRoute roles={['senior_moderator']} />}>
+            <Route path="moderator/senior" element={<SeniorModeratorDashboard />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['subject_moderator']} />}>
+            <Route path="moderator/subject" element={<SubjectModeratorDashboard />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['senior_moderator', 'subject_moderator']} />}>
+            <Route path="moderator/reports" element={<ModerationReportsPage />} />
+            <Route path="moderator/settings" element={<ProfilePage />} />
+          </Route>
+
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="admin" element={<AdminOverview />} />
             <Route path="admin/users" element={<UsersPage />} />
+            <Route path="admin/moderators" element={<ModeratorManagementPage />} />
             <Route path="admin/courses" element={<AdminCoursesPage />} />
             <Route path="admin/labs" element={<AdminLabsPage />} />
             <Route path="admin/content" element={<AdminContentPage />} />

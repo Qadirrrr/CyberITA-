@@ -181,7 +181,11 @@ async function handleLabExec(socket, message) {
       return send(socket, { type: 'error', message: 'Only the session owner can use its terminal.' });
     }
     const lab = await getLab(session.lab_id, { staff: true });
-    const result = await executeInSession(session, lab, command);
+    const result = await executeInSession(session, lab, command, {
+      onOutput: (chunk) => {
+        if (chunk) send(socket, { type: 'lab.output.chunk', requestId: message.requestId ?? null, sessionId, chunk });
+      },
+    });
     send(socket, {
       type: 'lab.output',
       requestId: message.requestId ?? null,

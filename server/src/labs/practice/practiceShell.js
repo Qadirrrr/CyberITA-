@@ -268,7 +268,7 @@ export class PracticeShell {
   }
 
   /** Executes a command line. Never throws. */
-  execute(commandLine) {
+  execute(commandLine, { onOutput } = {}) {
     const raw = String(commandLine ?? '').trim();
     const events = [];
     if (!raw) return { output: '', exitCode: 0, cwd: this.cwd, fsState: this.snapshot(), events };
@@ -278,7 +278,11 @@ export class PracticeShell {
 
     const result = this.runLine(raw);
     events.push(...(result.events || []));
-    return { output: result.output, exitCode: result.exitCode, cwd: this.cwd, fsState: this.snapshot(), events };
+    const output = result.output || '';
+    if (typeof onOutput === 'function' && output) {
+      try { onOutput(output); } catch { /* ignore */ }
+    }
+    return { output, exitCode: result.exitCode, cwd: this.cwd, fsState: this.snapshot(), events };
   }
 
   /** Runs a line for `sudo`, sharing the same state but not the history. */

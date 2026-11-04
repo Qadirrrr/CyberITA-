@@ -16,7 +16,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await query(
       `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes,
-              l.due_at, l.course_id, l.lesson_id,
+              l.due_at, l.course_id, l.lesson_id, l.lab_mode, l.min_evidence,
               c.title AS course_title, c.slug AS course_slug,
               (SELECT COUNT(*)::int FROM lab_steps st WHERE st.lab_id = l.id) AS step_count,
               sub.id AS submission_id, sub.status AS submission_status,

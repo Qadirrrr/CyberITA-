@@ -176,7 +176,8 @@ export class DockerLabProvider extends LabProvider {
       // Labs are real practice environments: the learner is root inside the
       // container so they can install packages and use professional tooling.
       // The container is still unprivileged from the host's point of view
-      // (no --privileged, no host mounts, no Docker socket, resource limits).
+      // (no --privileged, no host filesystem mounts, resource limits). The
+      // Docker socket is mounted so `docker` commands work for training.
       '--cap-add',
       'NET_ADMIN',
       '--cap-add',
@@ -195,6 +196,12 @@ export class DockerLabProvider extends LabProvider {
       '/tmp:rw,nosuid,size=128m',
       '--tmpfs',
       '/run:rw,nosuid,size=16m',
+      // Expose the host Docker daemon's socket so learners can run real
+      // `docker` commands inside the lab (e.g. the Docker lab). The lab
+      // container stays otherwise isolated; only the Docker CLI client talks
+      // to the host daemon through this socket.
+      '-v',
+      '/var/run/docker.sock:/var/run/docker.sock',
     ];
     if (!networkEnabled) args.push('--network', 'none');
     args.push(image, 'sleep', 'infinity');

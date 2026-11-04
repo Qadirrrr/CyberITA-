@@ -4,13 +4,19 @@ import env from '../../config/env.js';
 
 const registry = new Map();
 
-/** Registers a provider class. Production ships Docker + container-less practice; tests may register a simulator. */
+/**
+ * Registers a provider class. Docker is the production provider. The legacy
+ * container-less practice provider stays registered only so sessions created
+ * before the real-terminal change can still be stopped/deprovisioned.
+ */
 export function registerProvider(Provider) {
   return registry.set(Provider.providerName, new Provider());
 }
 
 registerProvider(DockerLabProvider);
-// Practice labs are always container-less, in production and in tests.
+// Legacy only: new sessions never select this provider, but sessions created
+// before the real-terminal change still need it to serve their terminal and to
+// be stopped/deprovisioned.
 registerProvider(PracticeLabProvider);
 
 /** Returns the active provider instance (LAB_PROVIDER env, default "docker"). */
@@ -23,12 +29,12 @@ export function getProvider(name = env.labs.provider) {
 /**
  * Picks the provider for a lab.
  *
- * - `labs.is_practice` → the in-process practice terminal (never Docker).
- * - every other lab → the configured real-lab provider (`LAB_PROVIDER`,
- *   "docker" in production and "mock" in automated tests).
+ * Every lab — guided practice, open-to-all practice and real assessment — runs
+ * in the configured real-lab provider (`LAB_PROVIDER`, "docker" in production
+ * and "mock" in automated tests). `labs.is_practice` now only controls access
+ * and grading; it must never switch a lab to the simulated shell.
  */
 export function getProviderForLab(lab, { fallback = env.labs.provider } = {}) {
-  if (lab?.is_practice) return getProvider(PracticeLabProvider.providerName);
   return getProvider(fallback);
 }
 

@@ -29,6 +29,8 @@ import contentReportRoutes from './routes/contentReports.js';
 import contentRoutes from './routes/content.js';
 import labSubmissionRoutes from './routes/labSubmissions.js';
 import projectRoutes from './routes/projects.js';
+import moderatorRoutes from './routes/moderators.js';
+import moderationRoutes from './routes/moderation.js';
 
 export function createApp() {
   const app = express();
@@ -67,6 +69,8 @@ export function createApp() {
   app.use('/api/labs', labRoutes);
   app.use('/api/lab-submissions', labSubmissionRoutes);
   app.use('/api/projects', projectRoutes);
+  app.use('/api/moderators', moderatorRoutes);
+  app.use('/api/moderation', moderationRoutes);
   app.use('/api/reports', reportRoutes);
   app.use('/api/posts', postRoutes);
   app.use('/api/notifications', notificationRoutes);

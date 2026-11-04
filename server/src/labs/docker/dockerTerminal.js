@@ -36,7 +36,7 @@ export class DockerTerminal {
     };
   }
 
-  async execute(rawCommand) {
+  async execute(rawCommand, { onOutput } = {}) {
     const command = String(rawCommand ?? '').trim();
     const fsState = stateFor(this.session);
     if (!command) return this.base();
@@ -66,7 +66,7 @@ export class DockerTerminal {
       `cwd=$(printf '%s' "$LAB_CWD_B64" | base64 -d)`,
       `command=$(printf '%s' "$LAB_COMMAND_B64" | base64 -d)`,
       `cd -- "$cwd" || exit 1`,
-      'eval "$command"',
+      'eval "$command" 2>&1',
     ].join('\n');
 
     const args = [
@@ -120,6 +120,11 @@ export class DockerTerminal {
     const result = await this.provider.run(args, {
       timeoutMs: this.provider.config.commandTimeoutMs,
       maxOutputBytes: this.provider.config.maxOutputBytes,
+      onStdout: (chunk) => {
+        if (typeof onOutput === 'function') {
+          try { onOutput(chunk); } catch { /* ignore */ }
+        }
+      },
     });
 
     if (result.spawnError) {

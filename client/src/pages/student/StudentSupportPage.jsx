@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -10,10 +10,20 @@ import {
   IconChatBubble,
   IconCheckCircle,
   IconClock,
+  IconFlag,
   IconHeadphones,
   IconMail,
+  IconShield,
   IconTerminal,
 } from '../../components/icons';
+import {
+  MODERATION_REPORT_KIND,
+  MODERATION_SEVERITY,
+  reportKindMeta,
+  reportStatusMeta,
+  severityMeta,
+} from '../../lib/moderation';
+import { formatDateTime } from '../../lib/format';
 
 const topics = [
   'Account & access',
@@ -67,6 +77,80 @@ export default function StudentSupportPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+
+  // ---------- moderation complaint channel ----------
+  const [courses, setCourses] = useState([]);
+  const [complaint, setComplaint] = useState({
+    courseId: '',
+    kind: 'complaint',
+    severity: 'normal',
+    title: '',
+    body: '',
+  });
+  const [complaintErrors, setComplaintErrors] = useState({});
+  const [complaintSending, setComplaintSending] = useState(false);
+  const [complaintSent, setComplaintSent] = useState(false);
+  const [myReports, setMyReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get('/my-courses')
+      .then(({ data }) => {
+        if (active) setCourses(data.enrollments || []);
+      })
+      .catch(() => {
+        /* course list is optional for a general complaint */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const loadMyReports = () => {
+    setReportsLoading(true);
+    api
+      .get('/moderation/my-reports')
+      .then(({ data }) => setMyReports(data.reports || []))
+      .catch(() => setMyReports([]))
+      .finally(() => setReportsLoading(false));
+  };
+
+  useEffect(() => {
+    loadMyReports();
+  }, []);
+
+  const updateComplaint = (field) => (event) =>
+    setComplaint((current) => ({ ...current, [field]: event.target.value }));
+
+  const submitComplaint = async (event) => {
+    event.preventDefault();
+    const nextErrors = {};
+    if (complaint.title.trim().length < 3) nextErrors.title = 'Give the complaint a short title.';
+    if (complaint.body.trim().length < 10) nextErrors.body = 'Describe the issue in at least 10 characters.';
+    setComplaintErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setComplaintSending(true);
+    try {
+      await api.post('/moderation/reports', {
+        title: complaint.title.trim(),
+        body: complaint.body.trim(),
+        kind: complaint.kind,
+        severity: complaint.severity,
+        courseId: complaint.courseId ? Number(complaint.courseId) : undefined,
+      });
+      setComplaintSent(true);
+      setComplaint((current) => ({ ...current, title: '', body: '' }));
+      toast.success('Complaint submitted. Your subject moderator has been notified.');
+      loadMyReports();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not submit the complaint.'));
+    } finally {
+      setComplaintSending(false);
+    }
+  };
 
   const update = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
 
@@ -238,6 +322,121 @@ export default function StudentSupportPage() {
               </details>
             ))}
           </div>
+        </Card>
+      </div>
+
+      {/* ---------- moderation complaint channel ---------- */}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <IconShield size={18} className="text-brand-300" />
+            <h2 className="font-display text-lg font-semibold">Raise a complaint to a moderator</h2>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Complaints go to the Subject/Course Moderator responsible for the course. If none is assigned,
+            the admin team receives it. You can track the status below.
+          </p>
+
+          {complaintSent && (
+            <Alert tone="success" title="Complaint received" className="mt-4">
+              Your moderator has been notified. You will see status updates in “My moderation reports”.
+            </Alert>
+          )}
+
+          <form onSubmit={submitComplaint} noValidate className="mt-5 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select label="Course" value={complaint.courseId} onChange={updateComplaint('courseId')}>
+                <option value="">General / not course-specific</option>
+                {courses.map((enrollment) => (
+                  <option key={enrollment.id} value={enrollment.course_id}>
+                    {enrollment.title}
+                  </option>
+                ))}
+              </Select>
+              <Select label="Type" value={complaint.kind} onChange={updateComplaint('kind')}>
+                {Object.entries(MODERATION_REPORT_KIND)
+                  .filter(([key]) => key === 'complaint' || key === 'content_quality')
+                  .map(([key, item]) => (
+                    <option key={key} value={key}>
+                      {item.label}
+                    </option>
+                  ))}
+              </Select>
+              <Select label="Severity" value={complaint.severity} onChange={updateComplaint('severity')}>
+                {Object.entries(MODERATION_SEVERITY).map(([key, item]) => (
+                  <option key={key} value={key}>
+                    {item.label}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                label="Title"
+                value={complaint.title}
+                onChange={updateComplaint('title')}
+                error={complaintErrors.title}
+                placeholder="Short summary of the issue"
+              />
+            </div>
+            <Textarea
+              label="What happened?"
+              rows={5}
+              value={complaint.body}
+              onChange={updateComplaint('body')}
+              error={complaintErrors.body}
+              placeholder="Describe the issue, who was involved, and what outcome you expect…"
+              maxLength={10000}
+              hint={`${complaint.body.length}/10000 characters`}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" loading={complaintSending}>
+                <IconFlag size={15} /> Submit complaint
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <Card className="p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold">My moderation reports</h2>
+          <p className="mt-1 text-xs text-slate-500">Complaints you raised and their current status.</p>
+
+          {reportsLoading ? (
+            <div className="mt-4 space-y-2">
+              <div className="h-14 animate-pulse rounded-lg bg-white/5" />
+              <div className="h-14 animate-pulse rounded-lg bg-white/5" />
+            </div>
+          ) : myReports.length === 0 ? (
+            <p className="mt-4 rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-500 dark:border-white/10">
+              You have not raised any moderation complaints yet.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-white/5">
+              {myReports.map((report) => (
+                <li key={report.id} className="py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-200">{report.title}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                        {report.course_title || 'General'} · {formatDateTime(report.created_at)}
+                        {report.moderator_name ? ` · ${report.moderator_name}` : ''}
+                      </p>
+                    </div>
+                    <Badge tone={reportStatusMeta(report.status).tone}>
+                      {reportStatusMeta(report.status).label}
+                    </Badge>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge tone={reportKindMeta(report.kind).tone}>{reportKindMeta(report.kind).label}</Badge>
+                    <Badge tone={severityMeta(report.severity).tone}>{severityMeta(report.severity).label}</Badge>
+                  </div>
+                  {report.resolution && (
+                    <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[11px] text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/[0.06] dark:text-emerald-200">
+                      {report.resolution}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </div>
     </div>
