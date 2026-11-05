@@ -281,6 +281,7 @@ export default function ModeratorManagementPage() {
           label="Active moderators"
           value={stats?.moderators ?? 0}
           hint={`${stats?.senior_moderators ?? 0} senior · ${stats?.subject_moderators ?? 0} subject`}
+          onClick={() => document.getElementById('moderator-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconFlag}
@@ -288,6 +289,7 @@ export default function ModeratorManagementPage() {
           value={stats?.open_reports ?? 0}
           hint="Awaiting moderator action"
           tone="amber"
+          onClick={() => document.getElementById('moderator-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconAlert}
@@ -295,6 +297,7 @@ export default function ModeratorManagementPage() {
           value={stats?.escalated_reports ?? 0}
           hint="With senior moderators"
           tone="accent"
+          onClick={() => document.getElementById('moderator-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconCheckCircle}
@@ -302,10 +305,11 @@ export default function ModeratorManagementPage() {
           value={stats?.resolved_reports ?? 0}
           hint="Closed complaints"
           tone="emerald"
+          onClick={() => document.getElementById('moderator-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
       </div>
 
-      <Card className="p-4">
+      <Card id="moderator-list" className="p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl border border-slate-200/80 bg-slate-100/90 p-1 dark:border-white/10 dark:bg-night-900/60">
             {tabs.map((tab) => (

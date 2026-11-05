@@ -141,6 +141,7 @@ export default function StudentDashboard() {
           label="Active courses"
           value={stats?.enrollments.active ?? active.length}
           hint={`${completed.length} completed`}
+          to="/student/courses"
         />
         <StatCard
           icon={IconTerminal}
@@ -148,6 +149,7 @@ export default function StudentDashboard() {
           value={stats?.labs.started ?? 0}
           hint={`${stats?.labs.stepsCompleted ?? 0} steps verified`}
           tone="accent"
+          to="/labs"
         />
         <StatCard
           icon={IconTerminal}
@@ -155,6 +157,7 @@ export default function StudentDashboard() {
           value={labAssignments.length - pendingAssignments.length}
           hint={`${pendingAssignments.length} to complete`}
           tone="emerald"
+          to="/student/lab-assignments"
         />
         <StatCard
           icon={IconTerminal}
@@ -166,6 +169,7 @@ export default function StudentDashboard() {
               : `${labAssignments.length} assigned in total`
           }
           tone="amber"
+          to="/student/lab-assignments"
         />
       </div>
 

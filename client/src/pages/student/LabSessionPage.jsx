@@ -11,6 +11,7 @@ import {
   IconCamera,
   IconCheck,
   IconCheckCircle,
+  IconClock,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -327,7 +328,7 @@ export default function LabSessionPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-100 text-slate-600 dark:bg-[#06080d] dark:text-slate-300">
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-100 text-slate-600 dark:bg-[#06080d] dark:text-slate-300">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-brand-500 border-t-transparent mb-3" />
         <p className="font-mono text-sm text-slate-500 dark:text-slate-400">Preparing your lab workstation…</p>
       </div>
@@ -336,7 +337,7 @@ export default function LabSessionPage() {
 
   if (error || !data) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-100 p-6 text-center text-slate-700 dark:bg-[#06080d] dark:text-slate-300">
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-100 p-6 text-center text-slate-700 dark:bg-[#06080d] dark:text-slate-300">
         <div className="w-full max-w-md">
           <Alert tone="error" title="Session unavailable">
             {error || 'This lab session could not be found or has expired.'}
@@ -373,7 +374,7 @@ export default function LabSessionPage() {
   const instructionParts = splitInstruction(activeStep?.instruction);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-100 text-slate-900 font-sans select-none dark:bg-[#06080d] dark:text-slate-100">
+    <div className="flex min-h-screen w-full flex-col overflow-y-auto bg-slate-100 text-slate-900 font-sans lg:h-screen lg:overflow-hidden dark:bg-[#06080d] dark:text-slate-100">
       <input
         ref={fileRef}
         type="file"
@@ -477,9 +478,9 @@ export default function LabSessionPage() {
       </header>
 
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
-      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] gap-3 p-3 overflow-hidden">
+      <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
+        <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
           {/* Header Stepper and Progress (guided labs only) */}
           {!isRealLab && (
           <div className="flex shrink-0 flex-col border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
@@ -913,7 +914,7 @@ export default function LabSessionPage() {
         </div>
 
         {/* Right Column: Interactive Lab Terminal */}
-        <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
           <LabTerminal
             sessionId={Number(session.id)}
             status={session.status}

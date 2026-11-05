@@ -132,6 +132,7 @@ export default function SeniorModeratorDashboard() {
           label="Supervised moderators"
           value={stats.supervised_moderators ?? supervised.length}
           hint="Subject / course moderators"
+          onClick={() => document.getElementById('supervised-moderators')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconAlert}
@@ -139,6 +140,7 @@ export default function SeniorModeratorDashboard() {
           value={stats.escalated_reports ?? 0}
           hint="Needs a senior decision"
           tone="accent"
+          to="/moderator/reports?status=escalated"
         />
         <StatCard
           icon={IconFlag}
@@ -146,6 +148,7 @@ export default function SeniorModeratorDashboard() {
           value={stats.open_reports ?? 0}
           hint="Open or in review"
           tone="amber"
+          to="/moderator/reports"
         />
         <StatCard
           icon={IconCheckCircle}
@@ -153,11 +156,12 @@ export default function SeniorModeratorDashboard() {
           value={stats.resolved_reports ?? 0}
           hint="Closed reports"
           tone="emerald"
+          to="/moderator/reports?status=resolved"
         />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <Card className="overflow-hidden">
+        <Card id="supervised-moderators" className="overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Subject moderators you supervise</h2>

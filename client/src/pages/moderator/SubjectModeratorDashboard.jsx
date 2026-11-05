@@ -148,13 +148,20 @@ export default function SubjectModeratorDashboard() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={IconBookOpen} label="Assigned courses" value={stats.courses ?? courses.length} hint="In your scope" />
+        <StatCard
+          icon={IconBookOpen}
+          label="Assigned courses"
+          value={stats.courses ?? courses.length}
+          hint="In your scope"
+          onClick={() => document.getElementById('assigned-courses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        />
         <StatCard
           icon={IconUsers}
           label="Assigned instructors"
           value={stats.instructors ?? instructors.length}
           hint="Whose work you review"
           tone="accent"
+          onClick={() => document.getElementById('assigned-instructors')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconFlag}
@@ -162,6 +169,7 @@ export default function SubjectModeratorDashboard() {
           value={stats.open_reports ?? 0}
           hint="Open or in review"
           tone="amber"
+          to="/moderator/reports"
         />
         <StatCard
           icon={IconCheckCircle}
@@ -169,11 +177,12 @@ export default function SubjectModeratorDashboard() {
           value={stats.resolved_reports ?? 0}
           hint="Closed complaints"
           tone="emerald"
+          to="/moderator/reports"
         />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Card className="overflow-hidden">
+        <Card id="assigned-courses" className="overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Assigned courses</h2>
@@ -241,7 +250,7 @@ export default function SubjectModeratorDashboard() {
           )}
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card id="assigned-instructors" className="overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Assigned instructors</h2>

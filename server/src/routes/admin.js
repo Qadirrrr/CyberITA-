@@ -897,7 +897,7 @@ router.get(
         const { rows: recentAuth } = await query(
             `SELECT a.id, a.action, a.created_at, u.full_name AS user_name, u.email AS user_email, u.role AS user_role
        FROM activity_events a LEFT JOIN users u ON u.id = a.user_id
-       WHERE a.action LIKE 'auth.%'
+       WHERE (a.action ILIKE 'account.%' OR a.action ILIKE 'auth.%')
        ORDER BY a.created_at DESC LIMIT 8`
         );
         const { rows: failedSessions } = await query(

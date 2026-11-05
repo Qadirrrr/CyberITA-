@@ -157,13 +157,14 @@ export default function StudentsPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard icon={IconGraduationCap} label="Learners shown" value={total} hint={courseLabel} tone="brand" />
+        <StatCard icon={IconGraduationCap} label="Learners shown" value={total} hint={courseLabel} tone="brand" onClick={() => document.getElementById('students-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         <StatCard
           icon={IconTarget}
           label="Average progress"
           value={`${totals.avgProgress}%`}
           hint="Across the courses in view"
           tone="emerald"
+          onClick={() => document.getElementById('students-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconFileText}
@@ -171,10 +172,11 @@ export default function StudentsPage() {
           value={totals.pending}
           hint="Reports and lab submissions on this page"
           tone="amber"
+          to="/instructor/lab-submissions"
         />
       </div>
 
-      <Card className="p-4">
+      <Card id="students-table" className="p-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_240px]">
           <div className="relative">
             <IconSearch size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />

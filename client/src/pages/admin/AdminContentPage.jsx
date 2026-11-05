@@ -110,6 +110,7 @@ export default function AdminContentPage() {
           label="Blog Posts"
           value={stats.posts_published ?? 0}
           hint={`${stats.posts_drafts ?? 0} drafts · ${stats.posts_from_reports ?? 0} from reports`}
+          to="/instructor/blog"
         />
         <StatCard
           icon={IconFileText}
@@ -117,6 +118,7 @@ export default function AdminContentPage() {
           value={(stats.reports_submitted ?? 0) + (stats.reports_approved ?? 0) + (stats.reports_published ?? 0)}
           hint={`${stats.reports_submitted ?? 0} pending review`}
           tone="amber"
+          to="/instructor/reports"
         />
         <StatCard
           icon={IconFlag}
@@ -124,6 +126,7 @@ export default function AdminContentPage() {
           value={stats.flags_open ?? 0}
           hint={`of ${stats.flags_total ?? 0} total reports`}
           tone="rose"
+          onClick={() => document.getElementById('content-flags')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
         <StatCard
           icon={IconAward}
@@ -131,6 +134,7 @@ export default function AdminContentPage() {
           value={stats.certificates ?? 0}
           hint="issued to learners"
           tone="emerald"
+          to="/student/certificates"
         />
       </div>
 
@@ -304,7 +308,7 @@ export default function AdminContentPage() {
       </Card>
 
       {/* Reported Content Flags */}
-      <Card className="p-5">
+      <Card id="content-flags" className="p-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-base font-semibold">Reported Content</h2>

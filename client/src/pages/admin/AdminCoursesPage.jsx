@@ -161,19 +161,23 @@ export default function AdminCoursesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={IconBookOpen} label="Total Courses" value={stats?.courses ?? 0}
-            hint={`${stats?.published_courses ?? 0} published · ${stats?.draft_courses ?? 0} drafts`} />
+            hint={`${stats?.published_courses ?? 0} published · ${stats?.draft_courses ?? 0} drafts`}
+            onClick={() => document.getElementById('course-catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
           <StatCard icon={IconGraduationCap} label="Enrollments" value={stats?.enrollments ?? 0}
-            hint={`${stats?.completed_enrollments ?? 0} completed`} tone="emerald" />
+            hint={`${stats?.completed_enrollments ?? 0} completed`} tone="emerald"
+            onClick={() => document.getElementById('enrollment-breakdown')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
           <StatCard icon={IconAward} label="Certificates" value={stats?.certificates ?? 0}
-            hint={`${stats?.certificates_30d ?? 0} in last 30 days`} tone="amber" />
+            hint={`${stats?.certificates_30d ?? 0} in last 30 days`} tone="amber"
+            onClick={() => document.getElementById('enrollment-breakdown')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
           <StatCard icon={IconLayers} label="Learning Paths" value={stats?.learning_paths ?? 0}
-            hint={`${stats?.published_paths ?? 0} published`} tone="accent" />
+            hint={`${stats?.published_paths ?? 0} published`} tone="accent"
+            onClick={() => document.getElementById('course-catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         </div>
       )}
 
       {!catalogLoading && catalog && (
         <div className="grid gap-5 lg:grid-cols-3">
-          <Card className="p-5">
+          <Card id="enrollment-breakdown" className="p-5">
             <h2 className="font-display text-base font-semibold">Enrollment Breakdown</h2>
             <p className="text-[11px] text-slate-500">Active vs. completed</p>
             <div className="mt-4 flex items-center gap-4">
@@ -275,7 +279,7 @@ export default function AdminCoursesPage() {
         </Card>
       )}
 
-      <Card className="p-5">
+      <Card id="course-catalog" className="p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-base font-semibold">All Courses</h2>

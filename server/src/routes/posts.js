@@ -34,7 +34,7 @@ router.get(
                 tag: z.string().trim().max(40).optional(),
                 status: z.enum(['draft', 'published']).optional(),
                 page: z.coerce.number().int().min(1).default(1),
-                limit: z.coerce.number().int().min(1).max(48).default(9),
+                limit: z.coerce.number().int().min(1).max(100).default(9),
             })
             .safeParse(req.query);
         if (!parsed.success) throw badRequest('Invalid query parameters.');

@@ -33,7 +33,6 @@ const RESERVED = new Set([
   'sshd',
 ]);
 
-const HOSTNAME = 'cyberita-lab';
 
 function printable(value) {
   return String(value ?? '')
@@ -70,12 +69,16 @@ export function studentIdentity(user = {}) {
   }
   if (!slug || RESERVED.has(slug)) slug = id ? `student-${id}` : 'student';
 
+  // Per-student hostname so the container is instantly identifiable,
+  // e.g. "muneeb-lab" instead of a generic "cyberita-lab".
+  const hostname = `${slug.replace(/_/g, '-')}-lab`.replace(/[^a-z0-9-]/g, '').slice(0, 253) || 'cyberita-lab';
+
   return {
     studentId: id,
     displayName,
     shellUser: slug,
-    hostname: HOSTNAME,
-    prompt: `${slug}@${HOSTNAME}`,
+    hostname,
+    prompt: `${slug}@${hostname}`,
   };
 }
 

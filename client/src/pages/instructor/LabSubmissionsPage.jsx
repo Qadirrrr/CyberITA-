@@ -136,15 +136,16 @@ export default function LabSubmissionsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Pending review" value={stats?.pending ?? 0} tone="amber" icon={IconClock} hint="Waiting for you" />
+        <StatCard label="Pending review" value={stats?.pending ?? 0} tone="amber" icon={IconClock} hint="Waiting for you" onClick={() => { setStatus('submitted'); setPage(1); }} />
         <StatCard
           label="Changes requested"
           value={stats?.changes_requested ?? 0}
           tone="rose"
           icon={IconXCircle}
           hint="Returned to students"
+          onClick={() => { setStatus('changes_requested'); setPage(1); }}
         />
-        <StatCard label="Approved" value={stats?.approved ?? 0} tone="emerald" icon={IconCheckCircle} hint="Completed labs" />
+        <StatCard label="Approved" value={stats?.approved ?? 0} tone="emerald" icon={IconCheckCircle} hint="Completed labs" onClick={() => { setStatus('approved'); setPage(1); }} />
       </div>
 
       <Card className="p-4">

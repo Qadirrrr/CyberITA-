@@ -6,7 +6,7 @@ import { runDocker, dockerFailure } from './dockerRunner.js';
 import { DockerTerminal } from './dockerTerminal.js';
 import { studentIdentity } from '../identity.js';
 
-const NAME_PATTERN = /^cyberita-lab-[a-f0-9]{32}$/;
+const NAME_PATTERN = /^cyberita-lab-[a-z0-9_-]{1,120}$/;
 const IMAGE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,254}$/;
 const HOME_DIR = '/home/student';
 const STUDENT_UID = '1000';
@@ -342,10 +342,12 @@ export class DockerLabProvider extends LabProvider {
 
   async provision({ lab, user, host = null, serverId = null }) {
     const image = this.resolveImage(lab.container_image);
-    const name = `cyberita-lab-${crypto.randomBytes(16).toString('hex')}`;
+    const identity = studentIdentity(user);
+    // Name containers after the student so the host can tell who is doing
+    // what: cyberita-lab-<name>-<userId>-<random>.
+    const name = `cyberita-lab-${identity.shellUser}-${user.id}-${crypto.randomBytes(6).toString('hex')}`;
     const cwd = normalizeContainerPath(lab.initial_cwd || HOME_DIR);
     const networkEnabled = Boolean(this.config.networkEnabled || lab.network_enabled);
-    const identity = studentIdentity(user);
 
     try {
       await this.ensureImage(image, host);

@@ -1,5 +1,6 @@
 import { dockerFailure } from './dockerRunner.js';
 import { studentIdentity } from '../identity.js';
+import { stripAnsi } from '../../utils/ansi.js';
 
 const MARKER_PATH = '/tmp/.cyberita-cwd';
 const MAX_COMMAND_LENGTH = 4000;
@@ -66,7 +67,10 @@ export class DockerTerminal {
       `cwd=$(printf '%s' "$LAB_CWD_B64" | base64 -d)`,
       `command=$(printf '%s' "$LAB_COMMAND_B64" | base64 -d)`,
       `cd -- "$cwd" || exit 1`,
-      'eval "$command" 2>&1',
+      // Allocate a real PTY inside the container via `script(1)` so commands
+      // (apt, vim, less, top ...) see a proper terminal — no "not a terminal"
+      // warnings and full interactive rendering in the web xterm.
+      `exec script -qec "$command" /dev/null`,
     ].join('\n');
 
     const args = [
@@ -96,11 +100,11 @@ export class DockerTerminal {
       '-e',
       'DEBIAN_FRONTEND=noninteractive',
       '-e',
+      'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games',
+      '-e',
       'APT_LISTCHANGES_FRONTEND=none',
       '-e',
-      'TERM=dumb',
-      '-e',
-      'NO_COLOR=1',
+      'TERM=xterm-256color',
       '-e',
       'PAGER=cat',
       '-e',
@@ -142,6 +146,7 @@ export class DockerTerminal {
       output += `${output.endsWith('\n') || !output ? '' : '\n'}[output truncated]`;
     }
     output = clampOutput(output, this.provider.config.maxOutputBytes);
+    const cleanOutput = stripAnsi(output);
 
     const marker = await this.provider.run(
       ['exec', name, '/bin/sh', '-c', `cat ${MARKER_PATH} 2>/dev/null || true`],
@@ -151,7 +156,7 @@ export class DockerTerminal {
     if (nextCwd.startsWith('/')) this.cwd = nextCwd;
 
     return this.base({
-      output,
+      output: cleanOutput,
       exitCode: result.timedOut ? 124 : result.exitCode,
     });
   }

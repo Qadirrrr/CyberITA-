@@ -13,11 +13,10 @@ import {
 import {
   IconBarChart,
   IconCheckCircle,
-  IconCpu,
   IconFileText,
   IconGraduationCap,
   IconRefresh,
-  IconSettings,
+  IconServer,
   IconShield,
   IconTerminal,
   IconUsers,
@@ -42,6 +41,13 @@ function uptime(seconds) {
 }
 
 const authActionTone = {
+  'account.login': 'emerald',
+  'account.logout': 'slate',
+  'account.registered': 'brand',
+  'account.login_failed': 'rose',
+  'account.password_reset': 'amber',
+  'account.email_verified': 'slate',
+  // legacy keys kept so older rows render correctly
   'auth.login': 'emerald',
   'auth.logout': 'slate',
   'auth.register': 'brand',
@@ -124,7 +130,10 @@ export default function AdminSystemPage() {
 
       {/* Key System Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('database-health')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Server Uptime</span>
             <Badge tone="emerald">online</Badge>
@@ -136,7 +145,10 @@ export default function AdminSystemPage() {
             {data?.time ? `As of ${new Date(data.time).toLocaleTimeString()}` : ''}
           </p>
         </Card>
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('database-health')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Database</span>
             <Badge tone={database.latencyMs >= 0 ? 'emerald' : 'rose'}>
@@ -146,7 +158,10 @@ export default function AdminSystemPage() {
           <p className="mt-2 font-display text-2xl font-semibold text-white">{dbSizeDisplay}</p>
           <p className="mt-1 text-[11px] text-slate-500">{(database.tables ?? []).length} tables tracked</p>
         </Card>
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('database-health')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Memory (Heap)</span>
             <span className="text-xs text-slate-500">Node.js</span>
@@ -154,21 +169,24 @@ export default function AdminSystemPage() {
           <p className="mt-2 font-display text-2xl font-semibold text-white">{memUsedDisplay}</p>
           <p className="mt-1 text-[11px] text-slate-500">RSS {rssDisplay} · System {memTotalDisplay}</p>
         </Card>
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('security-posture')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Active Sessions</span>
             <Badge tone="brand">{security.active_sessions ?? 0}</Badge>
           </div>
           <p className="mt-2 font-display text-2xl font-semibold text-white">
-            {(security.admins ?? 0) + (security.instructors ?? 0) + (security.students ?? 0)}
+            {security.active_sessions ?? 0}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">total user accounts</p>
+          <p className="mt-1 text-[11px] text-slate-500">live refresh tokens</p>
         </Card>
       </div>
 
       {/* Security Posture */}
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="p-5">
+        <Card id="security-posture" className="p-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-base font-semibold">Security Posture</h2>
@@ -216,7 +234,7 @@ export default function AdminSystemPage() {
               (security.recentAuth ?? []).map((event) => (
                 <div key={event.id} className="flex items-center gap-3">
                   <Badge tone={authActionTone[event.action] ?? 'slate'} className="shrink-0 font-mono text-[10px]">
-                    {event.action.replace('auth.', '')}
+                    {event.action.replace(/^(auth|account)\./, '')}
                   </Badge>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs text-slate-300">{event.user_name || event.user_email || 'Unknown'}</p>
@@ -231,7 +249,7 @@ export default function AdminSystemPage() {
       </div>
 
       {/* Learning Analytics */}
-      <Card className="p-5">
+      <Card id="learning-analytics" className="p-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-base font-semibold">Learning Analytics</h2>
@@ -286,7 +304,7 @@ export default function AdminSystemPage() {
       </Card>
 
       {/* Database Health */}
-      <Card className="p-5">
+      <Card id="database-health" className="p-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-base font-semibold">Database Health</h2>

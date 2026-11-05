@@ -24,6 +24,7 @@ import { formatDateTime } from '../../lib/format';
 const actionTones = {
   admin: 'rose',
   auth: 'brand',
+  account: 'brand',
   course: 'emerald',
   lab: 'accent',
   report: 'amber',
@@ -95,7 +96,7 @@ export default function AdminAuditLogsPage() {
             {[
               { label: 'All', value: '' },
               { label: 'Admin Actions', value: 'admin' },
-              { label: 'Auth & Security', value: 'auth' },
+              { label: 'Auth & Security', value: 'account' },
               { label: 'Courses & Lessons', value: 'course' },
               { label: 'Labs', value: 'lab' },
               { label: 'Reports', value: 'report' },

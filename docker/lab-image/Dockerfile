@@ -29,7 +29,8 @@ LABEL org.opencontainers.image.title="CyberITA+ lab runtime" \
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8
+    LC_ALL=C.UTF-8 \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
 
 # Tooling used by the lab steps. Keep this list in sync with
 # docs/LABS.md when labs start relying on new commands.

@@ -311,6 +311,10 @@ export default function DockerContainerMonitorPanel() {
           tone="emerald"
           icon={IconPlay}
           hint="Live student sessions"
+          onClick={() => {
+            setStatusFilter('running');
+            setPage(1);
+          }}
         />
         <StatCard
           label="Total Managed Containers"
@@ -318,8 +322,15 @@ export default function DockerContainerMonitorPanel() {
           tone="brand"
           icon={IconLayers}
           hint={`${counts.stopped ?? 0} stopped / preserved`}
+          onClick={() => {
+            setStatusFilter('all');
+            setPage(1);
+          }}
         />
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('container-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Average Active CPU</span>
             <IconCpu size={16} className="text-amber-400" />
@@ -331,7 +342,10 @@ export default function DockerContainerMonitorPanel() {
             Across {counts.running ?? 0} running container(s)
           </p>
         </Card>
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('container-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Host Engine</span>
             <Badge tone="emerald">Native Engine</Badge>
@@ -346,7 +360,7 @@ export default function DockerContainerMonitorPanel() {
       </div>
 
       {/* Filter and Search Bar */}
-      <Card className="p-4">
+      <Card id="container-list" className="p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-400">Filter status:</span>

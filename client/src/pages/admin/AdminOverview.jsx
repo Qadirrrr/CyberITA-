@@ -51,7 +51,7 @@ function buildWeeklySeries(data, weeks = 12) {
 function SeriesBars({ data, tone = 'brand' }) {
   if (!data?.length || data.every((item) => Number(item.count) === 0)) {
     return (
-      <div className="flex h-28 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/10 text-center">
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/10 text-center">
         <IconBarChart size={20} className="text-slate-600" />
         <p className="text-[11px] text-slate-600">No weekly activity yet</p>
       </div>
@@ -59,19 +59,37 @@ function SeriesBars({ data, tone = 'brand' }) {
   }
 
   const max = Math.max(1, ...data.map((item) => item.count));
+  const isBrand = tone === 'brand';
   return (
-    <div className="flex h-28 items-end gap-1.5">
-      {data.map((item) => (
-        <div key={String(item.week)} className="group relative flex flex-1 flex-col items-center gap-1">
-          <span className="text-[9px] text-slate-600 opacity-0 transition group-hover:opacity-100">{item.count}</span>
-          <div
-            className={`w-full rounded-t ${tone === 'brand' ? 'bg-brand-400/60 group-hover:bg-brand-300' : 'bg-accent-400/60 group-hover:bg-accent-300'} transition`}
-            style={{ height: `${Math.max(4, (item.count / max) * 88)}px` }}
-            title={`${new Date(item.week).toLocaleDateString()} · ${item.count}`}
-          />
-          <span className="text-[8px] text-slate-700">{new Date(item.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-        </div>
-      ))}
+    <div className="flex h-40 flex-col">
+      <div className="flex min-h-0 flex-1 items-end gap-2 border-b border-white/5 pb-1">
+        {data.map((item) => {
+          const height = Math.max(6, (Number(item.count) / max) * 100);
+          return (
+            <div key={String(item.week)} className="group relative flex h-full flex-1 flex-col justify-end">
+              <span className="pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 text-[10px] font-semibold tabular-nums text-slate-500 opacity-0 transition group-hover:opacity-100">
+                {item.count}
+              </span>
+              <div
+                className={`w-full rounded-t-md transition-all duration-300 ${
+                  isBrand
+                    ? 'bg-gradient-to-t from-brand-500/70 to-cyan-400/80 group-hover:from-brand-400 group-hover:to-cyan-300'
+                    : 'bg-gradient-to-t from-violet-500/70 to-accent-400/80 group-hover:from-violet-400 group-hover:to-accent-300'
+                }`}
+                style={{ height: `${height}%` }}
+                title={`${new Date(item.week).toLocaleDateString()} · ${item.count}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex gap-2">
+        {data.map((item) => (
+          <span key={String(item.week)} className="flex-1 text-center text-[8px] leading-tight text-slate-600">
+            {new Date(item.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -176,7 +194,7 @@ export default function AdminOverview() {
   const engagement = stats.engagement ?? { active_learners_7d: 0 };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Platform overview</h1>
@@ -207,6 +225,7 @@ export default function AdminOverview() {
           label="Accounts"
           value={stats.users.total}
           hint={`${stats.users.students} learners · ${stats.users.instructors} instructors`}
+          to="/admin/users"
         />
         <StatCard
           icon={IconBookOpen}
@@ -214,6 +233,7 @@ export default function AdminOverview() {
           value={stats.courses.total}
           hint={`${stats.courses.published} published · ${stats.courses.drafts} drafts`}
           tone="accent"
+          to="/admin/courses"
         />
         <StatCard
           icon={IconGraduationCap}
@@ -221,19 +241,19 @@ export default function AdminOverview() {
           value={stats.enrollments.total}
           hint={`${completionRate}% completion rate`}
           tone="emerald"
+          to="/admin/courses"
         />
-        <Link to="/admin/labs?tab=containers" className="block transition hover:opacity-90">
-          <StatCard
-            icon={IconTerminal}
-            label="Live Docker labs"
-            value={stats.labs.sessions}
-            hint={`${stats.labs.completed_sessions} completed · live containers`}
-            tone="amber"
-          />
-        </Link>
+        <StatCard
+          icon={IconTerminal}
+          label="Live Docker labs"
+          value={stats.labs.sessions}
+          hint={`${stats.labs.completed_sessions} completed · live containers`}
+          tone="amber"
+          to="/admin/labs?tab=containers"
+        />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -260,12 +280,12 @@ export default function AdminOverview() {
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="p-5">
           <h2 className="font-display text-base font-semibold">Account mix</h2>
           <p className="text-[11px] text-slate-500">People by access level</p>
-          <div className="mt-5 flex items-center gap-4">
-            <DonutChart segments={roleSegments} total={stats.users.total} label="accounts" size={132} thickness={13} />
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <DonutChart segments={roleSegments} total={stats.users.total} label="accounts" size={120} thickness={12} />
             <DonutLegend segments={roleSegments} total={stats.users.total} />
           </div>
         </Card>
@@ -273,13 +293,13 @@ export default function AdminOverview() {
         <Card className="p-5">
           <h2 className="font-display text-base font-semibold">Enrollment outcomes</h2>
           <p className="text-[11px] text-slate-500">Completion vs. in progress</p>
-          <div className="mt-5 flex items-center gap-4">
+          <div className="mt-3 flex flex-wrap items-center gap-4">
             <DonutChart
               segments={enrollmentSegments}
               total={stats.enrollments.total}
               label="enrollments"
-              size={132}
-              thickness={13}
+              size={120}
+              thickness={12}
             />
             <DonutLegend segments={enrollmentSegments} total={stats.enrollments.total} />
           </div>
@@ -320,7 +340,7 @@ export default function AdminOverview() {
         </Card>
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="p-5">
           <div className="flex items-center justify-between gap-3">
             <div>

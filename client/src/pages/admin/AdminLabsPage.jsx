@@ -192,7 +192,10 @@ export default function AdminLabsPage() {
         <>
       {/* Infrastructure Health Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('runtime-readiness')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Docker Daemon</span>
             <Badge tone={dockerAvailable ? 'emerald' : 'amber'}>
@@ -213,6 +216,7 @@ export default function AdminLabsPage() {
           tone="emerald"
           icon={IconPlay}
           hint="Active containers"
+          onClick={() => handleTabChange('containers')}
         />
 
         <StatCard
@@ -221,9 +225,13 @@ export default function AdminLabsPage() {
           tone="brand"
           icon={IconTerminal}
           hint={`${health?.infrastructure?.sessionStats?.stopped ?? 0} completed`}
+          onClick={() => handleTabChange('sessions')}
         />
 
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/20"
+          onClick={() => document.getElementById('runtime-readiness')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Memory (Node RSS)</span>
             <span className="text-xs text-slate-500">
@@ -248,7 +256,7 @@ export default function AdminLabsPage() {
       )}
 
       {/* Runtime readiness: live end-to-end verification of the real lab stack */}
-      <Card className="p-5">
+      <Card id="runtime-readiness" className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-base font-semibold text-white">Runtime readiness</h2>

@@ -109,6 +109,7 @@ export default function StaffDashboard() {
           label={user?.role === 'admin' ? 'Courses' : 'Assigned courses'}
           value={stats?.courses?.total ?? courses.length}
           hint={`${stats?.courses?.published ?? published} published`}
+          to="/instructor/courses"
         />
         <StatCard
           icon={IconUsers}
@@ -116,6 +117,7 @@ export default function StaffDashboard() {
           value={stats?.students?.learners ?? 0}
           hint={`${stats?.students?.enrollments ?? 0} enrollments`}
           tone="accent"
+          to="/instructor/students"
         />
         <StatCard
           icon={IconTerminal}
@@ -123,6 +125,7 @@ export default function StaffDashboard() {
           value={stats?.labs?.labs ?? 0}
           hint={`${stats?.labs?.published_labs ?? 0} published`}
           tone="emerald"
+          to="/instructor/labs"
         />
         <StatCard
           icon={IconCheckCircle}
@@ -130,6 +133,7 @@ export default function StaffDashboard() {
           value={stats?.pending?.lab_submissions_pending ?? 0}
           hint="Waiting for review"
           tone="amber"
+          to="/instructor/lab-submissions"
         />
       </div>
 

@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { IconAlert, IconCheckCircle, IconChevronLeft, IconChevronRight, IconInbox, IconInfo, IconX } from './icons';
 
 export function cx(...parts) {
@@ -326,7 +327,16 @@ export function AnimatedStatValue({ value }) {
   );
 }
 
-export function StatCard({ icon: IconComponent, label, value, hint, tone = 'brand', className = '' }) {
+export function StatCard({
+  icon: IconComponent,
+  label,
+  value,
+  hint,
+  tone = 'brand',
+  className = '',
+  to,
+  onClick,
+}) {
   const tones = {
     brand: 'bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-300',
     accent: 'bg-purple-50 text-purple-700 dark:bg-accent-400/10 dark:text-accent-300',
@@ -334,8 +344,15 @@ export function StatCard({ icon: IconComponent, label, value, hint, tone = 'bran
     amber: 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300',
     rose: 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300',
   };
-  return (
-    <Card className={cx('p-5 transition-all hover:border-slate-300 hover:shadow-md dark:hover:border-white/20', className)}>
+  const interactive = Boolean(to || onClick);
+  const card = (
+    <Card
+      className={cx(
+        'p-5 transition-all hover:border-slate-300 hover:shadow-md dark:hover:border-white/20',
+        interactive && 'h-full cursor-pointer focus-within:ring-2 focus-within:ring-brand-500/40',
+        className
+      )}
+    >
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
         {IconComponent && (
@@ -350,6 +367,22 @@ export function StatCard({ icon: IconComponent, label, value, hint, tone = 'bran
       {hint && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p>}
     </Card>
   );
+
+  if (to) {
+    return (
+      <Link to={to} className="block h-full focus:outline-none">
+        {card}
+      </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="block h-full w-full text-left focus:outline-none">
+        {card}
+      </button>
+    );
+  }
+  return card;
 }
 
 export function EmptyState({ icon: IconComponent = IconInbox, title, message, action, className = '' }) {

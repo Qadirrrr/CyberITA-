@@ -136,16 +136,17 @@ export default function LabSubmissionsRecordPanel() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total" value={stats?.total ?? 0} tone="brand" icon={IconClipboard} hint="All submissions" />
-        <StatCard label="Pending review" value={stats?.pending ?? 0} tone="amber" icon={IconClock} hint="With instructors" />
+        <StatCard label="Total" value={stats?.total ?? 0} tone="brand" icon={IconClipboard} hint="All submissions" onClick={() => { setStatus('all'); setPage(1); }} />
+        <StatCard label="Pending review" value={stats?.pending ?? 0} tone="amber" icon={IconClock} hint="With instructors" onClick={() => { setStatus('submitted'); setPage(1); }} />
         <StatCard
           label="Changes requested"
           value={stats?.changes_requested ?? 0}
           tone="rose"
           icon={IconXCircle}
           hint="Back with students"
+          onClick={() => { setStatus('changes_requested'); setPage(1); }}
         />
-        <StatCard label="Approved" value={stats?.approved ?? 0} tone="emerald" icon={IconCheckCircle} hint="Completed" />
+        <StatCard label="Approved" value={stats?.approved ?? 0} tone="emerald" icon={IconCheckCircle} hint="Completed" onClick={() => { setStatus('approved'); setPage(1); }} />
       </div>
 
       <Card className="p-4">

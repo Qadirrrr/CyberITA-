@@ -200,6 +200,7 @@ router.post(
 
     if (!user || !passwordOk) {
       if (user?.is_active) {
+        await logActivity(user.id, 'account.login_failed');
         const attempts = Number(user.failed_login_attempts || 0) + 1;
         const lockedUntil = attempts >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null;
         await query('UPDATE users SET failed_login_attempts = $1, locked_until = $2 WHERE id = $3', [
