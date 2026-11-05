@@ -221,7 +221,8 @@ export class DockerLabProvider extends LabProvider {
    * the passwd entry makes `whoami`, `$USER` and the prompt show their name.
    *
    * The container itself is still unprivileged relative to the host: no
-   * --privileged, no host mounts, no Docker socket, and resource limits.
+   * --privileged, no host filesystem mounts, and resource limits. The Docker
+   * socket is mounted so `docker` commands work for training.
    */
   buildAccountScript(identity) {
     return [
