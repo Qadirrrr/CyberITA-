@@ -83,7 +83,16 @@ export function runDocker(binary, args, { input, timeoutMs = 30000, maxOutputByt
 }
 
 export function dockerFailure(result, fallback = 'Docker command failed.') {
-  if (result.spawnError?.code === 'ENOENT') return 'Docker CLI is not installed or is not on PATH.';
+  if (result.spawnError?.code === 'ENOENT') {
+    return [
+      'Docker CLI is not installed or is not on PATH.',
+      'Install Docker Engine / Docker Desktop on this host, make sure the API process can see it on PATH,',
+      'or set LAB_DOCKER_BINARY to the full path (for example /usr/bin/docker).',
+    ].join(' ');
+  }
+  if (result.spawnError?.code === 'EACCES') {
+    return 'Docker CLI was found but is not executable by the API process. Fix its permissions or point LAB_DOCKER_BINARY at an executable copy.';
+  }
   if (result.timedOut) return `${fallback} The Docker command timed out.`;
   const detail = String(result.stderr || result.stdout || '').trim().split(/\r?\n/).filter(Boolean).slice(-3).join(' ');
   return detail ? `${fallback} ${detail}` : fallback;

@@ -25,6 +25,7 @@ not start until the engine and image are ready.
 | Test simulator | `server/tests/support/lab-mock/` | In-process provider used only by the automated test suite (`LAB_PROVIDER=mock`); never registered in production. The real practice provider is always registered, in tests and production alike. |
 | Admin monitoring | **Admin → Lab Infrastructure** | Service health, provider breakdown, sessions, failed labs, limits, cleanup, plus a live **Runtime readiness** check. |
 | Smoke test | `npm run lab:smoke` (in `/server`) | Provisions a throwaway container, runs real commands, removes the container. |
+| Doctor | `npm run lab:doctor` (in `/server`) | Prints the resolved Docker CLI, engine status and image availability, with the exact fix when something is missing. |
 
 ## 2. What your machine/host must provide
 
@@ -286,7 +287,7 @@ pattern, so a generated practice lab is guaranteed to be solvable in-browser.
 | --- | --- | --- |
 | `LAB_PROVIDER` | `docker` | Provider for **course** labs. `docker` for real containers. `mock` is a test-only simulator registered by the automated test suite. Practice labs always use the built-in `practice` provider regardless of this value. |
 | `LAB_DOCKER_IMAGE` | `cyberita/lab-runtime:1.0` | Default image; overridable per lab in the lab editor. |
-| `LAB_DOCKER_BINARY` | `docker` | Docker CLI binary (or full path). |
+| `LAB_DOCKER_BINARY` | `docker` | Docker CLI binary (name or full path). The API looks the name up on `PATH` and then in common install locations (`/usr/bin`, `/usr/local/bin`, `/snap/bin`, `/opt/homebrew/bin`, Docker Desktop), so services with a minimal `PATH` still work. Set a full path if the CLI is elsewhere. |
 | `LAB_DOCKER_HOST` | *(empty)* | Remote daemon, e.g. `ssh://labuser@lab-host`. |
 | `LAB_DOCKER_NETWORK` | `true` | Global network allowance. Lab sessions need it for `apt` installs; instructors can still disable it per lab. |
 | `LAB_DOCKER_PULL` | `true` | Pull the image when it is missing locally. |
@@ -299,9 +300,11 @@ pattern, so a generated practice lab is guaranteed to be solvable in-browser.
 
 ## 8. Troubleshooting
 
+Start with `npm run lab:doctor` (in `/server`): it prints the Docker CLI it resolved, the engine status and whether the lab image is present, plus the fix for whatever is missing. `GET /api/labs/status` returns the same binary information (`dockerBinary`, `dockerBinarySource`).
+
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Lab page shows *"Docker CLI is not installed or is not on PATH."* | No Docker on the API host (or the API runs under a user without it). | Install/start the engine (§2), restart the API if the PATH changed. |
+| Lab page shows *"Docker CLI is not installed or is not on PATH."* | No Docker on the API host, or the API process (systemd/PM2/NSSM/service/container) runs with a `PATH` that does not include it. | Install/start the engine (§2). The API also checks `/usr/bin`, `/usr/local/bin`, `/snap/bin`, Homebrew and Docker Desktop automatically. If Docker lives elsewhere, set `LAB_DOCKER_BINARY=/full/path/to/docker` in `server/.env` and restart. For services, add `Environment=PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin` (systemd) or start PM2 from a shell where `docker version` works. If the API itself runs in a container, install the Docker CLI in that image and mount `/var/run/docker.sock`. |
 | *"Docker daemon is not reachable."* | Desktop/engine stopped, or wrong `DOCKER_HOST`. | Start Docker Desktop / `service docker start`; check `LAB_DOCKER_HOST`. |
 | *"Lab image … is not available"* + build hint | `cyberita/lab-runtime:1.0` never built and not pullable. | `npm run lab:image:build`. |
 | Commands fail with *permission denied* inside `/home/student` | The image ships `/home/student` owned by another UID and the provider could not take it over. | Use the runtime image, or rebuild the image with a `/home/student` the provider can chown. |

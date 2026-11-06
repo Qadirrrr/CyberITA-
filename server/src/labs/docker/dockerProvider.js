@@ -3,6 +3,7 @@ import { LabProvider } from '../provider.js';
 import env from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
 import { runDocker, dockerFailure } from './dockerRunner.js';
+import { resolveDockerBinary, dockerBinaryHint } from './dockerBinary.js';
 import { DockerTerminal } from './dockerTerminal.js';
 import { studentIdentity } from '../identity.js';
 
@@ -110,9 +111,12 @@ export class DockerLabProvider extends LabProvider {
   async run(args, options = {}) {
     const { host, ...runnerOptions } = options;
     const dockerHost = host !== undefined ? host : this.config.host || '';
+    // Resolve the CLI explicitly so production services with a minimal PATH
+    // (systemd, PM2, NSSM, Windows services) still find Docker.
+    const resolved = resolveDockerBinary(this.config.binary);
     try {
       if (this.runner) return await this.runner(args, runnerOptions);
-      return await runDocker(this.config.binary, args, {
+      return await runDocker(resolved.binary, args, {
         ...runnerOptions,
         env: { ...(dockerHost ? { DOCKER_HOST: dockerHost } : {}), ...(runnerOptions.env || {}) },
       });
@@ -122,15 +126,31 @@ export class DockerLabProvider extends LabProvider {
   }
 
   async isAvailable({ host } = {}) {
+    const resolved = resolveDockerBinary(this.config.binary);
     const result = await this.run(['version', '--format', '{{.Server.Version}}'], { timeoutMs: 8000, host });
     if (result.spawnError?.code === 'ENOENT') {
-      return { ok: false, reason: 'Docker CLI is not installed or is not on PATH.' };
+      return {
+        ok: false,
+        reason: dockerBinaryHint(resolved),
+        binary: resolved.binary,
+        binarySource: resolved.source,
+      };
     }
     if (result.exitCode !== 0 || result.timedOut) {
-      return { ok: false, reason: dockerFailure(result, 'Docker daemon is not reachable.') };
+      return {
+        ok: false,
+        reason: dockerFailure(result, 'Docker daemon is not reachable.'),
+        binary: resolved.binary,
+        binarySource: resolved.source,
+      };
     }
     const version = result.stdout.trim();
-    return { ok: true, reason: version ? `Docker Engine ${version}` : 'Docker Engine ready' };
+    return {
+      ok: true,
+      reason: version ? `Docker Engine ${version}` : 'Docker Engine ready',
+      binary: resolved.binary,
+      binarySource: resolved.source,
+    };
   }
 
   resolveImage(explicit) {
@@ -147,13 +167,23 @@ export class DockerLabProvider extends LabProvider {
   async ensureImage(image, host) {
     const inspected = await this.run(['image', 'inspect', image], { timeoutMs: this.config.provisionTimeoutMs, host });
     if (inspected.exitCode === 0) return;
-    if (!this.config.pull) throw providerError(`Lab image "${image}" is not available on the Docker host.`);
+    const localImage = String(image).startsWith('cyberita/');
+    const buildHint = localImage
+      ? ' It is a local CyberITA+ image: build it on the Docker host with `npm run lab:image:build` (see docs/LABS.md).'
+      : '';
+    if (!this.config.pull) {
+      throw providerError(
+        `Lab image "${image}" is not available on the Docker host.${buildHint || ' Enable LAB_DOCKER_PULL=true to pull it automatically.'}`
+      );
+    }
     const pulled = await this.run(['pull', image], { timeoutMs: this.config.provisionTimeoutMs, host });
     if (pulled.exitCode !== 0) {
-      const hint = String(image).startsWith('cyberita/')
-        ? ' It is a local CyberITA+ image: build it with `npm run lab:image:build` (see docs/LABS.md).'
-        : '';
-      throw providerError(`${dockerFailure(pulled, `Could not pull the lab image "${image}".`)}${hint}`);
+      // Only blame a missing local image when the pull actually ran. A missing
+      // Docker CLI (ENOENT) is a host setup problem, not a missing image.
+      const cliMissing = Boolean(pulled.spawnError);
+      throw providerError(
+        `${dockerFailure(pulled, `Could not pull the lab image "${image}".`)}${cliMissing ? '' : buildHint}`
+      );
     }
   }
 

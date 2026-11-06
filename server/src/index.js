@@ -7,6 +7,7 @@ import { checkDbConnection } from './config/db.js';
 import { runMigrations } from './db/migrate.js';
 import { purgeExpiredTokens } from './services/authService.js';
 import { cleanupExpiredLabSessions } from './services/labService.js';
+import { getProvider } from './labs/providers/index.js';
 
 async function main() {
   const app = createApp();
@@ -42,6 +43,30 @@ async function main() {
       labProvider: env.labs.provider,
     });
   });
+
+  // Non-blocking preflight: tell operators immediately when the lab runtime is
+  // unreachable (missing Docker CLI, daemon down, ...) instead of letting
+  // students hit a 503 later.
+  void (async () => {
+    try {
+      const provider = getProvider();
+      const availability = await provider.isAvailable();
+      if (availability.ok) {
+        logger.info(`Lab provider "${provider.name}" ready`, {
+          detail: availability.reason,
+          binary: availability.binary || null,
+        });
+      } else {
+        logger.warn(`Lab provider "${provider.name}" unavailable`, {
+          reason: availability.reason,
+          binary: availability.binary || null,
+          binarySource: availability.binarySource || null,
+        });
+      }
+    } catch (error) {
+      logger.warn('Lab provider preflight failed', { error: error.message });
+    }
+  })();
 
   const shutdown = (signal) => {
     logger.info(`${signal} received, shutting down.`);

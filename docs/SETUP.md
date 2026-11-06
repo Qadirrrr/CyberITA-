@@ -147,6 +147,8 @@ LAB_DOCKER_TIMEOUT_MS=180000
 
 `LAB_DOCKER_IMAGE` is the default image. Instructors can override it per lab from **Lab settings > Container image**. Images must provide `/bin/sh`, `base64`, `grep` and basic coreutils; the provider runs as root inside the container, creates `/home/student` if the image has none, and installs the session's identity. The bundled runtime image ships a `student` account (UID 1000) with a writable `/home/student`, the apt package lists and the usual lab tooling. Ubuntu, Debian, Alpine and Kali images also work, but minimal scratch images do not.
 
+> **Running the API as a service?** The lab runtime needs the Docker CLI, and services often start with a minimal `PATH`. The API looks for `docker` on `PATH` and then in `/usr/bin`, `/usr/local/bin`, `/snap/bin`, Homebrew and Docker Desktop locations. If your install is elsewhere, set `LAB_DOCKER_BINARY=/full/path/to/docker` in `server/.env`. `GET /api/labs/status` reports the binary it resolved (`dockerBinary`, `dockerBinarySource`), and the API logs a readiness line at startup.
+
 > Full runbook — install options on Windows (Docker Desktop vs docker-ce in WSL2), image contents, the admin readiness check and troubleshooting: **[docs/LABS.md](./LABS.md)**.
 
 To use a remote Docker host, set `LAB_DOCKER_HOST=ssh://labuser@lab-host` and configure SSH key authentication for the API process. The SSH user must be allowed to use the Docker daemon.
@@ -156,6 +158,7 @@ For more than one Docker host, keep `LAB_DOCKER_HOST` as the default and registe
 Verify the complete container lifecycle without touching application data:
 
 ```bash
+npm run lab:doctor   # CLI, engine and image diagnostics
 npm run lab:smoke
 ```
 

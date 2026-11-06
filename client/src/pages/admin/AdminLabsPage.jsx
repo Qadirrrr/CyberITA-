@@ -252,6 +252,11 @@ export default function AdminLabsPage() {
       {!dockerAvailable && (
         <Alert tone="amber" title="Real Lab Infrastructure Notice">
           Docker is not currently active on this host, so labs cannot start. Start Docker Desktop (or the Docker daemon) and labs will run again automatically without restarting the app.
+          {health?.infrastructure?.docker?.reason && (
+            <p className="mt-2 break-words font-mono text-[11px] leading-5 opacity-80">
+              {health.infrastructure.docker.reason}
+            </p>
+          )}
         </Alert>
       )}
 
@@ -288,6 +293,16 @@ export default function AdminLabsPage() {
             </div>
           ))}
         </div>
+
+        {health?.infrastructure?.docker?.binary && (
+          <p
+            className="mt-2 truncate font-mono text-[10px] text-slate-500"
+            title={`Docker CLI: ${health.infrastructure.docker.binary}`}
+          >
+            Docker CLI: {health.infrastructure.docker.binary}
+            {health.infrastructure.docker.binarySource ? ` (${health.infrastructure.docker.binarySource})` : ''}
+          </p>
+        )}
 
         {verifyResult && (
           <div className="mt-4 space-y-2">

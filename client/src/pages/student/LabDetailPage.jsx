@@ -195,6 +195,9 @@ export default function LabDetailPage() {
         <Alert tone="amber" title="This lab is temporarily unavailable">
           Labs run in real containers, so they cannot start while the Docker provider is offline. Please try again
           later or ask your instructor.
+          {labStatus.reason && (
+            <p className="mt-2 break-words font-mono text-[11px] leading-5 opacity-80">{labStatus.reason}</p>
+          )}
         </Alert>
       )}
 

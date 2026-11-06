@@ -160,6 +160,11 @@ router.get(
             provider: provider.name,
             available: availability.ok,
             reason: availability.reason || null,
+            // Diagnostic details so operators can see which Docker CLI the API
+            // process is actually using (PATH problems are the usual cause of
+            // "Docker CLI is not installed or is not on PATH").
+            dockerBinary: availability.binary || null,
+            dockerBinarySource: availability.binarySource || null,
             // Every lab, including open-to-all practice labs, runs in a real
             // container and therefore needs the Docker provider.
             sessionTtlMinutes: env.labs.sessionTtlMinutes,

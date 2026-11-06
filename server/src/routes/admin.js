@@ -62,6 +62,8 @@ router.get(
                 available: check.ok,
                 provider: 'docker',
                 reason: check.reason || null,
+                binary: check.binary || null,
+                binarySource: check.binarySource || null,
             };
         } catch (err) {
             dockerStatus = {
@@ -1100,7 +1102,13 @@ router.post(
 
         const started = Date.now();
         const availability = await provider.isAvailable({ host });
-        add('engine', 'Docker engine reachable', availability.ok, availability.reason, Date.now() - started);
+        add(
+            'engine',
+            'Docker engine reachable',
+            availability.ok,
+            [availability.reason, availability.binary ? `CLI: ${availability.binary}` : null].filter(Boolean).join(' · ') || null,
+            Date.now() - started
+        );
 
         if (availability.ok) {
             const imageStarted = Date.now();
@@ -1252,7 +1260,13 @@ router.post(
                 // 1. Engine reachable
                 const started = Date.now();
                 const availability = await provider.isAvailable();
-                add('engine', 'Docker engine reachable', availability.ok, availability.reason, Date.now() - started);
+                add(
+                    'engine',
+                    'Docker engine reachable',
+                    availability.ok,
+                    [availability.reason, availability.binary ? `CLI: ${availability.binary}` : null].filter(Boolean).join(' · ') || null,
+                    Date.now() - started
+                );
                 if (!availability.ok) {
                     return res.json({ ok: false, provider: provider.name, image: provider.config.image, checks, at: new Date().toISOString() });
                 }

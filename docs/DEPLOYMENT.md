@@ -47,7 +47,7 @@ Notes:
 - Keep `CORS_ORIGINS` limited to the public origin. It is only needed for cross-origin browser calls; the production frontend is same-origin.
 - Set `DB_SSL=true` if your managed PostgreSQL requires TLS.
 - Do not commit `.env` files.
-- Install Docker Engine and keep the daemon running on the lab host. The API user must be able to run `docker`; add it to the `docker` group or configure a rootless daemon.
+- Install Docker Engine and keep the daemon running on the lab host. The API user must be able to run `docker`; add it to the `docker` group or configure a rootless daemon. Services usually start with a minimal `PATH`: the API looks for the CLI on `PATH` and in the usual install locations, and you can pin it with `LAB_DOCKER_BINARY=/usr/bin/docker`. If the API itself runs in a container, install the Docker CLI in that image and mount `/var/run/docker.sock`.
 - Lab sessions run as root *inside* their disposable container (real terminal, package installs). Containers are never privileged, have no host mounts and no Docker socket. Network access is on by default for `apt`; restrict egress at the network firewalling level if required.
 - Pre-pull `LAB_DOCKER_IMAGE` during deployment so students do not wait for image downloads. Per-lab images are pulled on first start when `LAB_DOCKER_PULL=true`.
 
