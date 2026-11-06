@@ -35,6 +35,7 @@ JWT_ACCESS_SECRET=<openssl rand -hex 48>
 JWT_REFRESH_SECRET=<openssl rand -hex 48>
 COOKIE_SECURE=true
 CORS_ORIGINS=https://cyberita.example.com
+APP_URL=https://cyberita.example.com
 LAB_PROVIDER=docker
 LAB_DOCKER_IMAGE=cyberita/lab-runtime:1.0
 LAB_DOCKER_NETWORK=true
@@ -43,6 +44,7 @@ LAB_DOCKER_NETWORK=true
 Notes:
 
 - Set `COOKIE_SECURE=true` when the site is served over HTTPS.
+- `APP_URL` is the public origin of the site (scheme + host + port, no trailing slash), e.g. `https://cyberita.example.com` or `http://203.0.113.10:4000`. Verification and password-reset emails prefer the origin of the request that triggered them, so a stale `APP_URL` no longer produces an unreachable link; keep it correct for background emails. Make sure the port in the link is open in your firewall / cloud security group (or serve the app through port 80/443).
 - Use distinct, random JWT secrets. Rotating a secret invalidates existing sessions.
 - Keep `CORS_ORIGINS` limited to the public origin. It is only needed for cross-origin browser calls; the production frontend is same-origin.
 - Set `DB_SSL=true` if your managed PostgreSQL requires TLS.

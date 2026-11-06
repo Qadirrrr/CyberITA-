@@ -56,7 +56,14 @@ export function createApp() {
 
   // Health / readiness
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', name: 'CyberITA+ API', env: env.nodeEnv, time: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      name: 'CyberITA+ API',
+      env: env.nodeEnv,
+      appUrl: env.mail.appUrl,
+      mailConfigured: Boolean(env.mail.host && env.mail.user),
+      time: new Date().toISOString(),
+    });
   });
 
   // Global (optional) authentication, req.user is set when a valid token exists

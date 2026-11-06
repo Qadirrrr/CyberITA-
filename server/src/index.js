@@ -41,6 +41,7 @@ async function main() {
     logger.info(`CyberITA+ API listening on http://localhost:${env.port}`, {
       env: env.nodeEnv,
       labProvider: env.labs.provider,
+      appUrl: env.mail.appUrl,
     });
   });
 

@@ -18,6 +18,7 @@ import { recordActivity } from '../utils/activity.js';
 import logger from '../config/logger.js';
 import { emailSchema, fullNameSchema, passwordSchema } from '../utils/validation.js';
 import { issueAccountToken, consumeAccountToken } from '../services/accountTokens.js';
+import { resolvePublicBaseUrl } from '../utils/publicUrl.js';
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -78,10 +79,10 @@ const verifyEmailSchema = z.object({
 const resendVerificationSchema = z.object({ email: emailSchema.optional().nullable() });
 
 /** Links are only echoed back outside production, and only when SMTP is not configured. */
-function devLink(path, params) {
+function devLink(path, params, req) {
   if (env.isProduction || mailConfigured) return {};
   const query = new URLSearchParams(params).toString();
-  return { devLink: `${env.mail.appUrl}${path}?${query}` };
+  return { devLink: `${resolvePublicBaseUrl(req)}${path}?${query}` };
 }
 
 function cookieOptions({ path, maxAge, remember = true }) {
@@ -143,11 +144,12 @@ async function buildSession(user, req) {
 }
 
 /** Issues a fresh verification token and emails it. Never throws into the request path. */
-async function deliverVerification(user) {
+async function deliverVerification(user, req) {
   try {
     const { token } = await issueAccountToken(user, 'email_verification');
-    const result = await sendVerificationEmail({ user, token });
-    return { ok: result.ok, ...devLink('/verify-email', { token, email: user.email }) };
+    const baseUrl = resolvePublicBaseUrl(req);
+    const result = await sendVerificationEmail({ user, token, baseUrl });
+    return { ok: result.ok, ...devLink('/verify-email', { token, email: user.email }, req) };
   } catch (error) {
     logger.error('Could not send verification email', { userId: user.id, error: error.message });
     return { ok: false };
@@ -171,7 +173,7 @@ router.post(
     );
     const user = rows[0];
     await logActivity(user.id, 'account.registered');
-    const verification = await deliverVerification(user);
+    const verification = await deliverVerification(user, req);
     // Do NOT issue a session here — the account must be verified before login.
     // We return a minimal payload so the client can redirect to /login with
     // the appropriate banner without leaking tokens for an unverified account.
@@ -220,7 +222,7 @@ router.post(
     // Block login until the email address is verified.
     if (!user.email_verified_at) {
       // Silently re-send a fresh verification link so the user can unblock themselves.
-      await deliverVerification(user);
+      await deliverVerification(user, req);
       throw unauthorized(
         'Please verify your email address before signing in. We just sent you a new verification link — check your inbox (and spam folder).'
       );
@@ -339,7 +341,7 @@ router.post(
     const user = rows[0];
     // Same response whether or not the account exists: never confirm an address.
     if (!user || user.email_verified_at) return res.json({ ok: true });
-    const verification = await deliverVerification(user);
+    const verification = await deliverVerification(user, req);
     res.json({ ok: true, emailSent: verification.ok, ...verification.devLink ? { devVerificationLink: verification.devLink } : {} });
   })
 );
@@ -358,9 +360,10 @@ router.post(
     if (user?.is_active) {
       try {
         const { token } = await issueAccountToken(user, 'password_reset');
-        const result = await sendPasswordResetEmail({ user, token });
+        const baseUrl = resolvePublicBaseUrl(req);
+        const result = await sendPasswordResetEmail({ user, token, baseUrl });
         await logActivity(user.id, 'account.password_reset_requested');
-        const resetDev = devLink('/reset-password', { token, email: user.email });
+        const resetDev = devLink('/reset-password', { token, email: user.email }, req);
         return res.json({
           ok: true,
           emailSent: result.ok,

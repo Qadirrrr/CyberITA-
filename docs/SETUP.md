@@ -76,6 +76,14 @@ PASSWORD_RESET_TTL_MINUTES=60
   the server log, and the API echoes `devVerificationLink` / `devResetLink` in the
   response, so the pages can show the link directly. Never enabled in production.
 - **With SMTP** messages are delivered for real and links are never echoed back.
+- **Link host**: verification/reset links use the origin the learner is actually
+  browsing (including the port and `X-Forwarded-*` headers behind a proxy), so a
+  stale `APP_URL` cannot send them to an unreachable address. `APP_URL` is the
+  fallback for emails sent outside a request (e.g. background jobs) and should
+  still be the public origin, e.g. `https://cyberita.example.com` or
+  `http://203.0.113.10:4000`. If the link still times out, the port is blocked
+  by the host firewall / cloud security group — open it or serve the app on
+  80/443 through a reverse proxy.
 
 Security properties: tokens are random 32-byte values stored only as SHA-256
 hashes, expire (24 h for verification, 60 min for reset), are single use, a

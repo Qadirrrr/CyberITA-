@@ -88,8 +88,9 @@ function layout(title, paragraphs, action) {
   </body></html>`;
 }
 
-export async function sendVerificationEmail({ user, token }) {
-  const link = `${env.mail.appUrl}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+export async function sendVerificationEmail({ user, token, baseUrl }) {
+  const base = String(baseUrl || env.mail.appUrl || '').replace(/\/+$/, '');
+  const link = `${base}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
   const name = user.full_name || 'there';
   return sendMail({
     to: user.email,
@@ -111,8 +112,9 @@ export async function sendVerificationEmail({ user, token }) {
   });
 }
 
-export async function sendPasswordResetEmail({ user, token }) {
-  const link = `${env.mail.appUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+export async function sendPasswordResetEmail({ user, token, baseUrl }) {
+  const base = String(baseUrl || env.mail.appUrl || '').replace(/\/+$/, '');
+  const link = `${base}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
   const name = user.full_name || 'there';
   return sendMail({
     to: user.email,
