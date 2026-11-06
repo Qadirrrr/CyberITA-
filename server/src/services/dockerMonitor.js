@@ -2,6 +2,8 @@ import { query, withTransaction } from '../config/db.js';
 import logger from '../config/logger.js';
 import { getProvider } from '../labs/providers/index.js';
 import { hostForSession } from './labServers.js';
+import { isRemoteAgent } from './labServers.js';
+import { agentClient } from '../labs/remote/agentClient.js';
 import { badRequest, notFound } from '../utils/errors.js';
 import { studentIdentity } from '../labs/identity.js';
 
@@ -500,6 +502,13 @@ export async function stopContainer(sessionId, adminUser) {
   const server = await hostForSession(session);
   const provider = getProvider('docker');
 
+  if (isRemoteAgent(server?.server)) {
+    await agentClient.stop(server.server, session.instance_id, { cwd: session.cwd, fsState: session.fs_state }, 20000);
+    await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1`, [sessionId]);
+    await recordContainerEvent({ containerId: session.instance_id, sessionId: session.id, userId: adminUser?.id || null, labId: session.lab_id, event: 'stopped', details: { stoppedBy: 'admin', adminName: adminUser?.full_name || 'Admin', remote: true } });
+    return { ok: true, sessionId, status: 'stopped' };
+  }
+
   const result = await provider.run(['stop', '-t', '10', session.instance_id], {
     host: server?.host || null,
     timeoutMs: 20000,
@@ -533,6 +542,14 @@ export async function restartContainer(sessionId, adminUser) {
 
   const server = await hostForSession(session);
   const provider = getProvider('docker');
+
+  if (isRemoteAgent(server?.server)) {
+    const res = await agentClient.restart(server.server, session.instance_id, { cwd: session.cwd, fsState: session.fs_state }, 30000);
+    if (!res.ok) throw badRequest(`Failed to restart remote container: ${res.error || 'Unknown error'}`);
+    await query(`UPDATE lab_sessions SET status = 'running', ended_at = NULL WHERE id = $1`, [sessionId]);
+    await recordContainerEvent({ containerId: session.instance_id, sessionId: session.id, userId: adminUser?.id || null, labId: session.lab_id, event: 'restarted', details: { restartedBy: 'admin', adminName: adminUser?.full_name || 'Admin', remote: true } });
+    return { ok: true, sessionId, status: 'running' };
+  }
 
   const result = await provider.run(['restart', '-t', '10', session.instance_id], {
     host: server?.host || null,
@@ -649,10 +666,14 @@ export async function removeContainer(sessionId, adminUser) {
   const provider = getProvider('docker');
 
   if (session.instance_id) {
-    await provider.run(['rm', '-f', session.instance_id], {
-      host: server?.host || null,
-      timeoutMs: 20000,
-    }).catch(() => {});
+    if (isRemoteAgent(server?.server)) {
+      await agentClient.remove(server.server, session.instance_id, { cwd: session.cwd, fsState: session.fs_state }, 20000).catch(() => {});
+    } else {
+      await provider.run(['rm', '-f', session.instance_id], {
+        host: server?.host || null,
+        timeoutMs: 20000,
+      }).catch(() => {});
+    }
   }
 
   await query(

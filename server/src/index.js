@@ -7,6 +7,7 @@ import { checkDbConnection } from './config/db.js';
 import { runMigrations } from './db/migrate.js';
 import { purgeExpiredTokens } from './services/authService.js';
 import { cleanupExpiredLabSessions } from './services/labService.js';
+import { markStaleServersOffline } from './services/labServers.js';
 import { getProvider } from './labs/providers/index.js';
 
 async function main() {
@@ -31,8 +32,10 @@ async function main() {
   const tokenPurge = setInterval(() => purgeExpiredTokens().catch(() => {}), 60 * 60 * 1000);
   tokenPurge.unref();
 
-  const runLabCleanup = () =>
+  const runLabCleanup = () => {
+    markStaleServersOffline().catch((error) => logger.warn('Lab server staleness check failed', { error: error.message }));
     cleanupExpiredLabSessions().catch((error) => logger.warn('Lab cleanup failed', { error: error.message }));
+  };
   runLabCleanup();
   const labCleanup = setInterval(runLabCleanup, Math.max(1, env.labs.cleanupIntervalMinutes) * 60 * 1000);
   labCleanup.unref();

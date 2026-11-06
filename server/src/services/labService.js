@@ -7,7 +7,7 @@ import { notFound, forbidden, badRequest } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import { recomputeCourseProgress } from '../routes/enrollment.js';
 import { assertSessionAccess } from './access.js';
-import { hostForSession, resolveServerForNewSession } from './labServers.js';
+import { hostForSession, resolveServerForNewSession, reserveCapacity, releaseCapacity } from './labServers.js';
 import { studentIdentity } from '../labs/identity.js';
 import { recordContainerEvent } from './dockerMonitor.js';
 
@@ -77,7 +77,19 @@ export async function startSession(user, lab) {
   // Labs are routed to their assigned Docker server (or the default host).
   const { host, server } = await resolveServerForNewSession(lab);
 
-  const descriptor = await provider.provision({ lab, user, host, serverId: server?.id ?? null });
+  // Atomically reserve capacity on the chosen server before provisioning.
+  let reservedServer = server;
+  if (server?.id) {
+    reservedServer = await reserveCapacity(server.id);
+  }
+
+  let descriptor;
+  try {
+    descriptor = await provider.provision({ lab, user, host, server: reservedServer, serverId: reservedServer?.id ?? null });
+  } catch (error) {
+    if (reservedServer?.id) await releaseCapacity(reservedServer.id).catch(() => {});
+    throw error;
+  }
   // Every container gets the configured TTL so abandoned sessions are reclaimed.
   const expiresAt = new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
   let rows;
@@ -87,10 +99,11 @@ export async function startSession(user, lab) {
          (lab_id, user_id, provider, instance_id, status, fs_state, cwd, expires_at, lab_server_id)
        VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8)
        RETURNING *`,
-      [lab.id, user.id, descriptor.provider, descriptor.instanceId, JSON.stringify(descriptor.fsState || {}), descriptor.cwd, expiresAt, server?.id ?? null]
+      [lab.id, user.id, descriptor.provider, descriptor.instanceId, JSON.stringify(descriptor.fsState || {}), descriptor.cwd, expiresAt, reservedServer?.id ?? null]
     ));
   } catch (error) {
-    await provider.deprovision({ instance_id: descriptor.instanceId, provider: descriptor.provider }, { host }).catch(() => {});
+    await provider.deprovision({ instance_id: descriptor.instanceId, provider: descriptor.provider }, { host, server: reservedServer }).catch(() => {});
+    if (reservedServer?.id) await releaseCapacity(reservedServer.id).catch(() => {});
     throw error;
   }
   const session = rows[0];
@@ -105,7 +118,7 @@ export async function startSession(user, lab) {
       details: {
         image: lab.container_image,
         provider: descriptor.provider,
-        labServerId: server?.id ?? null,
+        labServerId: reservedServer?.id ?? null,
       },
     }).catch(() => {});
   }
@@ -137,7 +150,9 @@ export async function stopSession(session, user) {
   if (session.status === 'stopped') return session;
   const provider = getProvider(session.provider);
   const server = await hostForSession(session);
-  await provider.deprovision(session, { host: server?.host || null });
+  if (server?.server) session._server = server.server;
+  await provider.deprovision(session, { host: server?.host || null, server: server?.server || null });
+  if (server?.server?.id) await releaseCapacity(server.server.id).catch(() => {});
   const { rows } = await query(
     `UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1 RETURNING *`,
     [session.id]
@@ -312,7 +327,9 @@ export async function executeInSession(session, lab, command, { onOutput } = {})
   if (session.expires_at && new Date(session.expires_at) < new Date()) {
     try {
       const server = await hostForSession(session);
-      await provider.deprovision(session, { host: server?.host || null });
+      if (server?.server) session._server = server.server;
+      await provider.deprovision(session, { host: server?.host || null, server: server?.server || null });
+      if (server?.server?.id) await releaseCapacity(server.server.id).catch(() => {});
       await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1`, [session.id]);
     } catch (error) {
       await query(`UPDATE lab_sessions SET status = 'error' WHERE id = $1`, [session.id]).catch(() => {});
@@ -321,7 +338,9 @@ export async function executeInSession(session, lab, command, { onOutput } = {})
     throw badRequest('This lab session has expired. Start a new session.');
   }
 
-  const terminal = provider.createTerminal(session, lab);
+  const server = await hostForSession(session);
+  if (server?.server) session._server = server.server;
+  const terminal = provider.createTerminal(session, lab, { server: server?.server || null });
   const result = await terminal.execute(command, { onOutput });
   const { events = [], ...exec } = result;
 
@@ -384,7 +403,9 @@ export async function cleanupExpiredLabSessions({ limit = 100 } = {}) {
     try {
       try {
         const server = await hostForSession(session);
-        await getProvider(session.provider).deprovision(session, { host: server?.host || null });
+        if (server?.server) session._server = server.server;
+        await getProvider(session.provider).deprovision(session, { host: server?.host || null, server: server?.server || null });
+        if (server?.server?.id) await releaseCapacity(server.server.id).catch(() => {});
       } catch (provErr) {
         logger.warn('Provider deprovision skipped or failed during cleanup', {
           sessionId: session.id,

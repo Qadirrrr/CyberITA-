@@ -27,6 +27,9 @@ import {
 const EMPTY_FORM = {
   name: '',
   dockerHost: '',
+  serverType: 'local',
+  agentUrl: '',
+  agentSecret: '',
   location: '',
   description: '',
   maxSessions: 0,
@@ -101,6 +104,9 @@ export default function LabServerAdminPanel() {
     setForm({
       name: server.name || '',
       dockerHost: server.docker_host || '',
+      serverType: server.server_type || 'local',
+      agentUrl: server.agent_url || '',
+      agentSecret: '',
       location: server.location || '',
       description: server.description || '',
       maxSessions: server.max_sessions ?? 0,
@@ -117,11 +123,14 @@ export default function LabServerAdminPanel() {
       const payload = {
         name: form.name.trim(),
         dockerHost: form.dockerHost.trim() || null,
+        serverType: form.serverType,
+        agentUrl: form.agentUrl.trim() || null,
         location: form.location.trim(),
         description: form.description.trim(),
         maxSessions: Number(form.maxSessions) || 0,
         status: form.status,
       };
+      if (form.agentSecret.trim()) payload.agentSecret = form.agentSecret.trim();
       if (modal.mode === 'create') {
         await api.post('/admin/lab-servers', payload);
         toast.success('Lab server added.');
@@ -255,7 +264,7 @@ export default function LabServerAdminPanel() {
                 <thead className="border-b border-white/5 text-slate-400">
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Server</th>
-                    <th className="px-3 py-2.5 font-medium">Docker host</th>
+                    <th className="px-3 py-2.5 font-medium">Type / host</th>
                     <th className="px-3 py-2.5 font-medium">Status</th>
                     <th className="px-3 py-2.5 font-medium">Load</th>
                     <th className="px-3 py-2.5 font-medium">Labs</th>
@@ -293,8 +302,19 @@ export default function LabServerAdminPanel() {
                         </td>
                         <td className="px-3 py-3">
                           <span className="font-mono text-[11px] text-slate-400">
-                            {server.docker_host || 'Local daemon (default)'}
+                            {server.server_type === 'remote-agent'
+                              ? `Agent: ${server.agent_url || '—'}`
+                              : (server.docker_host || 'Local daemon (default)')}
                           </span>
+                          {server.server_type === 'remote-agent' && (
+                            <div className="mt-1 text-[10px] text-slate-500">
+                              {server.last_heartbeat_at
+                                ? `Heartbeat ${new Date(server.last_heartbeat_at).toLocaleTimeString()} · ${server.cpu_percent ?? 0}% CPU · ${server.memory_used_mb ?? 0}/${server.memory_total_mb ?? 0} MB · ${server.disk_used_gb ?? 0}/${server.disk_total_gb ?? 0} GB`
+                                : 'No heartbeat yet'}
+                              {server.docker_available === false && <span className="ml-1 text-rose-300">· Docker down</span>}
+                              {server.last_error && <div className="text-rose-300">{server.last_error}</div>}
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-3">
                           <Badge tone={STATUS_TONE[server.status] || 'slate'}>{server.status}</Badge>
@@ -437,14 +457,44 @@ export default function LabServerAdminPanel() {
             required
             maxLength={120}
           />
-          <Input
-            label="Docker host"
-            value={form.dockerHost}
-            onChange={(event) => setForm((current) => ({ ...current, dockerHost: event.target.value }))}
-            placeholder="ssh://lab@10.0.0.5 or tcp://10.0.0.5:2376 — leave empty for local"
-            hint="Must be reachable from the API server. The Docker CLI uses this as DOCKER_HOST."
-            maxLength={500}
-          />
+          <Select
+            label="Server type"
+            value={form.serverType}
+            onChange={(event) => setForm((current) => ({ ...current, serverType: event.target.value }))}
+          >
+            <option value="local">Local Docker host (DOCKER_HOST)</option>
+            <option value="remote-agent">Remote Lab Agent (EC2)</option>
+          </Select>
+          {form.serverType === 'remote-agent' ? (
+            <>
+              <Input
+                label="Agent URL"
+                value={form.agentUrl}
+                onChange={(event) => setForm((current) => ({ ...current, agentUrl: event.target.value }))}
+                placeholder="http://10.0.0.5:9100"
+                hint="Private URL of the Lab Agent. Only the Main Server should reach it."
+                required
+                maxLength={500}
+              />
+              <Input
+                label={modal?.mode === 'edit' ? 'Agent secret (leave blank to keep)' : 'Agent secret'}
+                type="password"
+                value={form.agentSecret}
+                onChange={(event) => setForm((current) => ({ ...current, agentSecret: event.target.value }))}
+                placeholder="Shared secret (min 8 chars)"
+                maxLength={200}
+              />
+            </>
+          ) : (
+            <Input
+              label="Docker host"
+              value={form.dockerHost}
+              onChange={(event) => setForm((current) => ({ ...current, dockerHost: event.target.value }))}
+              placeholder="ssh://lab@10.0.0.5 or tcp://10.0.0.5:2376 — leave empty for local"
+              hint="Must be reachable from the API server. The Docker CLI uses this as DOCKER_HOST."
+              maxLength={500}
+            />
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Location"

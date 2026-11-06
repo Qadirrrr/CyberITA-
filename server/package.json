@@ -12,6 +12,7 @@
     "db:reset": "node src/db/reset.js",
     "user:create": "node src/scripts/createUser.js",
     "lab:smoke": "node src/scripts/dockerSmoke.js",
+    "agent:start": "node src/agent.js",
     "lab:doctor": "node src/scripts/dockerDoctor.js",
     "lab:image:build": "docker build -t cyberita/lab-runtime:1.0 ../docker/lab-image"
   },

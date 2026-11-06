@@ -4,7 +4,10 @@ import env from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
 import { runDocker, dockerFailure } from './dockerRunner.js';
 import { resolveDockerBinary, dockerBinaryHint } from './dockerBinary.js';
+import { agentClient } from '../remote/agentClient.js';
+import { getLabServer, isRemoteAgent } from '../../services/labServers.js';
 import { DockerTerminal } from './dockerTerminal.js';
+import { RemoteTerminal } from '../remote/remoteTerminal.js';
 import { studentIdentity } from '../identity.js';
 
 const NAME_PATTERN = /^cyberita-lab-[a-z0-9_-]{1,120}$/;
@@ -370,7 +373,19 @@ export class DockerLabProvider extends LabProvider {
     return shell.stdout.trim() === '/bin/bash' ? '/bin/bash' : '/bin/sh';
   }
 
-  async provision({ lab, user, host = null, serverId = null }) {
+  async provision({ lab, user, host = null, server = null, serverId = null }) {
+    const resolvedServer = server || (serverId ? await getLabServer(serverId).catch(() => null) : null);
+    if (resolvedServer && isRemoteAgent(resolvedServer)) {
+      const payload = { lab, user };
+      const res = await agentClient.createContainer(resolvedServer, payload, this.config.provisionTimeoutMs || 180000);
+      if (!res.ok) {
+        const err = new AppError(res.error || 'Remote provision failed.', 503, 'lab_unavailable');
+        err.expose = true;
+        throw err;
+      }
+      return { ...res.data, serverId: resolvedServer.id, provider: this.name };
+    }
+
     const image = this.resolveImage(lab.container_image);
     const identity = studentIdentity(user);
     // Name containers after the student so the host can tell who is doing
@@ -406,7 +421,18 @@ export class DockerLabProvider extends LabProvider {
     }
   }
 
-  async deprovision(session, { host } = {}) {
+  async deprovision(session, { host = null, server = null } = {}) {
+    const resolvedServer = server || (session?.lab_server_id ? await getLabServer(session.lab_server_id).catch(() => null) : null);
+    if (resolvedServer && isRemoteAgent(resolvedServer)) {
+      const res = await agentClient.remove(resolvedServer, session.instance_id || session.instanceId, {
+        cwd: session.cwd,
+        fsState: session.fs_state || session.fsState,
+      }, 60000);
+      if (!res.ok && !/not found/i.test(res.error || '')) {
+        throw providerError(res.error || 'Could not remove the remote lab container.');
+      }
+      return { ok: true };
+    }
     const name = this.containerName(session);
     if (!name) return { ok: true };
     const result = await this.run(['rm', '-f', name], { timeoutMs: 60000, host });
@@ -416,7 +442,12 @@ export class DockerLabProvider extends LabProvider {
     return { ok: true };
   }
 
-  createTerminal(session, lab) {
+  createTerminal(session, lab, { server = null } = {}) {
+    // Prefer explicit server; fall back to one stashed on the session object.
+    let srv = server || session?._server || null;
+    if (srv && isRemoteAgent(srv)) {
+      return new RemoteTerminal({ server: srv, session, lab });
+    }
     return new DockerTerminal({ provider: this, session, lab });
   }
 }

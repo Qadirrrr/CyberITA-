@@ -9,6 +9,7 @@ import { authenticate } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/auth.js';
+import agentRoutes from './routes/agent.js';
 import userRoutes from './routes/users.js';
 import courseRoutes from './routes/courses.js';
 import enrollmentRoutes from './routes/enrollment.js';
@@ -65,6 +66,9 @@ export function createApp() {
       time: new Date().toISOString(),
     });
   });
+
+  // Agent endpoints authenticate with their own bearer secret (not user JWT).
+  app.use('/api/agents', agentRoutes);
 
   // Global (optional) authentication, req.user is set when a valid token exists
   app.use('/api', authenticate);

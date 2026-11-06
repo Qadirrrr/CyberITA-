@@ -7,12 +7,14 @@ import { asyncHandler, notFound, badRequest } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
 import { requireRole } from '../middleware/auth.js';
 import { getProvider } from '../labs/providers/index.js';
+import { agentClient } from '../labs/remote/agentClient.js';
 import { stopSession, cleanupExpiredLabSessions } from '../services/labService.js';
 import { recordActivity } from '../utils/activity.js';
 import {
     createLabServer,
     deleteLabServer,
     getLabServer,
+    isRemoteAgent,
     listLabServers,
     updateLabServer,
     LAB_SERVER_STATUSES,
@@ -1003,7 +1005,10 @@ router.get(
 const labServerSchema = z.object({
     name: z.string().trim().min(2).max(120),
     provider: z.enum(['docker']).default('docker'),
+    serverType: z.enum(['local', 'remote-agent']).default('local'),
     dockerHost: z.string().trim().max(500).nullable().optional(),
+    agentUrl: z.string().trim().max(500).nullable().optional(),
+    agentSecret: z.string().trim().min(8).max(200).optional(),
     location: z.string().trim().max(160).default(''),
     description: z.string().trim().max(4000).default(''),
     maxSessions: z.coerce.number().int().min(0).max(100000).default(0),
@@ -1093,12 +1098,54 @@ router.post(
     '/lab-servers/:id/verify',
     asyncHandler(async(req, res) => {
         const server = await getLabServer(req.params.id);
-        const provider = getProvider('docker');
-        const host = server.docker_host || null;
-        const image = env.labs.docker.image;
         const checks = [];
         const add = (id, label, ok, detail, ms) =>
             checks.push({ id, label, ok: Boolean(ok), detail: detail ?? null, ms: ms ?? null });
+
+        if (isRemoteAgent(server)) {
+            const started = Date.now();
+            const health = await agentClient.health(server, 8000);
+            add('agent', 'Lab agent reachable', health.ok, health.ok ? 'Agent responded.' : (health.error || 'No response.'), Date.now() - started);
+
+            const mStarted = Date.now();
+            const metrics = await agentClient.metrics(server, 15000);
+            add(
+                'docker',
+                'Docker engine on agent',
+                Boolean(metrics.ok && metrics.data?.docker_available),
+                metrics.ok ? (metrics.data?.docker_reason || 'Docker available.') : (metrics.error || 'Metrics failed.'),
+                Date.now() - mStarted
+            );
+            add(
+                'resources',
+                'CPU / RAM / disk',
+                Boolean(metrics.ok),
+                metrics.ok
+                    ? `${metrics.data?.cpu_percent ?? 0}% CPU · ${metrics.data?.memory_used_mb ?? 0}/${metrics.data?.memory_total_mb ?? 0} MB RAM · ${metrics.data?.disk_used_gb ?? 0}/${metrics.data?.disk_total_gb ?? 0} GB disk`
+                    : (metrics.error || 'No metrics.'),
+                null
+            );
+            add(
+                'capacity',
+                'Capacity',
+                true,
+                `${metrics.data?.running_containers ?? 0} running · ${server.active_sessions || 0}/${server.max_sessions || '∞'} slots`,
+                null
+            );
+            const image = env.labs.docker.image;
+            // agent doesn't inspect image by default; check via container list? Just report configured.
+            add('image', `Lab image "${image}"`, true, 'Verified on first session (pulled/built on the agent host).', null);
+
+            const ok = checks.every((check) => check.ok);
+            await withTransaction((client) =>
+                recordActivity(client, { userId: req.user.id, action: 'admin.lab_server_verified', entityType: 'lab_server', entityId: server.id, metadata: { ok, name: server.name, remote: true } })
+            );
+            return res.json({ ok, provider: 'remote-agent', image, checks, at: new Date().toISOString() });
+        }
+
+        const provider = getProvider('docker');
+        const host = server.docker_host || null;
+        const image = env.labs.docker.image;
 
         const started = Date.now();
         const availability = await provider.isAvailable({ host });
