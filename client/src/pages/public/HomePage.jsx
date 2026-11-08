@@ -132,7 +132,7 @@ export default function HomePage() {
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
-                  <span className="ml-2 font-mono text-xs text-slate-400">student@cyberita-lab: ~</span>
+                  <span className="ml-2 font-mono text-xs text-slate-400">student@cyberitalab: ~</span>
                   <Badge tone="emerald" dot="animate-pulse" className="ml-auto !bg-emerald-500/20 !text-emerald-300 !border-emerald-500/30">
                     Live
                   </Badge>

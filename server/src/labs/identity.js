@@ -34,6 +34,15 @@ const RESERVED = new Set([
 ]);
 
 
+/**
+ * Fixed lab hostname for every student.
+ *
+ * The prompt is `<student>@cyberitalab`, e.g. `saif@cyberitalab:~$` — the
+ * student's own name before the `@`, and this shared lab name after it,
+ * instead of a per-student hostname like `saif-lab`.
+ */
+export const LAB_HOSTNAME = 'cyberitalab';
+
 function printable(value) {
   return String(value ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -69,9 +78,9 @@ export function studentIdentity(user = {}) {
   }
   if (!slug || RESERVED.has(slug)) slug = id ? `student-${id}` : 'student';
 
-  // Per-student hostname so the container is instantly identifiable,
-  // e.g. "muneeb-lab" instead of a generic "cyberita-lab".
-  const hostname = `${slug.replace(/_/g, '-')}-lab`.replace(/[^a-z0-9-]/g, '').slice(0, 253) || 'cyberita-lab';
+  // Fixed hostname for every lab, so the prompt reads
+  // e.g. "saif@cyberitalab" — student name, then @cyberitalab.
+  const hostname = LAB_HOSTNAME;
 
   return {
     studentId: id,

@@ -9,6 +9,7 @@ import {
   ensureDir,
   writeFile,
 } from './virtualFs.js';
+import { LAB_HOSTNAME } from '../identity.js';
 
 const HOME = '/home/student';
 const DEFAULT_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
@@ -226,14 +227,14 @@ function parseLine(line) {
 /* ------------------------------------------------------------------ */
 
 export class PracticeShell {
-  constructor({ fsState, cwd = HOME, welcome = '', hostname = 'cyberita-lab', user = 'student' } = {}) {
+  constructor({ fsState, cwd = HOME, welcome = '', hostname = LAB_HOSTNAME, user = 'student' } = {}) {
     const state = fsState && typeof fsState === 'object' ? fsState : {};
     // Keep the `{ '/': node }` wrapper: the helpers in virtualFs.js resolve
     // paths from fs['/'] exactly like the serialised session state.
     this.fs = state['/'] ? deepClone(state) : defaultFs();
     this.fsMeta = {
       shellUser: state.shellUser || user,
-      hostname: state.hostname || hostname,
+      hostname: hostname || state.hostname,
       studentName: state.studentName || '',
       studentId: state.studentId || '',
     };
@@ -1670,7 +1671,7 @@ export class PracticeShell {
     if (database === 'hosts') {
       if (!key) return { output: 'getent: missing key', exitCode: 2 };
       if (key === 'localhost') return '127.0.0.1       localhost';
-      if (key === 'cyberita-lab' || key === this.hostname) return `127.0.1.1       ${this.hostname}`;
+      if (key === LAB_HOSTNAME || key === this.hostname) return `127.0.1.1       ${this.hostname}`;
       return `${fakeIpFor(key)}      ${key}`;
     }
     if (database === 'passwd') {

@@ -1,5 +1,5 @@
 import { dockerFailure } from './dockerRunner.js';
-import { studentIdentity } from '../identity.js';
+import { studentIdentity, LAB_HOSTNAME } from '../identity.js';
 import { stripAnsi } from '../../utils/ansi.js';
 
 const MARKER_PATH = '/tmp/.cyberita-cwd';
@@ -57,7 +57,10 @@ export class DockerTerminal {
     const fallbackId = studentIdentity({ id: this.session?.user_id || this.session?.student_id, full_name: this.session?.student_name });
     const identity = {
       shellUser: fsState.shellUser || fallbackId.shellUser || 'student',
-      hostname: fsState.hostname || fallbackId.hostname || 'cyberita-lab',
+      // Fixed lab hostname for every student (see identity.js): the prompt
+      // always reads <student>@cyberitalab, even for sessions created
+      // before this change stored a per-student hostname.
+      hostname: LAB_HOSTNAME,
       studentName: fsState.studentName || fallbackId.displayName || '',
       studentId: fsState.studentId || fallbackId.studentId || '',
     };

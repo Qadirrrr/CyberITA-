@@ -73,18 +73,18 @@ const MOUNTS = [
 ].join('\n');
 
 const SYSLOG = [
-  'Oct 20 09:00:01 cyberita-lab systemd[1]: Starting Daily apt upgrade and clean activities...',
-  'Oct 20 09:00:02 cyberita-lab systemd[1]: Started OpenBSD Secure Shell server.',
-  'Oct 20 09:00:03 cyberita-lab sshd[342]: Server listening on 0.0.0.0 port 22.',
-  'Oct 20 09:01:11 cyberita-lab nginx[731]: nginx: worker process is ready.',
-  'Oct 20 10:12:40 cyberita-lab sshd[1021]: Accepted publickey for student from 10.10.14.7 port 51244 ssh2',
+  'Oct 20 09:00:01 cyberitalab systemd[1]: Starting Daily apt upgrade and clean activities...',
+  'Oct 20 09:00:02 cyberitalab systemd[1]: Started OpenBSD Secure Shell server.',
+  'Oct 20 09:00:03 cyberitalab sshd[342]: Server listening on 0.0.0.0 port 22.',
+  'Oct 20 09:01:11 cyberitalab nginx[731]: nginx: worker process is ready.',
+  'Oct 20 10:12:40 cyberitalab sshd[1021]: Accepted publickey for student from 10.10.14.7 port 51244 ssh2',
   '',
 ].join('\n');
 
 const AUTH_LOG = [
-  'Oct 20 09:59:01 cyberita-lab CRON[998]: pam_unix(cron:session): session opened for user root',
-  'Oct 20 10:12:40 cyberita-lab sshd[1021]: Accepted publickey for student from 10.10.14.7 port 51244 ssh2',
-  'Oct 20 10:12:41 cyberita-lab sshd[1021]: pam_unix(sshd:session): session opened for user student(uid=1000)',
+  'Oct 20 09:59:01 cyberitalab CRON[998]: pam_unix(cron:session): session opened for user root',
+  'Oct 20 10:12:40 cyberitalab sshd[1021]: Accepted publickey for student from 10.10.14.7 port 51244 ssh2',
+  'Oct 20 10:12:41 cyberitalab sshd[1021]: pam_unix(sshd:session): session opened for user student(uid=1000)',
   '',
 ].join('\n');
 
@@ -124,8 +124,8 @@ export const defaultFs = () => ({
       ),
     }),
     etc: dir({
-      hostname: file('cyberita-lab\n'),
-      hosts: file('127.0.0.1\tlocalhost\n127.0.1.1\tcyberita-lab\n::1\tlocalhost ip6-localhost ip6-loopback\n'),
+      hostname: file('cyberitalab\n'),
+      hosts: file('127.0.0.1\tlocalhost\n127.0.1.1\tcyberitalab\n::1\tlocalhost ip6-localhost ip6-loopback\n'),
       'resolv.conf': file('nameserver 10.0.15.1\nnameserver 1.1.1.1\nsearch cyberita.local\n'),
       'os-release': file(OS_RELEASE),
       issue: file('Ubuntu 22.04.4 LTS \\n \\l\n'),

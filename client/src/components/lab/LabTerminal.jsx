@@ -23,7 +23,7 @@ function normalizeIdentity(student) {
     id,
     name,
     shellUser: shellUser || 'student',
-    hostname: student?.hostname || 'cyberita-lab',
+    hostname: student?.hostname || 'cyberitalab',
   };
 }
 

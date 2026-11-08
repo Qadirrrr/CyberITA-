@@ -93,7 +93,7 @@ export class PracticeLabProvider extends LabProvider {
       fsState,
       cwd: session?.cwd || lab?.initial_cwd || HOME,
       welcome: lab?.terminal_welcome || session?.welcome || '',
-      hostname: fsState.hostname || session?.hostname || identity.hostname,
+      hostname: identity.hostname,
       user: fsState.shellUser || session?.shell_user || identity.shellUser,
     });
   }

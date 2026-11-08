@@ -123,7 +123,7 @@ Open http://localhost:5173. The API runs on http://localhost:4000 and Vite proxi
 
 ## Labs
 
-Real labs run inside isolated Docker containers. Each session gets its own container, filesystem and Linux shell. Learners get a real terminal: commands run as root (UID 0) inside their own disposable container, so they can install any package with `apt` and use professional tooling, and the shell/prompt shows their own name or student id (for example `saif@cyberita-lab`). The container is still isolated from the host: no `--privileged`, no host mounts, no Docker socket, CPU/memory/PID limits, and no network unless enabled. Network access is on by default so package installs work, and instructors can turn it off per lab.
+Real labs run inside isolated Docker containers. Each session gets its own container, filesystem and Linux shell. Learners get a real terminal: commands run as root (UID 0) inside their own disposable container, so they can install any package with `apt` and use professional tooling, and the shell/prompt shows their own name or student id (for example `saif@cyberitalab`). The container is still isolated from the host: no `--privileged`, no host mounts, no Docker socket, CPU/memory/PID limits, and no network unless enabled. Network access is on by default so package installs work, and instructors can turn it off per lab.
 
 Prerequisites:
 

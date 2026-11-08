@@ -450,7 +450,7 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     id: identity.studentId,
     name: session.student_name || identity.displayName,
     shell_user: fsState.shellUser || identity.shellUser,
-    hostname: fsState.hostname || identity.hostname,
+    hostname: identity.hostname,
   };
   const { rows: progressRows } = await query(
     `SELECT step_id, command_used, output_excerpt, completed_at FROM lab_step_progress WHERE session_id = $1`,
