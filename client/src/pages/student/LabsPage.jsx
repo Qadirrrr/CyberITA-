@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
-import { Badge, Button, Card, EmptyState, ProgressBar, Skeleton } from '../../components/ui';
+import { Alert, Badge, Button, Card, EmptyState, ProgressBar, Skeleton } from '../../components/ui';
 import {
   IconArrowRight,
   IconCheckCircle,
@@ -189,11 +189,14 @@ export default function LabsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-up space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-white">Practical labs</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">
+            Hands-on labs
+          </p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Practical labs</h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
             Warm up on practice labs, or open course labs for graded practicals.
           </p>
         </div>
@@ -250,6 +253,7 @@ export default function LabsPage() {
           <button
             type="button"
             onClick={() => setDifficulty('all')}
+            aria-pressed={difficulty === 'all'}
             className={`chip ${difficulty === 'all' ? 'chip-active' : ''}`}
           >
             All levels
@@ -259,18 +263,19 @@ export default function LabsPage() {
               key={key}
               type="button"
               onClick={() => setDifficulty(key)}
+              aria-pressed={difficulty === key}
               className={`chip ${difficulty === key ? 'chip-active' : ''}`}
             >
               {DIFFICULTIES[key].label}
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+        <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
           <input
             type="checkbox"
             checked={mineOnly}
             onChange={(event) => setMineOnly(event.target.checked)}
-            className="h-3.5 w-3.5 rounded border-white/20 bg-night-950 text-brand-400"
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 accent-brand-600 focus:ring-brand-500 dark:border-white/20"
           />
           Started by me
         </label>
@@ -282,15 +287,22 @@ export default function LabsPage() {
             {mode === 'practice' ? 'Practice labs' : 'Course labs'}
           </h2>
           <Badge tone="slate">{filtered.length}</Badge>
+          {!loading && activeLabs.length > 0 && filtered.length !== activeLabs.length && (
+            <span className="text-xs text-slate-500">of {activeLabs.length}</span>
+          )}
         </div>
         {(search || difficulty !== 'all' || mineOnly) && (
-          <button type="button" onClick={resetFilters} className="text-[11px] text-slate-400 transition hover:text-brand-300">
+          <button type="button" onClick={resetFilters} className="text-xs font-medium text-slate-500 transition hover:text-brand-600 dark:hover:text-brand-300">
             Clear filters
           </button>
         )}
       </div>
 
-      {error && <p className="text-sm text-rose-300">{error}</p>}
+      {error && (
+        <Alert tone="error" title="Something went wrong">
+          {error}
+        </Alert>
+      )}
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -340,7 +352,7 @@ export default function LabsPage() {
             const isPractice = Boolean(lab.is_practice);
             const isReal = lab.lab_mode === 'real';
             return (
-              <Card key={lab.id} className="group flex flex-col p-5 transition hover:border-brand-400">
+              <Card key={lab.id} className="card-hover group flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
@@ -357,7 +369,7 @@ export default function LabsPage() {
                     {isPractice && <Badge tone="emerald">Open to all</Badge>}
                   </div>
                 </div>
-                <h3 className="mt-3 font-display text-base font-semibold leading-snug text-slate-900 dark:text-white">{lab.title}</h3>
+                <h3 className="mt-3 font-display text-base font-semibold leading-snug text-slate-900 transition-colors group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-300">{lab.title}</h3>
                 {lab.summary && <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{lab.summary}</p>}
                 <p className="mt-2 text-xs text-slate-500">
                   {isReal
@@ -385,14 +397,15 @@ export default function LabsPage() {
                   </div>
                 )}
 
-                <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1">
-                      <IconClock size={11} /> {lab.estimated_minutes} min
-                    </span>
-                    {Number(lab.time_limit_minutes) > 0 && (
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3.5 dark:border-white/5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                    {Number(lab.time_limit_minutes) > 0 ? (
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300" title={`${lab.time_limit_minutes} minute time limit · about ${lab.estimated_minutes} minutes of work`}>
+                        <IconClock size={11} /> {lab.time_limit_minutes} min limit
+                      </span>
+                    ) : (
                       <span className="inline-flex items-center gap-1">
-                        · <IconClock size={11} /> {lab.time_limit_minutes} min limit
+                        <IconClock size={11} /> {lab.estimated_minutes} min
                       </span>
                     )}
                     {lab.last_started_at && <span>· started {timeAgo(lab.last_started_at)}</span>}
@@ -419,9 +432,13 @@ export default function LabsPage() {
                   )}
                 </div>
                 {lab.my_status && (
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-white/5">
-                    <span className={`h-1.5 w-1.5 rounded-full ${lab.my_status === 'running' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                    last session {lab.my_status}
+                  <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <span className={`h-1.5 w-1.5 rounded-full ${lab.my_status === 'running' ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'}`} />
+                    {lab.my_status === 'running' ? (
+                      <span className="text-emerald-700 dark:text-emerald-300">Session running now</span>
+                    ) : (
+                      <>Last session {lab.my_status}</>
+                    )}
                   </div>
                 )}
               </Card>

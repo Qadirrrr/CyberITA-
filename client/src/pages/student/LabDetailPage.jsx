@@ -114,19 +114,20 @@ export default function LabDetailPage() {
   const offlineReason = 'This lab cannot start right now. Please try again later.';
 
   return (
-    <div className="space-y-5">
-      <Link to="/student/labs" className="inline-flex items-center gap-1.5 text-xs text-slate-500 transition hover:text-brand-300">
-        <IconArrowLeft size={13} /> Back to lab catalog
+    <div className="animate-fade-up space-y-5">
+      <Link to="/student/labs" className="group inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300">
+        <IconArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" /> Back to lab catalog
       </Link>
 
       <Card className="relative overflow-hidden p-6">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-500 via-cyan-400 to-accent-500" aria-hidden="true" />
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={tone}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
               <Badge tone="slate">
-                <IconClock size={11} /> {lab.estimated_minutes} min
+                <IconClock size={11} /> {lab.estimated_minutes} min est.
               </Badge>
               {Number(lab.time_limit_minutes) > 0 && (
                 <Badge tone="brand">
@@ -141,13 +142,13 @@ export default function LabDetailPage() {
               )}
               {isPractice && <Badge tone="emerald">Open to all</Badge>}
               {!isPractice && lab.due_at && <Badge tone={new Date(lab.due_at) < new Date() ? 'rose' : 'amber'}><IconClock size={11} /> Due {formatDateTime(lab.due_at)}</Badge>}
-              {running && <Badge tone="emerald">Session running</Badge>}
+              {running && <Badge tone="emerald" dot="animate-pulse">Session running</Badge>}
             </div>
-            <h1 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">{lab.title}</h1>
+            <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{lab.title}</h1>
             {lab.summary && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">{lab.summary}</p>}
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-slate-500">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
               {data.course ? (
-                <Link to={`/courses/${data.course.slug}`} className="inline-flex items-center gap-1 hover:text-brand-300">
+                <Link to={`/courses/${data.course.slug}`} className="inline-flex items-center gap-1 font-medium hover:text-brand-600 dark:hover:text-brand-300">
                   <IconExternalLink size={11} /> {data.course.title}
                 </Link>
               ) : (
@@ -185,7 +186,7 @@ export default function LabDetailPage() {
                 {isReal ? 'Start real lab' : isPractice ? 'Start practice lab' : 'Start guided lab'}
               </Button>
             )}
-            <p className="max-w-[220px] text-xs leading-5 text-slate-500">
+            <p className="max-w-[240px] text-xs leading-5 text-slate-500 dark:text-slate-400 lg:text-right">
               {isReal
                 ? `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
                 : isPractice
@@ -208,7 +209,7 @@ export default function LabDetailPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Card className="p-6">
-          <h2 className="font-display text-lg font-semibold">About this lab</h2>
+          <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-white">About this lab</h2>
           <div className="mt-3">
             <Markdown>{lab.description || 'No additional description provided for this lab.'}</Markdown>
           </div>
@@ -218,11 +219,11 @@ export default function LabDetailPage() {
           {myProgress && (
             <Card className="p-5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-display text-base font-semibold">Your progress</h2>
+                <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Your progress</h2>
                 {myProgress.completed ? (
                   <Badge tone="emerald"><IconCheckCircle size={11} /> Completed</Badge>
                 ) : (
-                  <span className="font-mono text-xs font-semibold text-slate-400">{myProgress.percent}%</span>
+                  <span className="font-display text-lg font-bold tabular-nums text-slate-900 dark:text-white">{myProgress.percent}%</span>
                 )}
               </div>
               <div className="mt-3">
@@ -232,7 +233,7 @@ export default function LabDetailPage() {
                   size="sm"
                 />
               </div>
-              <p className="mt-2 text-[11px] leading-5 text-slate-500">
+              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                 {isReal
                   ? `${myProgress.evidenceCount} of ${myProgress.minEvidence} screenshot${myProgress.minEvidence === 1 ? '' : 's'} attached${myProgress.approved ? ' · approved by your instructor' : ''}.`
                   : myProgress.requiredSteps > 0
@@ -242,7 +243,7 @@ export default function LabDetailPage() {
                       : 'Start the lab to begin tracking progress.'}
               </p>
               {Number(lab.time_limit_minutes) > 0 && (
-                <p className="mt-2 border-t border-white/5 pt-2 text-[11px] leading-5 text-slate-500">
+                <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500 dark:border-white/5 dark:text-slate-400">
                   You get {lab.time_limit_minutes} minutes once you start. The session ends automatically at zero, and you can finish early when your required work is complete.
                 </p>
               )}
@@ -250,11 +251,11 @@ export default function LabDetailPage() {
           )}
 
           <Card className="p-5">
-            <h2 className="font-display text-base font-semibold">{isReal ? 'Your task' : "What you'll do"}</h2>
+            <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">{isReal ? 'Your task' : "What you'll do"}</h2>
             {isReal ? (
               <div className="mt-3 max-h-96 overflow-y-auto pr-1">
                 <Markdown>{lab.task_brief || lab.description || 'Your instructor is preparing the task brief.'}</Markdown>
-                <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-5 text-slate-500">
+                <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500 dark:border-white/5 dark:text-slate-400">
                   There are no steps or hints. Complete the task yourself and upload at least {minEvidence} screenshot
                   {minEvidence === 1 ? '' : 's'} as evidence.
                 </p>
@@ -263,20 +264,20 @@ export default function LabDetailPage() {
               <>
                 <ol className="mt-3 space-y-2.5">
                   {steps.map((step, index) => (
-                    <li key={step.id} className="flex gap-2.5 text-xs leading-5 text-slate-400">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/5 font-mono text-[10px] text-slate-400">
+                    <li key={step.id} className="flex gap-2.5 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 font-mono text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-white/5 dark:text-slate-300 dark:ring-white/10">
                         {index + 1}
                       </span>
-                      <span className={step.is_optional ? 'text-slate-500' : ''}>
+                      <span className={step.is_optional ? 'text-slate-500 dark:text-slate-400' : ''}>
                         {step.title}
-                        {step.is_optional && <span className="ml-1 text-[10px] uppercase tracking-wider text-slate-600">optional</span>}
+                        {step.is_optional && <span className="ml-1.5 rounded bg-slate-100 px-1 py-px text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:bg-white/5 dark:text-slate-400">optional</span>}
                       </span>
                     </li>
                   ))}
-                  {steps.length === 0 && <li className="text-xs text-slate-500">Steps are being prepared.</li>}
+                  {steps.length === 0 && <li className="text-sm text-slate-500">Steps are being prepared.</li>}
                 </ol>
-                <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-5 text-slate-500">
-                  Steps marked <span className="text-brand-300">verified</span> complete automatically when you run the right command.
+                <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500 dark:border-white/5 dark:text-slate-400">
+                  Steps marked <span className="font-medium text-brand-600 dark:text-brand-300">verified</span> complete automatically when you run the right command.
                 </p>
               </>
             )}
@@ -284,17 +285,18 @@ export default function LabDetailPage() {
 
           {sessions.length > 0 && (
             <Card className="p-5">
-              <h2 className="font-display text-base font-semibold">Recent sessions</h2>
-              <ul className="mt-2 divide-y divide-white/5">
+              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Recent sessions</h2>
+              <ul className="mt-2 divide-y divide-slate-100 dark:divide-white/5">
                 {sessions.slice(0, 5).map((session) => (
-                  <li key={session.id} className="flex items-center justify-between gap-2 py-2 text-[11px]">
-                    <Link to={`/labs/session/${session.id}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-brand-300">
+                  <li key={session.id} className="flex items-center justify-between gap-2 py-2.5 text-xs">
+                    <Link to={`/labs/session/${session.id}`} target="_blank" rel="noopener noreferrer" className="font-medium text-slate-600 transition hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-300">
                       {formatDateTime(session.started_at)}
                     </Link>
-                    <span className="flex items-center gap-1.5">
-                      {session.status === 'running' && <IconCheckCircle size={11} className="text-emerald-400" />}
-                      <span className={session.status === 'running' ? 'text-emerald-300' : 'text-slate-500'}>{session.status}</span>
-                    </span>
+                    {session.status === 'running' ? (
+                      <Badge tone="emerald" dot="animate-pulse">Running</Badge>
+                    ) : (
+                      <Badge tone="slate">{session.status}</Badge>
+                    )}
                   </li>
                 ))}
               </ul>

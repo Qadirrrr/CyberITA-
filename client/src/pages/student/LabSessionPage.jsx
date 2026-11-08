@@ -403,6 +403,21 @@ export default function LabSessionPage() {
 
   const instructionParts = splitInstruction(activeStep?.instruction);
 
+  const timeUsedLabel = (() => {
+    if (running || !session.started_at || !session.ended_at) return null;
+    const seconds = Math.max(0, Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000));
+    if (!seconds) return null;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return minutes > 0 ? `${minutes}m ${String(rest).padStart(2, '0')}s` : `${rest}s`;
+  })();
+
+  const endSummary = isRealLab
+    ? `${data.screenshots.length} screenshot${data.screenshots.length === 1 ? '' : 's'} attached`
+    : steps.length > 0
+      ? `${completedCount} of ${steps.length} steps completed · ${Math.round(progress.percent)}% progress`
+      : `${Math.round(progress.percent)}% progress`;
+
   return (
     <div className="flex min-h-screen w-full flex-col overflow-y-auto bg-slate-100 text-slate-900 font-sans lg:h-screen lg:overflow-hidden dark:bg-[#06080d] dark:text-slate-100">
       <input
@@ -418,8 +433,9 @@ export default function LabSessionPage() {
           <button
             type="button"
             onClick={handleExit}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand-400/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-white"
             title="Exit workstation"
+            aria-label="Exit workstation"
           >
             <IconArrowLeft size={15} />
           </button>
@@ -434,7 +450,7 @@ export default function LabSessionPage() {
                 {data.lab?.title || 'Hands-on Lab'}
               </h1>
               <Badge tone={running ? 'emerald' : 'slate'} dot={running ? 'animate-pulse' : true}>
-                {running ? 'Online' : session.status}
+                {running ? 'Live session' : session.ended_reason === 'completed' ? 'Completed' : session.ended_reason === 'expired' ? 'Time expired' : 'Ended'}
               </Badge>
             </div>
             <p className="hidden truncate text-xs text-slate-500 sm:block">
@@ -537,6 +553,16 @@ export default function LabSessionPage() {
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
+          {!isRealLab && steps.length > 0 && (
+            <span className="hidden text-[11px] text-slate-500 md:inline">
+              {completedCount} of {steps.length} steps
+            </span>
+          )}
+          {isRealLab && (
+            <span className="hidden text-[11px] text-slate-500 md:inline">
+              {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'} attached
+            </span>
+          )}
           <div className="w-24 sm:w-40">
             <ProgressBar
               value={progress.percent}
@@ -555,10 +581,32 @@ export default function LabSessionPage() {
         </div>
       </div>
 
+      {!running && session.ended_reason === 'completed' && (
+        <div className="shrink-0 px-3 pt-3 sm:px-4">
+          <Alert tone="success" title="Lab completed — nice work">
+            You finished this session with {endSummary}
+            {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. Your progress is
+            saved — you can review it any time from the lab page.
+          </Alert>
+        </div>
+      )}
+
       {!running && session.ended_reason === 'expired' && (
-        <div className="shrink-0 px-3 pt-3">
+        <div className="shrink-0 px-3 pt-3 sm:px-4">
           <Alert tone="warning" title="Lab time is over">
-            This session ended automatically when the lab timer reached zero. Start a new session to continue practising.
+            This session ended automatically when the lab timer reached zero. You had achieved {endSummary}
+            {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''} — that progress is
+            saved. Start a new session to continue practising.
+          </Alert>
+        </div>
+      )}
+
+      {!running && (session.ended_reason === 'stopped' || session.ended_reason === 'submitted') && (
+        <div className="shrink-0 px-3 pt-3 sm:px-4">
+          <Alert tone="info" title={session.ended_reason === 'submitted' ? 'Lab submitted' : 'Session ended'}>
+            You ended this session with {endSummary}
+            {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. Your progress is
+            saved — restart any time to keep going.
           </Alert>
         </div>
       )}
@@ -587,8 +635,9 @@ export default function LabSessionPage() {
                   type="button"
                   onClick={goToPrev}
                   disabled={!hasPrev}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 outline-none transition hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand-400/60 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
                   title="Previous step"
+                  aria-label="Previous step"
                 >
                   <IconChevronLeft size={14} />
                 </button>
@@ -596,8 +645,9 @@ export default function LabSessionPage() {
                   type="button"
                   onClick={goToNext}
                   disabled={!hasNext}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 outline-none transition hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand-400/60 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
                   title="Next step"
+                  aria-label="Next step"
                 >
                   <IconChevronRight size={14} />
                 </button>
@@ -606,16 +656,15 @@ export default function LabSessionPage() {
 
             {/* Overall Progress Bar */}
             <div className="mt-3">
-              <div className="mb-1 flex items-center justify-between text-xs">
+              <div className="mb-1.5 flex items-center justify-between text-xs">
                 <span className="font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Overall Progress</span>
                 <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-300">{Math.round(progress.percent)}%</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-                <div
-                  className="h-full rounded-full bg-brand-500 transition-all duration-500"
-                  style={{ width: `${progress.percent}%` }}
-                />
-              </div>
+              <ProgressBar
+                value={progress.percent}
+                tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
+                size="sm"
+              />
             </div>
           </div>
           )}
@@ -647,7 +696,7 @@ export default function LabSessionPage() {
 
           {/* Horizontal Step Navigation Ribbon (guided labs only) */}
           {!isRealLab && (
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-200 bg-slate-50 p-2.5 dark:border-white/10 dark:bg-night-950/70">
+          <div className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-200 bg-slate-50 p-2.5 dark:border-white/10 dark:bg-night-950/70">
             {steps.map((step, index) => {
               const active = step.id === activeStepId;
               return (
@@ -989,9 +1038,9 @@ export default function LabSessionPage() {
           {/* Footer Report Bar (guided labs only) */}
           {!isRealLab && report && !isPractice && (
             <div className="shrink-0 border-t border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-night-950/70">
-              <Link to={`/student/reports/${report.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs transition hover:text-brand-300">
-                <span className="flex items-center gap-1.5 text-slate-300">
-                  <IconFileText size={13} className="text-brand-400" /> {report.title}
+              <Link to={`/student/reports/${report.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs transition hover:text-brand-600 dark:hover:text-brand-300">
+                <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+                  <IconFileText size={13} className="text-brand-500 dark:text-brand-400" /> {report.title}
                 </span>
                 {reportStatus && <Badge tone={reportStatus.tone}>{reportStatus.label}</Badge>}
               </Link>
