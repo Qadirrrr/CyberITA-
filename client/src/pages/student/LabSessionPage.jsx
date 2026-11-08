@@ -428,7 +428,7 @@ export default function LabSessionPage() {
         onChange={onFileSelected}
       />
 
-      <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-night-950">
+      <header className="z-30 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-1.5 dark:border-white/10 dark:bg-night-950">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -461,6 +461,19 @@ export default function LabSessionPage() {
                   : 'Isolated Linux container'}
             </p>
           </div>
+        </div>
+
+        {/* Countdown — large and always in front, next to the lab title */}
+        <div className="hidden shrink-0 lg:block">
+          <LabTimer
+            size="lg"
+            expiresAt={session.expires_at}
+            remainingSeconds={session.remaining_seconds}
+            running={running}
+            limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
+            endedReason={session.ended_reason}
+            onExpire={handleTimeUp}
+          />
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -537,14 +550,15 @@ export default function LabSessionPage() {
 
       <div className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-night-900/70 sm:px-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <LabTimer
-            expiresAt={session.expires_at}
-            remainingSeconds={session.remaining_seconds}
-            running={running}
-            limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
-            endedReason={session.ended_reason}
-            onExpire={handleTimeUp}
-          />
+          <span className="lg:hidden">
+            <LabTimer
+              expiresAt={session.expires_at}
+              remainingSeconds={session.remaining_seconds}
+              running={running}
+              limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
+              endedReason={session.ended_reason}
+            />
+          </span>
           <span className="hidden text-[11px] text-slate-500 sm:inline">
             {Number(data.lab?.time_limit_minutes) > 0
               ? `Lab time limit: ${data.lab.time_limit_minutes} min`

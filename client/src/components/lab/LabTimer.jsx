@@ -29,7 +29,9 @@ export default function LabTimer({
   limitMinutes = 0,
   endedReason = null,
   onExpire,
+  size = 'md',
 }) {
+  const large = size === 'lg';
   const target = useMemo(() => {
     if (remainingSeconds !== null && remainingSeconds !== undefined && Number.isFinite(Number(remainingSeconds))) {
       return Date.now() + Math.max(0, Number(remainingSeconds)) * 1000;
@@ -69,8 +71,12 @@ export default function LabTimer({
 
   if (target === null) {
     return (
-      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${TONES.muted}`}>
-        <IconClock size={13} /> No time limit
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full border font-medium ${TONES.muted} ${
+          large ? 'px-4 py-2 text-sm' : 'px-2.5 py-1 text-xs'
+        }`}
+      >
+        <IconClock size={large ? 17 : 13} /> No time limit
       </span>
     );
   }
@@ -79,12 +85,12 @@ export default function LabTimer({
     const expired = endedReason === 'expired';
     return (
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+        className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${
           expired ? TONES.danger : TONES.muted
-        }`}
+        } ${large ? 'px-4 py-2 text-sm' : 'px-2.5 py-1 text-xs font-medium'}`}
         title={expired ? 'The lab time limit was reached' : 'This session has ended'}
       >
-        <IconClock size={13} /> {expired ? "Time's up" : 'Session ended'}
+        <IconClock size={large ? 17 : 13} /> {expired ? "Time's up" : 'Session ended'}
       </span>
     );
   }
@@ -95,18 +101,26 @@ export default function LabTimer({
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${tone} ${
-        urgent ? 'animate-pulse' : ''
-      }`}
+      className={`inline-flex items-center rounded-full border font-semibold shadow-sm ${tone} ${
+        large ? 'gap-2.5 px-4 py-2 text-sm' : 'gap-2 px-3 py-1.5 text-xs'
+      } ${urgent ? 'animate-pulse' : ''}`}
       title={limitMinutes > 0 ? `This lab ends after ${limitMinutes} minutes` : 'Time remaining in this session'}
       role="timer"
       aria-live="off"
     >
-      <IconClock size={14} />
-      <span className="hidden text-[10px] font-medium uppercase tracking-wider opacity-75 sm:inline">
-        Time left
+      <IconClock size={large ? 20 : 14} />
+      <span className={large ? 'flex flex-col leading-none' : 'contents'}>
+        <span
+          className={`font-semibold uppercase tracking-wider opacity-75 ${
+            large ? 'text-[10px]' : 'hidden text-[10px] font-medium sm:inline'
+          }`}
+        >
+          Time left
+        </span>
+        <span className={`font-mono tabular-nums ${large ? 'mt-0.5 text-xl font-bold leading-none' : 'text-sm'}`}>
+          {formatDuration(remaining ?? 0)}
+        </span>
       </span>
-      <span className="font-mono text-sm tabular-nums">{formatDuration(remaining ?? 0)}</span>
     </span>
   );
 }
