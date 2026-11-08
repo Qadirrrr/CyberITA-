@@ -66,7 +66,7 @@ export default function BroadcastPage() {
               label="Title"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              placeholder="e.g. New Linux hardening lab is live"
+              placeholder="Enter broadcast title"
               required
               maxLength={200}
               error={errors.title}
@@ -76,7 +76,7 @@ export default function BroadcastPage() {
               rows={6}
               value={form.body}
               onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
-              placeholder="Keep it short and actionable. Mention what changed and where to find it."
+              placeholder="Enter broadcast message"
               maxLength={2000}
               hint={`${form.body.length}/2000 characters`}
               error={errors.body}
@@ -85,7 +85,7 @@ export default function BroadcastPage() {
               label="Link (optional)"
               value={form.link}
               onChange={(event) => setForm((current) => ({ ...current, link: event.target.value }))}
-              placeholder="/student/labs"
+              placeholder="Enter link"
               hint="An in-app path like /student/labs or a full URL."
               maxLength={300}
               error={errors.link}

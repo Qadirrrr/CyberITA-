@@ -90,8 +90,12 @@ export async function startSession(user, lab) {
     if (reservedServer?.id) await releaseCapacity(reservedServer.id).catch(() => {});
     throw error;
   }
-  // Every container gets the configured TTL so abandoned sessions are reclaimed.
-  const expiresAt = new Date(Date.now() + env.labs.sessionTtlMinutes * 60 * 1000);
+  // A lab can set its own time limit. When it does, that limit is the session
+  // deadline. Labs without a limit still get the platform TTL so abandoned
+  // sessions are always reclaimed.
+  const labLimitMinutes = Math.max(0, Number(lab.time_limit_minutes) || 0);
+  const sessionMinutes = labLimitMinutes > 0 ? labLimitMinutes : env.labs.sessionTtlMinutes;
+  const expiresAt = new Date(Date.now() + sessionMinutes * 60 * 1000);
   let rows;
   try {
     ({ rows } = await query(
@@ -146,7 +150,7 @@ export async function startSession(user, lab) {
   return { session: fullSession || session, reused: false, welcome: descriptor.welcome };
 }
 
-export async function stopSession(session, user) {
+export async function stopSession(session, user, { reason = 'stopped' } = {}) {
   if (session.status === 'stopped') return session;
   const provider = getProvider(session.provider);
   const server = await hostForSession(session);
@@ -154,8 +158,9 @@ export async function stopSession(session, user) {
   await provider.deprovision(session, { host: server?.host || null, server: server?.server || null });
   if (server?.server?.id) await releaseCapacity(server.server.id).catch(() => {});
   const { rows } = await query(
-    `UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1 RETURNING *`,
-    [session.id]
+    `UPDATE lab_sessions SET status = 'stopped', ended_at = now(), ended_reason = $2
+     WHERE id = $1 RETURNING *`,
+    [session.id, reason]
   );
   if (user?.id) {
     await withTransaction((client) =>
@@ -178,6 +183,27 @@ export async function stopSession(session, user) {
     }).catch(() => {});
   }
   return rows[0];
+}
+
+/**
+ * Stops a session that has passed its deadline. The student-facing session
+ * endpoint calls this so a lab ends immediately when its timer reaches zero,
+ * even before the periodic cleanup job runs.
+ */
+export async function expireSessionIfNeeded(session, user) {
+  if (session.status !== 'running') return session;
+  if (!session.expires_at || new Date(session.expires_at) > new Date()) return session;
+  try {
+    return await stopSession(session, user, { reason: 'expired' });
+  } catch (error) {
+    logger.warn('Expired lab session cleanup failed', { sessionId: session.id, error: error.message });
+    const { rows } = await query(
+      `UPDATE lab_sessions SET status = 'stopped', ended_at = now(), ended_reason = 'expired'
+       WHERE id = $1 RETURNING *`,
+      [session.id]
+    );
+    return rows[0] || session;
+  }
 }
 
 async function getIncompleteSteps(sessionId) {
@@ -330,7 +356,7 @@ export async function executeInSession(session, lab, command, { onOutput } = {})
       if (server?.server) session._server = server.server;
       await provider.deprovision(session, { host: server?.host || null, server: server?.server || null });
       if (server?.server?.id) await releaseCapacity(server.server.id).catch(() => {});
-      await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now() WHERE id = $1`, [session.id]);
+      await query(`UPDATE lab_sessions SET status = 'stopped', ended_at = now(), ended_reason = 'expired' WHERE id = $1`, [session.id]);
     } catch (error) {
       await query(`UPDATE lab_sessions SET status = 'error' WHERE id = $1`, [session.id]).catch(() => {});
       logger.warn('Expired lab session cleanup failed', { sessionId: session.id, error: error.message });
@@ -414,7 +440,7 @@ export async function cleanupExpiredLabSessions({ limit = 100 } = {}) {
         });
       }
       const result = await query(
-        `UPDATE lab_sessions SET status = 'stopped', ended_at = now()
+        `UPDATE lab_sessions SET status = 'stopped', ended_at = now(), ended_reason = 'expired'
          WHERE id = $1 AND status IN ('running', 'provisioning', 'error')`,
         [session.id]
       );
@@ -431,7 +457,7 @@ export async function cleanupExpiredLabSessions({ limit = 100 } = {}) {
       }
     } catch (error) {
       await query(
-        `UPDATE lab_sessions SET status = 'stopped', ended_at = now()
+        `UPDATE lab_sessions SET status = 'stopped', ended_at = now(), ended_reason = 'expired'
          WHERE id = $1 AND status IN ('running', 'provisioning', 'error')`,
         [session.id]
       ).catch(() => {});
@@ -473,7 +499,8 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     [session.id]
   );
   const { rows: labRows } = await query(
-    `SELECT id, title, submission_requirements, is_practice, lab_mode, task_brief, min_evidence
+    `SELECT id, title, submission_requirements, is_practice, lab_mode, task_brief, min_evidence,
+            time_limit_minutes
      FROM labs WHERE id = $1`,
     [session.lab_id]
   );
@@ -494,6 +521,11 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
 
   const required = stepViews.filter((s) => !s.is_optional);
   const completedRequired = required.filter((s) => s.completed).length;
+
+  const remainingSeconds =
+    session.status === 'running' && session.expires_at
+      ? Math.max(0, Math.floor((new Date(session.expires_at).getTime() - Date.now()) / 1000))
+      : 0;
 
   // Real labs are question-only assessments: progress is the number of
   // screenshot evidence files the learner has attached to the session.
@@ -530,7 +562,9 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
       history: session.history,
       started_at: session.started_at,
       expires_at: session.expires_at,
+      remaining_seconds: remainingSeconds,
       ended_at: session.ended_at,
+      ended_reason: session.ended_reason || null,
       lab_server_id: session.lab_server_id || null,
       lab_server_name: session.lab_server_name || null,
       student_id: student.id,
@@ -548,5 +582,70 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     report: reportRows[0] || null,
     submission: submissionRows[0] || null,
     progress,
+  };
+}
+
+/**
+ * Best-ever progress for one learner on one lab. Used by the lab detail page.
+ * Guided labs measure completed required steps; real labs measure screenshots.
+ */
+export async function getUserLabProgress(userId, lab) {
+  const labId = typeof lab === 'object' ? lab.id : lab;
+  const labMode = typeof lab === 'object' && lab.lab_mode === 'real' ? 'real' : 'practice';
+  const minEvidence = Math.max(1, Number(typeof lab === 'object' ? lab.min_evidence : 1) || 1);
+
+  const { rows } = await query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM lab_steps st
+         WHERE st.lab_id = $2 AND st.is_optional = FALSE) AS required_steps,
+       COALESCE((
+         SELECT MAX(x.completed_required) FROM (
+           SELECT (SELECT COUNT(*)::int FROM lab_step_progress p
+                     JOIN lab_steps st ON st.id = p.step_id
+                    WHERE p.session_id = s.id AND st.is_optional = FALSE) AS completed_required
+             FROM lab_sessions s
+            WHERE s.lab_id = $2 AND s.user_id = $1
+         ) x
+       ), 0) AS completed_steps,
+       COALESCE((
+         SELECT MAX((SELECT COUNT(*)::int FROM screenshots sc WHERE sc.session_id = s.id))
+           FROM lab_sessions s
+          WHERE s.lab_id = $2 AND s.user_id = $1
+       ), 0) AS evidence_count,
+       EXISTS (
+         SELECT 1 FROM lab_submissions ls
+           JOIN lab_sessions s ON s.id = ls.session_id
+          WHERE s.lab_id = $2 AND s.user_id = $1 AND ls.status = 'approved'
+       ) AS approved,
+       EXISTS (SELECT 1 FROM lab_sessions s WHERE s.lab_id = $2 AND s.user_id = $1) AS started`,
+    [userId, labId]
+  );
+
+  const row = rows[0] || {};
+  const requiredSteps = Number(row.required_steps) || 0;
+  const completedSteps = Number(row.completed_steps) || 0;
+  const evidenceCount = Number(row.evidence_count) || 0;
+
+  let percent;
+  if (labMode === 'real') {
+    percent = Math.min(100, Math.round((evidenceCount / minEvidence) * 100));
+  } else if (requiredSteps > 0) {
+    percent = Math.min(100, Math.round((completedSteps / requiredSteps) * 100));
+  } else {
+    percent = row.started ? 100 : 0;
+  }
+
+  return {
+    percent,
+    completed:
+      labMode === 'real'
+        ? Boolean(row.approved) || evidenceCount >= minEvidence
+        : requiredSteps > 0 && completedSteps >= requiredSteps,
+    requiredSteps,
+    completedSteps,
+    evidenceCount,
+    minEvidence,
+    approved: Boolean(row.approved),
+    started: Boolean(row.started),
   };
 }

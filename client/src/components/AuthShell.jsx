@@ -5,7 +5,6 @@ import ThemeToggle from './ThemeToggle';
 export default function AuthShell({ title, subtitle, children, footer, compact = false, wide = false }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 transition-colors duration-200 dark:bg-night-950">
-      <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-80" />
       <div className="pointer-events-none absolute -left-40 top-1/3 h-80 w-80 rounded-full bg-brand-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-accent-500/10 blur-3xl" />
 
@@ -25,7 +24,7 @@ export default function AuthShell({ title, subtitle, children, footer, compact =
               compact ? 'rounded-2xl p-4 sm:p-6' : 'rounded-[24px] p-6 sm:p-9'
             }`}
           >
-            <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/50 to-transparent dark:via-brand-400/60" />
+            <div className="absolute inset-x-10 top-0 h-px bg-brand-500/40" />
             <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl" />
 
             <div className="relative">

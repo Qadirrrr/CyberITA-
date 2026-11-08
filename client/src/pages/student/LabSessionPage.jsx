@@ -4,7 +4,8 @@ import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
-import { Alert, Badge, Button } from '../../components/ui';
+import LabTimer from '../../components/lab/LabTimer';
+import { Alert, Badge, Button, ProgressBar } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -18,6 +19,7 @@ import {
   IconClipboard,
   IconCopy,
   IconFileText,
+  IconFlag,
   IconPlay,
   IconRefresh,
   IconSend,
@@ -64,6 +66,7 @@ export default function LabSessionPage() {
   const fileRef = useRef(null);
   const pendingStep = useRef(null);
   const replaceTarget = useRef(null);
+  const timeUpRef = useRef(false);
 
   const load = useCallback(
     async ({ silent = false } = {}) => {
@@ -262,8 +265,35 @@ export default function LabSessionPage() {
     }
   };
 
+  const finishLab = async () => {
+    if (!window.confirm('All required work is complete. End this lab session now?')) return;
+    setStopping(true);
+    try {
+      await api.post(`/labs/sessions/${sessionId}/stop`, { reason: 'completed' });
+      toast.success('Lab completed. Your session has ended.');
+      await load({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not end the lab session.'));
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const handleTimeUp = useCallback(async () => {
+    if (timeUpRef.current) return;
+    timeUpRef.current = true;
+    try {
+      await api.post(`/labs/sessions/${sessionId}/stop`, { reason: 'expired' });
+    } catch {
+      // The server may have ended the session already; reload below reflects it.
+    }
+    toast.info('Lab time is over. Your session has ended.');
+    await load({ silent: true });
+  }, [sessionId, load, toast]);
+
   const restart = async () => {
     setStarting(true);
+    timeUpRef.current = false;
     try {
       const { data: response } = await api.post(`/labs/${data.session.lab_id}/sessions`, {}, { timeout: 300000 });
       toast.success(
@@ -394,7 +424,7 @@ export default function LabSessionPage() {
             <IconArrowLeft size={15} />
           </button>
 
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-sky-500 text-xs font-bold text-white shadow-sm shadow-brand-500/20">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-xs font-bold text-white shadow-sm shadow-brand-500/20">
             C+
           </div>
 
@@ -458,9 +488,21 @@ export default function LabSessionPage() {
           </Button>
 
           {running ? (
-            <Button variant="danger" size="xs" onClick={stopSession} loading={stopping} className="gap-1 rounded-xl px-3">
-              <IconXCircle size={13} /> Stop
-            </Button>
+            progress.allRequiredCompleted ? (
+              <Button
+                size="xs"
+                onClick={finishLab}
+                loading={stopping}
+                className="gap-1 rounded-xl border-0 bg-emerald-600 px-3 text-white shadow-sm shadow-emerald-500/20 hover:bg-emerald-500"
+                title="All required work is complete — end this lab now"
+              >
+                <IconFlag size={13} /> Finish
+              </Button>
+            ) : (
+              <Button variant="danger" size="xs" onClick={stopSession} loading={stopping} className="gap-1 rounded-xl px-3">
+                <IconXCircle size={13} /> Stop
+              </Button>
+            )
           ) : (
             <Button size="xs" onClick={restart} loading={starting} className="gap-1 rounded-xl px-3">
               <IconPlay size={13} /> Restart
@@ -476,6 +518,50 @@ export default function LabSessionPage() {
           </button>
         </div>
       </header>
+
+      <div className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-night-900/70 sm:px-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <LabTimer
+            expiresAt={session.expires_at}
+            remainingSeconds={session.remaining_seconds}
+            running={running}
+            limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
+            endedReason={session.ended_reason}
+            onExpire={handleTimeUp}
+          />
+          <span className="hidden text-[11px] text-slate-500 sm:inline">
+            {Number(data.lab?.time_limit_minutes) > 0
+              ? `Lab time limit: ${data.lab.time_limit_minutes} min`
+              : 'Session safety limit'}
+          </span>
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
+          <div className="w-24 sm:w-40">
+            <ProgressBar
+              value={progress.percent}
+              tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
+              size="sm"
+            />
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+            {Math.round(progress.percent)}%
+          </span>
+          {progress.allRequiredCompleted && running && (
+            <Badge tone="emerald">
+              <IconCheckCircle size={11} /> Complete
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {!running && session.ended_reason === 'expired' && (
+        <div className="shrink-0 px-3 pt-3">
+          <Alert tone="warning" title="Lab time is over">
+            This session ended automatically when the lab timer reached zero. Start a new session to continue practising.
+          </Alert>
+        </div>
+      )}
 
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
       <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] lg:overflow-hidden content-start lg:content-stretch">

@@ -134,7 +134,7 @@ export default function LoginPage() {
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             error={errors.email}
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             className="pr-10"
           />
           <IconMail size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
@@ -148,7 +148,7 @@ export default function LoginPage() {
             value={form.password}
             onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
             error={errors.password}
-            placeholder="••••••••"
+            placeholder="Enter your password"
             className="pr-10"
           />
           <button

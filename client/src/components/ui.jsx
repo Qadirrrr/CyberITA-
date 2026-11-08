@@ -221,11 +221,11 @@ export function Spinner({ className = 'h-5 w-5' }) {
 
 export function ProgressBar({ value = 0, className = '', tone = 'brand', size = 'md' }) {
   const toneMap = {
-    brand: 'bg-gradient-to-r from-brand-600 to-brand-400',
-    emerald: 'bg-gradient-to-r from-emerald-600 to-emerald-400',
-    accent: 'bg-gradient-to-r from-accent-600 to-accent-400',
-    amber: 'bg-gradient-to-r from-amber-600 to-amber-400',
-    rose: 'bg-gradient-to-r from-rose-600 to-rose-400',
+    brand: 'bg-brand-600',
+    emerald: 'bg-emerald-600',
+    accent: 'bg-accent-600',
+    amber: 'bg-amber-600',
+    rose: 'bg-rose-600',
   };
   return (
     <div
@@ -412,7 +412,7 @@ export function Avatar({ name = '', src, size = 'md', className = '' }) {
   return (
     <div
       className={cx(
-        'flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-600/15 to-accent-600/15 font-semibold text-brand-700 ring-1 ring-brand-500/20 dark:from-brand-500/30 dark:to-accent-500/30 dark:text-brand-200 dark:ring-white/10',
+        'flex shrink-0 items-center justify-center rounded-full bg-brand-50 font-semibold text-brand-700 ring-1 ring-brand-500/20 dark:bg-brand-400/10 dark:text-brand-200 dark:ring-white/10',
         sizes[size],
         className
       )}

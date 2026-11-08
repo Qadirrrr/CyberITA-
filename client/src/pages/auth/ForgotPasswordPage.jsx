@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               error={errors.email}
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               className="pr-10"
             />
             <IconMail size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />

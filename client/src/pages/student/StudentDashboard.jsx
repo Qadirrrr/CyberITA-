@@ -251,7 +251,7 @@ export default function StudentDashboard() {
             <div className="space-y-3">
               {active.slice(0, 4).map((enrollment) => (
                 <Card key={enrollment.id} className="flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-500/25 to-accent-500/20">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 dark:bg-brand-400/10">
                     {enrollment.cover_image ? (
                       <img src={enrollment.cover_image} alt="" className="h-full w-full object-cover" />
                     ) : (
@@ -316,7 +316,22 @@ export default function StudentDashboard() {
                         <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
                           <IconClock size={10} />
                           {assignment.due_at ? formatDateTime(assignment.due_at) : 'No deadline'}
+                          {Number(assignment.time_limit_minutes) > 0 ? ` · ${assignment.time_limit_minutes} min limit` : ''}
                         </p>
+                        {(assignment.is_completed || assignment.progress_percent > 0) && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <div className="min-w-0 flex-1">
+                              <ProgressBar
+                                value={assignment.is_completed ? 100 : assignment.progress_percent}
+                                tone={assignment.is_completed ? 'emerald' : 'brand'}
+                                size="sm"
+                              />
+                            </div>
+                            <span className="shrink-0 font-mono text-[9px] text-slate-500">
+                              {assignment.is_completed ? 'Done' : `${Math.round(assignment.progress_percent)}%`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Link>

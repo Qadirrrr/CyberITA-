@@ -63,7 +63,6 @@ export default function AboutPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-70" />
         <div className="container-page relative grid gap-10 py-12 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:py-20">
           <div>
             <Badge tone="brand" className="mb-4">
@@ -138,7 +137,7 @@ export default function AboutPage() {
               const IconComponent = value.icon;
               return (
                 <Card key={value.title} className="flex gap-4 p-6">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400/20 to-accent-500/10 text-brand-300">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
                     <IconComponent size={20} />
                   </span>
                   <div>
@@ -161,7 +160,7 @@ export default function AboutPage() {
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {team.map((member) => (
             <Card key={member.name} className="p-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/30 to-accent-500/30 font-display text-lg font-semibold text-brand-200 ring-1 ring-white/10">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 font-display text-lg font-semibold text-brand-700 ring-1 ring-brand-500/20 dark:bg-brand-400/15 dark:text-brand-200 dark:ring-white/10">
                 {member.initials}
               </div>
               <h3 className="mt-4 text-base font-semibold">{member.name}</h3>
@@ -173,7 +172,7 @@ export default function AboutPage() {
       </section>
 
       <section className="container-page pb-16 lg:pb-24">
-        <Card className="border-brand-400/20 bg-gradient-to-br from-brand-500/[0.1] via-night-900 to-accent-500/[0.08] p-8 text-center sm:p-12">
+        <Card className="border-brand-400/20 bg-brand-50/60 p-8 text-center dark:bg-brand-400/5 sm:p-12">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
             <IconZap size={14} /> Start Learning Today
           </div>

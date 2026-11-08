@@ -593,7 +593,7 @@ export default function DashboardLayout() {
       <aside
         className={cx(
           'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-slate-200/80 bg-white/95 transition-[width] duration-300 dark:border-white/5 dark:bg-night-900/70 lg:block',
-          sidebarCollapsed ? 'w-[76px]' : 'w-[248px]'
+          sidebarCollapsed ? 'w-[76px]' : 'w-[224px]'
         )}
       >
         {renderSidebar(sidebarCollapsed)}
@@ -616,7 +616,7 @@ export default function DashboardLayout() {
       <div
         className={cx(
           'flex min-h-screen flex-1 flex-col bg-slate-100 transition-[padding] duration-300 dark:bg-transparent',
-          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'
+          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[224px]'
         )}
       >
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/5 dark:bg-night-950/80">

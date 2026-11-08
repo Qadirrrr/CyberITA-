@@ -43,12 +43,6 @@ export default {
         'glow-sm': '0 0 24px -10px rgba(34, 211, 238, 0.5)',
         card: '0 18px 45px -24px rgba(0, 0, 0, 0.85)',
       },
-      backgroundImage: {
-        'grid-fade':
-          'radial-gradient(ellipse at top, rgba(6,182,212,0.06), transparent 60%)',
-        'hero-glow':
-          'radial-gradient(circle at 20% 20%, rgba(6,182,212,0.08), transparent 45%), radial-gradient(circle at 80% 10%, rgba(139,92,246,0.06), transparent 40%)',
-      },
       keyframes: {
         'fade-up': {
           '0%': { opacity: '0', transform: 'translateY(12px)' },
@@ -58,10 +52,21 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0' },
         },
+        float: {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
+          '50%': { transform: 'translate3d(0, -14px, 0)' },
+        },
+        'page-in': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.5s ease-out both',
         blink: 'blink 1s step-end infinite',
+        float: 'float 6s ease-in-out infinite',
+        'float-slow': 'float 9s ease-in-out infinite',
+        'page-in': 'page-in 0.4s ease-out both',
       },
     },
   },

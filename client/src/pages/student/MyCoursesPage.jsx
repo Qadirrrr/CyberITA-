@@ -42,8 +42,11 @@ export default function MyCoursesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold">My Courses</h1>
-          <p className="mt-1 text-sm text-slate-400">Pick up where you left off, or revisit a completed course.</p>
+          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">
+            <IconBookOpen size={13} /> Learning
+          </div>
+          <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">My Courses</h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Pick up where you left off, or revisit a completed course.</p>
         </div>
         <Button as={Link} to="/courses" variant="secondary" size="sm">
           Browse catalog <IconArrowRight size={15} />
@@ -91,7 +94,7 @@ export default function MyCoursesPage() {
             return (
               <Card key={enrollment.id} className="flex flex-col overflow-hidden">
                 <div className="flex gap-4 p-4">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-500/25 to-accent-500/20">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 dark:bg-brand-400/10">
                     {enrollment.cover_image ? (
                       <img src={enrollment.cover_image} alt="" className="h-full w-full object-cover" />
                     ) : (

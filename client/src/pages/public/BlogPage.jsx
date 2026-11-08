@@ -17,9 +17,8 @@ function coverFor(post) {
     );
   }
   return (
-    <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-brand-500/20 via-night-800 to-accent-500/15">
+    <div className="relative flex h-44 items-center justify-center bg-slate-900">
       <IconFileText size={44} className="text-brand-300/40" strokeWidth={1.2} />
-      <div className="absolute inset-0 bg-gradient-to-t from-night-950/70 to-transparent" />
     </div>
   );
 }
@@ -57,7 +56,6 @@ export default function BlogPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-60" />
         <div className="container-page relative py-12 lg:py-16">
           <Badge tone="brand" className="mb-4">
             <IconFileText size={13} /> The lab notebook
@@ -198,7 +196,7 @@ export default function BlogPage() {
           </>
         )}
 
-        <Card className="mt-12 border-white/10 bg-gradient-to-br from-accent-500/[0.08] via-night-900 to-brand-500/[0.06] p-6 sm:p-8">
+        <Card className="mt-12 border-brand-400/20 bg-brand-50/60 p-6 dark:bg-brand-400/5 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div>
               <h2 className="font-display text-xl font-semibold">Your lab report could be featured here</h2>

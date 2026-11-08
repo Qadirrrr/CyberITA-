@@ -202,7 +202,6 @@ export default function CourseDetailPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-60" />
         <div className="container-page relative grid gap-10 py-10 lg:grid-cols-[1.55fr_1fr] lg:py-14">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -297,11 +296,11 @@ export default function CourseDetailPage() {
 
           <div className="lg:sticky lg:top-24 lg:self-start">
             <Card className="overflow-hidden">
-              <div className="relative h-36 bg-gradient-to-br from-brand-500/25 via-night-800 to-accent-500/20">
+              <div className="relative h-36 bg-brand-50 dark:bg-night-800">
                 {course.cover_image && (
                   <img src={course.cover_image} alt="" className="h-full w-full object-cover opacity-80" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-night-850 via-night-850/20 to-transparent" />
+                <div className="absolute inset-0 bg-slate-950/20 dark:bg-night-950/40" />
                 <div className="absolute bottom-4 left-5 flex items-center gap-2">
                   <span className="rounded-lg bg-night-950/80 px-2.5 py-1 text-xs font-medium text-brand-200 backdrop-blur">
                     {price > 0 ? `$${price}` : 'Free'} access

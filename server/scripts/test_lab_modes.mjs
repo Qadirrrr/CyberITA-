@@ -111,6 +111,7 @@ try {
       minEvidence: 2,
       difficulty: 'beginner',
       estimatedMinutes: 30,
+      timeLimitMinutes: 25,
     },
   });
   check('create real lab returns 201', realCreate.status === 201, `status=${realCreate.status}`);
@@ -119,6 +120,7 @@ try {
   check('real lab stores lab_mode=real', realLab?.lab_mode === 'real');
   check('real lab stores task_brief', String(realLab?.task_brief || '').includes('attacking IP'));
   check('real lab stores min_evidence=2', Number(realLab?.min_evidence) === 2);
+  check('real lab stores time_limit_minutes=25', Number(realLab?.time_limit_minutes) === 25, `limit=${realLab?.time_limit_minutes}`);
 
   // real lab without task brief is rejected
   const noBrief = await api('/api/labs', {
@@ -215,8 +217,8 @@ try {
 
   // ---------- real session: question-only + evidence gating ----------
   const { rows: realSessionRows } = await query(
-    `INSERT INTO lab_sessions (lab_id, user_id, provider, status, instance_id)
-     VALUES ($1,$2,'mock','running','fake-real-session') RETURNING id`,
+    `INSERT INTO lab_sessions (lab_id, user_id, provider, status, instance_id, expires_at)
+     VALUES ($1,$2,'mock','running','fake-real-session', now() + interval '25 minutes') RETURNING id`,
     [realLab.id, student.id]
   );
   const realSessionId = realSessionRows[0].id;
@@ -227,6 +229,14 @@ try {
   check('real session reports mode=real', realOverview.data?.mode === 'real');
   check('real session exposes no steps', (realOverview.data?.steps?.length ?? -1) === 0);
   check('real session includes task brief', String(realOverview.data?.lab?.task_brief || '').includes('attacking IP'));
+  check('real session reports the lab time limit', Number(realOverview.data?.lab?.time_limit_minutes) === 25);
+  check(
+    'real session reports remaining seconds',
+    Number(realOverview.data?.session?.remaining_seconds) > 0 &&
+      Number(realOverview.data?.session?.remaining_seconds) <= 25 * 60,
+    `remaining=${realOverview.data?.session?.remaining_seconds}`
+  );
+  check('running session has no ended reason', !realOverview.data?.session?.ended_reason);
   check('real progress needs 2 evidence files', realOverview.data?.progress?.requiredTotal === 2, JSON.stringify(realOverview.data?.progress));
   check('real progress starts incomplete', realOverview.data?.progress?.allRequiredCompleted === false);
 
@@ -286,6 +296,27 @@ try {
   check('practice session exposes its steps', (practiceOverview.data?.steps?.length ?? 0) === 1, `steps=${practiceOverview.data?.steps?.length}`);
   check('practice progress uses step totals', practiceOverview.data?.progress?.requiredTotal === 1);
 
+  // ---------- expired sessions are ended as soon as they are loaded ----------
+  const { rows: expiredRows } = await query(
+    `INSERT INTO lab_sessions (lab_id, user_id, provider, status, instance_id, expires_at)
+     VALUES ($1,$2,'mock','running','fake-expired-session', now() - interval '1 minute') RETURNING id`,
+    [realLab.id, student.id]
+  );
+  const expiredSessionId = expiredRows[0].id;
+  created.sessions.push(expiredSessionId);
+
+  const expiredOverview = await api(`/api/labs/sessions/${expiredSessionId}`, { token: studentToken });
+  check(
+    'expired session is ended on load',
+    expiredOverview.status === 200 && expiredOverview.data?.session?.status === 'stopped',
+    `status=${expiredOverview.data?.session?.status}`
+  );
+  check('expired session records ended_reason=expired', expiredOverview.data?.session?.ended_reason === 'expired');
+  check(
+    'expired session has zero remaining seconds',
+    Number(expiredOverview.data?.session?.remaining_seconds) === 0
+  );
+
   // ---------- converted lab hides legacy steps ----------
   const convert = await api(`/api/labs/${practiceLab.id}`, {
     token: instructorToken,
@@ -296,6 +327,27 @@ try {
   const convertedOverview = await api(`/api/labs/sessions/${practiceSessionId}`, { token: studentToken });
   check('converted real lab hides legacy steps', (convertedOverview.data?.steps?.length ?? -1) === 0);
   check('converted real lab switches to evidence progress', convertedOverview.data?.progress?.requiredTotal === 1);
+
+  // ---------- list + assignment progress fields ----------
+  const listRes = await api('/api/labs?limit=60', { token: studentToken });
+  check('authenticated lab list loads', listRes.status === 200, `status=${listRes.status}`);
+  const listedReal = (listRes.data?.labs || []).find((lab) => Number(lab.id) === Number(realLab.id));
+  check('lab list exposes the time limit', Number(listedReal?.time_limit_minutes) === 25);
+  check(
+    'lab list exposes progress fields',
+    listedReal && 'my_progress_percent' in listedReal && 'my_completed' in listedReal
+  );
+  check('lab list marks the completed real lab', listedReal?.my_completed === true && listedReal?.my_progress_percent === 100);
+
+  const assignmentsRes = await api('/api/me/lab-assignments', { token: studentToken });
+  check('lab assignments load', assignmentsRes.status === 200, `status=${assignmentsRes.status}`);
+  const assignment = (assignmentsRes.data?.labAssignments || []).find((lab) => Number(lab.id) === Number(realLab.id));
+  check('lab assignment exposes the time limit', Number(assignment?.time_limit_minutes) === 25);
+  check(
+    'lab assignment exposes progress',
+    Number.isFinite(Number(assignment?.progress_percent)) && typeof assignment?.is_completed === 'boolean'
+  );
+  check('lab assignment marks the completed real lab', assignment?.is_completed === true && Number(assignment?.progress_percent) === 100);
 
   console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}`);
 } catch (error) {

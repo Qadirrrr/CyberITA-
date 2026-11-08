@@ -279,7 +279,7 @@ export default function UsersPage() {
         <>
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[780px] text-left text-sm">
+              <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="px-5 py-2.5 font-medium">Account</th>

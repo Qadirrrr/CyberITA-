@@ -288,7 +288,7 @@ export default function AdminSystemPage() {
                   <div className="flex items-center gap-2">
                     <div className="h-1 w-20 overflow-hidden rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-brand-400 to-accent-400"
+                        className="h-full rounded-full bg-brand-500"
                         style={{ width: `${Math.min(100, Number(course.avg_progress))}%` }}
                       />
                     </div>

@@ -57,7 +57,6 @@ export default function ContactPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-60" />
         <div className="container-page relative py-12 lg:py-16">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">Contact</p>
           <h1 className="max-w-2xl text-balance font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
@@ -89,7 +88,7 @@ export default function ContactPage() {
 
             <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Your name" required value={form.name} onChange={update('name')} error={errors.name} placeholder="Alex Rivera" />
+                <Input label="Your name" required value={form.name} onChange={update('name')} error={errors.name} placeholder="Enter your name" />
                 <Input
                   label="Email address"
                   type="email"
@@ -97,7 +96,7 @@ export default function ContactPage() {
                   value={form.email}
                   onChange={update('email')}
                   error={errors.email}
-                  placeholder="alex@example.com"
+                  placeholder="Enter your email"
                 />
               </div>
               <Select label="Topic" value={form.subject} onChange={update('subject')} error={errors.subject} required>
@@ -116,7 +115,7 @@ export default function ContactPage() {
                 value={form.message}
                 onChange={update('message')}
                 error={errors.message}
-                placeholder="Tell us what you need help with…"
+                placeholder="Enter your message"
                 minLength={10}
                 maxLength={5000}
                 hint="At least 10 characters."

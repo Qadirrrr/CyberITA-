@@ -1,30 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
   <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#080e1a"/>
-      <stop offset="100%" stop-color="#04070d"/>
-    </linearGradient>
-    <linearGradient id="cGrad" x1="12" y1="12" x2="42" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="50%" stop-color="#06b6d4"/>
-      <stop offset="100%" stop-color="#0284c7"/>
-    </linearGradient>
-    <linearGradient id="plusGrad" x1="36" y1="23" x2="54" y2="41" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#67e8f9"/>
-      <stop offset="100%" stop-color="#22d3ee"/>
-    </linearGradient>
     <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#06b6d4" flood-opacity="0.4"/>
     </filter>
   </defs>
 
   <!-- Modern Dark Squircle Tile (high-contrast across light and dark browser themes) -->
-  <rect width="64" height="64" rx="16" fill="url(#bgGrad)"/>
+  <rect width="64" height="64" rx="16" fill="#05070d"/>
   <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" stroke="#164e63" stroke-width="1.5" stroke-opacity="0.8"/>
 
   <!-- Minimal Geometric Lettermark "C" -->
   <path d="M 41 16.5 C 37.5 14 33 13 28.5 13 C 18 13 11 20.5 11 32 C 11 43.5 18 51 28.5 51 C 33 51 37.5 50 41 47.5"
-        stroke="url(#cGrad)"
+        stroke="#06b6d4"
         stroke-width="7"
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -32,8 +19,8 @@
 
   <!-- Balanced Geometric Plus "+" Sign -->
   <g filter="url(#softGlow)">
-    <line x1="36" y1="32" x2="53" y2="32" stroke="url(#plusGrad)" stroke-width="6" stroke-linecap="round"/>
-    <line x1="44.5" y1="23.5" x2="44.5" y2="40.5" stroke="url(#plusGrad)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="36" y1="32" x2="53" y2="32" stroke="#22d3ee" stroke-width="6" stroke-linecap="round"/>
+    <line x1="44.5" y1="23.5" x2="44.5" y2="40.5" stroke="#22d3ee" stroke-width="6" stroke-linecap="round"/>
   </g>
 
   <!-- Subtle High-Tech Core Node -->

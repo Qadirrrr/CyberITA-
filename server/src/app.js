@@ -4,6 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import env from './config/env.js';
 import { authenticate } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -37,7 +38,21 @@ export function createApp() {
   const app = express();
 
   app.set('trust proxy', 1);
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        directives: {
+          // Allow the inline theme bootstrap in client/index.html (prevents a
+          // light/dark flash before React mounts).
+          scriptSrc: ["'self'", "'sha256-6LLvHJyZQDuwbRVR1Bu3nMWeKbL+reEJhRHGqAjRi4E='"],
+          // Course covers may be hosted on Unsplash; fall back gracefully when
+          // an image is unavailable.
+          imgSrc: ["'self'", 'data:', 'https://images.unsplash.com'],
+        },
+      },
+    })
+  );
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -48,7 +63,19 @@ export function createApp() {
     })
   );
   app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '2mb' }));
   app.use(cookieParser());
+
+  // Global rate limit: 300 requests / 15 min per IP (generous for normal use,
+  // blocks brute-force and basic DoS). Auth routes have their own stricter limit.
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 2000,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: (req) => req.path === '/api/health',
+  });
+  app.use('/api', globalLimiter);
 
   // Static uploads (lab screenshots / assignment files)
   const uploadsDir = path.resolve(process.cwd(), 'uploads');

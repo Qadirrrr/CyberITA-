@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
                 value={form.password}
                 onChange={setField('password')}
                 error={errors.password}
-                placeholder="At least 8 characters"
+                placeholder="Enter your new password"
                 className="pr-10"
               />
               <button
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
               value={form.confirm}
               onChange={setField('confirm')}
               error={errors.confirm}
-              placeholder="Repeat the new password"
+              placeholder="Confirm your new password"
             />
 
             <Button type="submit" loading={loading} size="lg" className="w-full">

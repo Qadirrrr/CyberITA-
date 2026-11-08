@@ -49,7 +49,6 @@ export default function VerifyCertificatePage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-60" />
         <div className="container-page relative py-12 lg:py-16">
           <Badge tone="brand" className="mb-4">
             <IconShield size={13} /> Public verification
@@ -76,7 +75,7 @@ export default function VerifyCertificatePage() {
                   id="serial"
                   value={serial}
                   onChange={(event) => setSerial(event.target.value)}
-                  placeholder="e.g. CYB-2X9K-4M7P"
+                  placeholder="Enter certificate serial"
                   className="input font-mono uppercase tracking-wider"
                   autoComplete="off"
                 />

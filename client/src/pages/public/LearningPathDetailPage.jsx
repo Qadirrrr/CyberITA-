@@ -51,7 +51,6 @@ export default function LearningPathDetailPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-70" />
         <div className="container-page relative py-10 lg:py-14">
           <Link to="/learning-paths" className="inline-flex items-center gap-1.5 text-xs text-slate-500 transition hover:text-brand-300">
             <IconArrowLeft size={13} /> All learning paths
@@ -89,7 +88,7 @@ export default function LearningPathDetailPage() {
                       {index + 1}
                     </span>
                     {index < path.courses.length - 1 && (
-                      <span className="absolute left-[15px] top-14 h-[calc(100%-2rem)] w-px bg-gradient-to-b from-brand-400/30 to-white/5" />
+                      <span className="absolute left-[15px] top-14 h-[calc(100%-2rem)] w-px bg-brand-400/20" />
                     )}
                     <Card className="card-hover p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">

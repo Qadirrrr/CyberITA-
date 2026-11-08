@@ -428,7 +428,7 @@ export default function LabTerminal({
 
   return (
     <div className={`terminal-window terminal-surface flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] text-zinc-100 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6)] ${className}`}>
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/5 bg-gradient-to-b from-[#161b22] to-[#0d1117] px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/5 bg-[#161b22] px-3 py-2">
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
           <span className="h-3 w-3 rounded-full bg-[#febc2e] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />

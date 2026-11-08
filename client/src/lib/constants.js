@@ -34,39 +34,66 @@ export const LAB_MODES = {
   },
 };
 
+/**
+ * Canonical course categories shown in the course editor dropdown.
+ * Keep this list in sync with the public catalog navigation.
+ */
 export const CATEGORIES = [
-  'Linux',
-  'Networking',
   'Cybersecurity',
-  'Cloud',
-  'Windows',
+  'Networking',
   'DevOps',
+  'Linux',
+  'System Administration',
+  'Cloud Computing',
+  'Digital Marketing',
   'Programming',
-  'Web Development',
-  'Databases',
-  'Automation',
-  'Career',
+  'Designing',
 ];
 
+/** Legacy category names still stored on older courses (kept for editing/back-compat). */
+export const LEGACY_CATEGORIES = ['Cloud', 'Windows', 'Web Development', 'Databases', 'Automation', 'Career'];
+
 export const SUBCATEGORY_SUGGESTIONS = {
-  Linux: ['Linux Administration', 'Shell Scripting', 'System Hardening'],
-  Networking: ['Network Fundamentals', 'Troubleshooting', 'Network Security', 'Cisco & Routing'],
-  Cybersecurity: [
-    'Security Fundamentals',
-    'Ethical Hacking',
-    'Penetration Testing',
-    'Security Operations',
-    'Governance & Compliance',
-    'Threat Detection',
-    'Incident Response',
+  Cybersecurity: ['CEH', 'CISSP', 'Penetration Testing', 'SIEM'],
+  Networking: ['CCNA', 'CCNP', 'HCIA-Datacom', 'HCIP-Datacom'],
+  DevOps: [
+    'Git',
+    'Docker',
+    'Docker Compose',
+    'Kubernetes',
+    'CI/CD',
+    'Prometheus',
+    'Terraform',
+    'Jenkins',
+    'Ansible',
+    'Puppet',
+    'Chef',
+    'Vagrant',
+    'Nagios',
   ],
-  Cloud: ['Cloud Platforms', 'Cloud Security', 'Cloud Architecture', 'AWS', 'Cloud Networking'],
+  Linux: ['RHCSA', 'RHCE', 'Kali Linux', 'FreeBSD UNIX', 'OpenShift', 'OpenSUSE Linux'],
+  'System Administration': ['Server Administration', 'Active Directory', 'PowerShell', 'Virtualisation', 'Backup & Recovery'],
+  'Cloud Computing': [
+    'AWS Certified Solutions Architect – Associate',
+    'AWS Certified Solutions Architect – Professional',
+    'GCP – Google Cloud Platform',
+    'Microsoft Azure',
+  ],
+  'Digital Marketing': ['SEO', 'Social Media', 'Content Marketing', 'Google Ads', 'Email Marketing'],
+  Programming: [
+    'Back End Website Development',
+    'Front End Website Development',
+    'Java Programming',
+    'Python Programming',
+    'CyberSecurity',
+  ],
+  Designing: ['Graphics Designing', 'Video Editing'],
+  // Legacy categories (older courses)
+  Cloud: ['AWS Certified Solutions Architect – Associate', 'GCP – Google Cloud Platform', 'Microsoft Azure'],
   Windows: ['Server Administration', 'Active Directory', 'PowerShell'],
-  DevOps: ['CI/CD & Automation', 'Containers', 'Infrastructure as Code'],
-  Programming: ['Python', 'JavaScript', 'Go', 'Bash'],
-  'Web Development': ['React', 'Express', 'Full Stack', 'APIs'],
+  'Web Development': ['Front End Website Development', 'Back End Website Development', 'Full Stack', 'APIs'],
   Databases: ['SQL & PostgreSQL', 'Database Design', 'Performance'],
-  Automation: ['Python Automation', 'Ansible', 'Scripting'],
+  Automation: ['Ansible', 'Puppet', 'Chef', 'Scripting'],
   Career: ['Career Growth', 'Interview Prep', 'Portfolio'],
 };
 

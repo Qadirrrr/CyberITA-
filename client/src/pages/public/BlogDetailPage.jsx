@@ -54,7 +54,6 @@ export default function BlogDetailPage() {
   return (
     <article>
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-50" />
         <div className="container-page relative max-w-4xl py-10 lg:py-14">
           <Link to="/blog" className="inline-flex items-center gap-1.5 text-xs text-slate-500 transition hover:text-brand-300">
             <IconArrowLeft size={13} /> Back to the blog

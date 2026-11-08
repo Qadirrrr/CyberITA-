@@ -168,7 +168,7 @@ export default function StudentLessonsPage() {
             return (
               <Card key={course.id} className="overflow-hidden">
                 <div className="flex flex-wrap items-center gap-3 border-b border-white/5 bg-white/[0.02] px-5 py-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-brand-500/25 to-accent-500/20">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-50 dark:bg-brand-400/10">
                     {course.cover_image ? (
                       <img src={course.cover_image} alt="" className="h-full w-full object-cover" />
                     ) : (

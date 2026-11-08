@@ -107,7 +107,7 @@ export default function ProfilePage() {
                 value={form.headline}
                 onChange={update('headline')}
                 className="mt-1.5"
-                placeholder="e.g. Aspiring SOC analyst · Linux enthusiast"
+                placeholder="Enter your headline"
                 error={errors.headline}
                 maxLength={160}
               />
@@ -123,7 +123,7 @@ export default function ProfilePage() {
                 value={form.bio}
                 onChange={update('bio')}
                 className="mt-1.5"
-                placeholder="A short introduction: what you're learning and what you want to work on next."
+                placeholder="Enter your bio"
                 error={errors.bio}
                 maxLength={2000}
               />
@@ -137,7 +137,7 @@ export default function ProfilePage() {
                 value={form.avatarUrl}
                 onChange={update('avatarUrl')}
                 className="mt-1.5"
-                placeholder="https://…"
+                placeholder="Enter image URL"
                 error={errors.avatarUrl}
               />
               <p className="mt-1 text-[10px] text-slate-600">Must be a public https image URL.</p>

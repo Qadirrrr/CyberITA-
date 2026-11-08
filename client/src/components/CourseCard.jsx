@@ -6,19 +6,23 @@ import { DIFFICULTIES } from '../lib/constants';
 import { formatMinutes } from '../lib/format';
 
 const categoryVisuals = {
-  Linux: { icon: IconTerminal, gradient: 'from-brand-500/30 via-night-800 to-night-900', text: 'text-brand-300' },
-  Networking: { icon: IconNetwork, gradient: 'from-sky-500/25 via-night-800 to-night-900', text: 'text-sky-300' },
-  Cybersecurity: { icon: IconShield, gradient: 'from-rose-500/25 via-night-800 to-night-900', text: 'text-rose-300' },
-  Cloud: { icon: IconCloud, gradient: 'from-accent-500/25 via-night-800 to-night-900', text: 'text-accent-300' },
-  DevOps: { icon: IconRefresh, gradient: 'from-amber-500/20 via-night-800 to-night-900', text: 'text-amber-300' },
-  Programming: { icon: IconCode, gradient: 'from-emerald-500/20 via-night-800 to-night-900', text: 'text-emerald-300' },
-  Databases: { icon: IconServer, gradient: 'from-indigo-500/25 via-night-800 to-night-900', text: 'text-indigo-300' },
-  Career: { icon: IconTarget, gradient: 'from-fuchsia-500/20 via-night-800 to-night-900', text: 'text-fuchsia-300' },
+  Linux: { icon: IconTerminal, solid: 'bg-brand-900', text: 'text-brand-300' },
+  Networking: { icon: IconNetwork, solid: 'bg-sky-900', text: 'text-sky-300' },
+  Cybersecurity: { icon: IconShield, solid: 'bg-rose-900', text: 'text-rose-300' },
+  'Cloud Computing': { icon: IconCloud, solid: 'bg-accent-600', text: 'text-accent-300' },
+  'System Administration': { icon: IconServer, solid: 'bg-teal-900', text: 'text-teal-300' },
+  'Digital Marketing': { icon: IconTarget, solid: 'bg-orange-900', text: 'text-orange-300' },
+  Designing: { icon: IconLayers, solid: 'bg-fuchsia-900', text: 'text-fuchsia-300' },
+  Cloud: { icon: IconCloud, solid: 'bg-accent-600', text: 'text-accent-300' },
+  DevOps: { icon: IconRefresh, solid: 'bg-amber-900', text: 'text-amber-300' },
+  Programming: { icon: IconCode, solid: 'bg-emerald-900', text: 'text-emerald-300' },
+  Databases: { icon: IconServer, solid: 'bg-indigo-900', text: 'text-indigo-300' },
+  Career: { icon: IconTarget, solid: 'bg-fuchsia-900', text: 'text-fuchsia-300' },
 };
 
 export default function CourseCard({ course, compact = false, footer }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const visual = categoryVisuals[course.category] || { icon: IconLayers, gradient: 'from-white/10 via-night-800 to-night-900', text: 'text-slate-300' };
+  const visual = categoryVisuals[course.category] || { icon: IconLayers, solid: 'bg-slate-800', text: 'text-slate-300' };
   const IconComponent = visual.icon;
   const level = DIFFICULTIES[course.level] || DIFFICULTIES.beginner;
   const lessons = course.lesson_count ?? course.lessons_count ?? 0;
@@ -28,9 +32,10 @@ export default function CourseCard({ course, compact = false, footer }) {
   return (
     <Link
       to={`/courses/${course.slug}`}
-      className="card card-hover group flex h-full flex-col overflow-hidden"
+      className="card card-hover group relative flex h-full flex-col overflow-hidden"
     >
-      <div className={`relative ${compact ? 'h-32' : 'h-44'} overflow-hidden bg-gradient-to-br ${visual.gradient}`}>
+      <span className="absolute inset-x-0 top-0 z-20 h-0.5 origin-left scale-x-0 bg-brand-500 transition-transform duration-300 group-hover:scale-x-100" />
+      <div className={`relative ${compact ? 'h-32' : 'h-44'} overflow-hidden ${visual.solid}`}>
         {course.cover_image && !imageFailed && (
           <img
             src={course.cover_image}
@@ -40,7 +45,7 @@ export default function CourseCard({ course, compact = false, footer }) {
             className="absolute inset-0 h-full w-full object-cover opacity-80 transition duration-500 group-hover:scale-105"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+        <div className="absolute inset-0 bg-slate-950/35" />
         <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
           <span className={`chip border-white/15 bg-slate-950/70 text-xs font-medium text-white backdrop-blur`}>
             <IconComponent size={13} />
@@ -79,7 +84,7 @@ export default function CourseCard({ course, compact = false, footer }) {
 
         <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-white/5">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/20 to-accent-500/20 text-xs font-semibold text-brand-700 ring-1 ring-slate-200 dark:text-brand-200 dark:ring-white/10">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700 ring-1 ring-slate-200 dark:bg-brand-400/10 dark:text-brand-200 dark:ring-white/10">
               {(course.instructor_name || 'CyberITA')
                 .split(' ')
                 .slice(0, 2)

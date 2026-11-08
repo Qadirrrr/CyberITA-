@@ -78,9 +78,8 @@ export default function CertificatesPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           {certificates.map((certificate) => (
             <Card key={certificate.id} className="relative overflow-hidden p-0">
-              <div className="relative overflow-hidden bg-gradient-to-br from-night-800 via-night-900 to-night-950 p-6">
+              <div className="relative overflow-hidden bg-night-900 p-6">
                 <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-brand-500/15 blur-3xl" />
-                <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:18px_18px]" />
                 <div className="relative">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">

@@ -3,22 +3,77 @@ import { Link } from 'react-router-dom';
 import api from '../../lib/api';
 import { useAuth, dashboardPath } from '../../context/AuthContext';
 import CourseCard from '../../components/CourseCard';
+import Reveal from '../../components/Reveal';
 import { Badge, Button, Card, SectionHeading, Skeleton } from '../../components/ui';
 import {
   IconArrowRight,
   IconAward,
-  IconBookOpen,
   IconCheck,
   IconCheckCircle,
   IconClock,
+  IconCloud,
+  IconCode,
+  IconCpu,
   IconFileText,
+  IconGlobe,
   IconLayers,
+  IconLock,
+  IconNetwork,
+  IconRefresh,
+  IconServer,
   IconShield,
+  IconTarget,
   IconTerminal,
   IconUsers,
   IconZap,
 } from '../../components/icons';
 import { formatDate } from '../../lib/format';
+
+const categoryShowcase = [
+  { name: 'Cybersecurity', icon: IconShield, hint: 'CEH · CISSP · Penetration Testing · SIEM' },
+  { name: 'Networking', icon: IconNetwork, hint: 'CCNA · CCNP · HCIA-Datacom · HCIP-Datacom' },
+  { name: 'DevOps', icon: IconRefresh, hint: 'Docker · Kubernetes · Terraform · CI/CD' },
+  { name: 'Linux', icon: IconTerminal, hint: 'RHCSA · RHCE · Kali Linux · OpenShift' },
+  { name: 'System Administration', icon: IconServer, hint: 'Windows Server · Active Directory · PowerShell' },
+  { name: 'Cloud Computing', icon: IconCloud, hint: 'AWS · Microsoft Azure · Google Cloud' },
+  { name: 'Digital Marketing', icon: IconTarget, hint: 'SEO · Social Media · Google Ads' },
+  { name: 'Programming', icon: IconCode, hint: 'Python · Java · Front-end · Back-end' },
+  { name: 'Designing', icon: IconLayers, hint: 'Graphics Designing · Video Editing' },
+];
+
+const platformPillars = [
+  {
+    icon: IconGlobe,
+    title: 'Browser terminal',
+    body: 'xterm.js streams a real Linux PTY over WebSocket — no installs, no local VMs.',
+  },
+  {
+    icon: IconServer,
+    title: 'Application server',
+    body: 'Node.js + Express API with PostgreSQL, role-based access and session control.',
+  },
+  {
+    icon: IconCpu,
+    title: 'Scheduler & capacity',
+    body: 'New sessions are balanced atomically across healthy lab servers with live CPU, RAM and heartbeat checks.',
+  },
+  {
+    icon: IconTerminal,
+    title: 'Remote lab agents',
+    body: 'Authenticated agents on AWS EC2 run isolated Docker containers, ten concurrent sessions per server.',
+  },
+];
+
+const techStack = ['React', 'Node.js', 'PostgreSQL', 'Docker', 'WebSocket', 'AES-256'];
+
+const trustBadges = [
+  { icon: IconShield, label: 'AES-256 encrypted', detail: 'Credentials encrypted at rest' },
+  { icon: IconLock, label: 'Isolated sandboxes', detail: 'One container per learner' },
+  { icon: IconAward, label: 'Verifiable certificates', detail: 'Public serial-number lookup' },
+  { icon: IconServer, label: 'Monitored servers', detail: 'Live CPU, RAM & heartbeat' },
+  { icon: IconUsers, label: 'Role-based access', detail: 'Student · Instructor · Admin' },
+  { icon: IconCheckCircle, label: 'Auto-verified labs', detail: 'Every command checked live' },
+];
 
 const features = [
   {
@@ -82,18 +137,19 @@ export default function HomePage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-slate-200 bg-white dark:border-white/5 dark:bg-transparent">
-        <div className="pointer-events-none absolute inset-0 hidden dark:block bg-hero-glow" />
-        <div className="pointer-events-none absolute inset-0 hidden dark:block bg-grid-fade opacity-60" />
-        <div className="container-page relative grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+      <section className="relative bg-white dark:bg-night-950">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 relative grid items-center gap-14 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <div className="animate-fade-up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/25 dark:bg-brand-400/10 dark:text-brand-200">
-              <IconShield size={14} className="text-brand-600 dark:text-brand-400" /> Enterprise Practical IT & Cybersecurity Labs
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-200">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
+              </span>
+              Enterprise Practical IT &amp; Cybersecurity Labs
             </div>
-            <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.08] text-slate-900 dark:text-white sm:text-5xl xl:text-6xl">
-              Learn IT by doing it
-              <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-accent-600 bg-clip-text text-transparent dark:from-brand-300 dark:via-brand-400 dark:to-accent-400">
-                {' '}
+            <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.05] text-slate-900 dark:text-white sm:text-5xl xl:text-6xl">
+              Learn IT by doing it{' '}
+              <span className="mt-1 block text-brand-600 dark:text-brand-400">
                 in a real terminal.
               </span>
             </h1>
@@ -103,15 +159,31 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               {user ? (
-                <Button as={Link} to={dashboardPath(user.role)} size="lg">
+                <Button
+                  as={Link}
+                  to={dashboardPath(user.role)}
+                  size="lg"
+                  className="shadow-lg shadow-brand-500/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-500/30"
+                >
                   Continue learning <IconArrowRight size={17} />
                 </Button>
               ) : (
-                <Button as={Link} to="/register" size="lg">
+                <Button
+                  as={Link}
+                  to="/register"
+                  size="lg"
+                  className="shadow-lg shadow-brand-500/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-500/30"
+                >
                   Start learning free <IconArrowRight size={17} />
                 </Button>
               )}
-              <Button as={Link} to="/courses" variant="secondary" size="lg">
+              <Button
+                as={Link}
+                to="/courses"
+                variant="secondary"
+                size="lg"
+                className="backdrop-blur transition hover:-translate-y-0.5"
+              >
                 Browse courses
               </Button>
             </div>
@@ -122,13 +194,42 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
+
+            <div className="mt-8 grid max-w-md grid-cols-3 gap-3 border-t border-slate-200 pt-6 dark:border-white/5">
+              {[
+                ['10', 'labs per server'],
+                ['100%', 'browser-based'],
+                ['AES-256', 'agent security'],
+              ].map(([value, label]) => (
+                <div key={label}>
+                  <p className="font-display text-lg font-semibold text-slate-900 dark:text-white">{value}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-500">{label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="animate-fade-up [animation-delay:120ms]">
+          <div className="animate-fade-up [animation-delay:140ms]">
             <div className="relative mx-auto max-w-lg">
-              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-500/15 via-transparent to-accent-500/15 blur-2xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
-                <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/90 px-4 py-3">
+              {/* Floating status chips */}
+              <div className="absolute -left-4 top-16 z-20 hidden animate-float sm:block">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-white/90 px-3 py-2 text-xs font-semibold text-emerald-700 shadow-lg backdrop-blur dark:bg-night-900/90 dark:text-emerald-300">
+                  <IconCheckCircle size={14} /> Auto-verified
+                </div>
+              </div>
+              <div className="absolute -right-5 top-40 z-20 hidden animate-float-slow sm:block">
+                <div className="flex items-center gap-2 rounded-xl border border-brand-500/30 bg-white/90 px-3 py-2 text-xs font-semibold text-brand-700 shadow-lg backdrop-blur dark:bg-night-900/90 dark:text-brand-300">
+                  <IconCpu size={14} /> 10 / server
+                </div>
+              </div>
+              <div className="absolute -bottom-5 left-8 z-20 hidden animate-float sm:block [animation-delay:-2s]">
+                <div className="flex items-center gap-2 rounded-xl border border-accent-500/30 bg-white/90 px-3 py-2 text-xs font-semibold text-accent-600 shadow-lg backdrop-blur dark:bg-night-900/90 dark:text-accent-300">
+                  <IconLock size={14} /> AES-256
+                </div>
+              </div>
+
+              <div className="terminal-glow relative overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-950 text-slate-100">
+                <div className="relative flex items-center gap-2 border-b border-slate-800 bg-slate-900 px-4 py-3">
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
@@ -137,7 +238,7 @@ export default function HomePage() {
                     Live
                   </Badge>
                 </div>
-                <div className="space-y-2.5 p-5 font-mono text-[12.5px] leading-6">
+                <div className="relative space-y-2.5 p-5 font-mono text-[12.5px] leading-6">
                   <p className="text-slate-500"># Lab 02 · Users, groups and permissions</p>
                   <p>
                     <span className="text-emerald-400">student@lab</span>
@@ -166,7 +267,7 @@ export default function HomePage() {
                     <span className="inline-block h-4 w-2 animate-blink bg-brand-300 align-middle" />
                   </p>
                 </div>
-                <div className="grid grid-cols-3 divide-x divide-white/5 border-t border-white/10 bg-night-900/50 text-center">
+                <div className="relative grid grid-cols-3 divide-x divide-white/5 border-t border-white/10 bg-night-900/50 text-center">
                   {[
                     ['2 / 4', 'steps verified'],
                     ['50%', 'progress'],
@@ -184,24 +285,47 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-b border-slate-200/80 bg-slate-50/70 dark:border-white/5 dark:bg-night-900/30">
-        <div className="container-page grid grid-cols-2 gap-6 py-8 sm:grid-cols-4">
-          {[
-            [IconBookOpen, 'Structured courses', 'From Linux basics to cloud operations'],
-            [IconTerminal, 'Real terminal labs', 'Verified command by command'],
-            [IconFileText, 'Practical reports', 'Instructor-reviewed documentation'],
-            [IconAward, 'Verifiable certificates', 'Serial numbers you can share'],
-          ].map(([IconComponent, title, body]) => (
-            <div key={title} className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-400/10 dark:text-brand-300">
-                <IconComponent size={19} />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">{body}</p>
-              </div>
+      <section className="relative border-b border-brand-700 bg-brand-600 dark:border-brand-800 dark:bg-brand-700">
+        {/* Top wave divider — irregular shape transition from previous section */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -translate-y-[99%]">
+          <svg
+            viewBox="0 0 1440 72"
+            preserveAspectRatio="none"
+            className="block h-14 w-full text-brand-600 dark:text-brand-700"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M0,40 C120,8 240,72 360,36 C480,4 600,68 720,34 C840,6 960,70 1080,32 C1200,4 1320,66 1440,30 L1440,72 L0,72 Z" />
+          </svg>
+        </div>        <div className="container-page py-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-10">
+            <div className="max-w-xs shrink-0">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-100">
+                <IconShield size={14} className="text-white" /> Trusted by design
+              </p>
+              <p className="mt-1.5 text-sm leading-6 text-brand-50">
+                Security, isolation and verifiable evidence are built into every lab session.
+              </p>
             </div>
-          ))}
+            <div className="trust-marquee flex-1">
+              <ul className="trust-track">
+                {[...trustBadges, ...trustBadges].map(({ icon: IconComponent, label, detail }, index) => (
+                  <li
+                    key={`${label}-${index}`}
+                    className="flex w-48 shrink-0 flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm transition hover:border-brand-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-brand-400/30"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+                      <IconComponent size={17} />
+                    </span>
+                    <span>
+                      <span className="block text-[11px] font-semibold leading-4 text-slate-800 dark:text-slate-200">{label}</span>
+                      <span className="mt-0.5 block text-[10px] leading-4 text-slate-500 dark:text-slate-500">{detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -216,12 +340,12 @@ export default function HomePage() {
             </Button>
           }
         />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <Reveal className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => {
             const IconComponent = feature.icon;
             return (
               <Card key={feature.title} className="group p-6 transition hover:border-slate-300 hover:shadow-md dark:hover:border-brand-400/25">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-slate-200 dark:bg-gradient-to-br dark:from-brand-400/20 dark:to-accent-500/10 dark:text-brand-300 dark:ring-white/5">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-slate-200 dark:bg-brand-400/10 dark:text-brand-300 dark:ring-white/5">
                   <IconComponent size={21} />
                 </span>
                 <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">{feature.title}</h3>
@@ -229,6 +353,42 @@ export default function HomePage() {
               </Card>
             );
           })}
+        </Reveal>
+      </section>
+
+      <section className="border-b border-slate-200/80 bg-white dark:border-white/5 dark:bg-transparent">
+        <div className="container-page py-16 lg:py-20">
+          <SectionHeading
+            eyebrow="Course categories"
+            title="Find the track that fits your goal"
+            description="From security operations to cloud engineering, every category is backed by practical labs and instructor review."
+            action={
+              <Button as={Link} to="/courses" variant="secondary" size="sm">
+                Browse all courses <IconArrowRight size={15} />
+              </Button>
+            }
+          />
+          <Reveal className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {categoryShowcase.map(({ name, icon: IconComponent, hint }) => (
+              <Link
+                key={name}
+                to={`/courses?category=${encodeURIComponent(name)}`}
+                className="card card-hover group flex items-center gap-4 p-5"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-slate-200 transition group-hover:bg-brand-100 dark:bg-brand-400/10 dark:text-brand-300 dark:ring-white/5">
+                  <IconComponent size={20} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-slate-900 dark:text-white">{name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">{hint}</span>
+                </span>
+                <IconArrowRight
+                  size={16}
+                  className="ml-auto shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-brand-600 dark:group-hover:text-brand-300"
+                />
+              </Link>
+            ))}
+          </Reveal>
         </div>
       </section>
 
@@ -244,7 +404,7 @@ export default function HomePage() {
               </Button>
             }
           />
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {loading
               ? Array.from({ length: 3 }).map((_, index) => (
                   <Card key={index} className="overflow-hidden">
@@ -257,7 +417,7 @@ export default function HomePage() {
                   </Card>
                 ))
               : courses.map((course) => <CourseCard key={course.id} course={course} />)}
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -276,7 +436,7 @@ export default function HomePage() {
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/30 bg-brand-400/10 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
                       {index + 1}
                     </span>
-                    {index < steps.length - 1 && <span className="mt-2 h-full w-px bg-gradient-to-b from-brand-400/30 to-transparent" />}
+                    {index < steps.length - 1 && <span className="mt-2 h-full w-px bg-brand-400/25" />}
                   </div>
                   <div className="pb-2">
                     <h3 className="text-base font-semibold">{step.title}</h3>
@@ -323,7 +483,7 @@ export default function HomePage() {
             {!loading && paths.length === 0 && (
               <Card className="p-6 text-sm text-slate-400">Learning paths are being prepared. Browse individual courses in the meantime.</Card>
             )}
-            <Card className="border-brand-400/20 bg-gradient-to-br from-brand-400/[0.07] to-transparent p-6">
+            <Card className="border-brand-400/20 bg-brand-50/60 p-6 dark:bg-brand-400/5">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-brand-300">
                 <IconShield size={15} /> Career-ready evidence
               </div>
@@ -338,6 +498,84 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="container-page py-16 lg:py-20">
+        <Reveal className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
+          <div>
+            <SectionHeading
+              eyebrow="Inside the platform"
+              title="Built like real training infrastructure"
+              description="CyberITA+ is not a video library with a quiz bolted on. Lessons, labs and certificates run on a purpose-built platform with isolated containers and reviewed evidence."
+            />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {platformPillars.map(({ icon: IconComponent, title, body }) => (
+                <div
+                  key={title}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-night-900/50"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+                    <IconComponent size={17} />
+                  </span>
+                  <h3 className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Card className="relative overflow-hidden p-6 sm:p-8">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl" />
+            <div className="relative">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-400">
+                    Lab session flow
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-semibold text-slate-900 dark:text-white">
+                    From click to container
+                  </h3>
+                </div>
+                <Badge tone="emerald" dot="animate-pulse">
+                  Live
+                </Badge>
+              </div>
+
+              <ol className="mt-6 space-y-3">
+                {[
+                  ['Student starts a lab', 'Capacity is reserved atomically on the healthiest server.'],
+                  ['Agent provisions a container', 'Isolated Docker sandbox with a dedicated PTY and filesystem.'],
+                  ['Commands are verified', 'Every step is checked against the expected outcome in real time.'],
+                  ['Evidence becomes a report', 'Output and screenshots are reviewed, then certificates are issued.'],
+                ].map(([title, body], index) => (
+                  <li key={title} className="relative flex gap-3.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/30 bg-brand-400/10 font-display text-xs font-semibold text-brand-700 dark:text-brand-300">
+                      {index + 1}
+                    </span>
+                    <div className="pb-1">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+                      <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-400">{body}</p>
+                    </div>
+                    {index < 3 && (
+                      <span className="absolute left-4 top-8 h-[calc(100%-1rem)] w-px bg-brand-400/25" />
+                    )}
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-200 pt-5 dark:border-white/5">
+                {techStack.map((tech) => (
+                  <span key={tech} className="chip chip-static">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-500">
+                <IconLock size={12} /> Agent traffic is authenticated and encrypted end to end.
+              </p>
+            </div>
+          </Card>
+        </Reveal>
+      </section>
+
       <section className="border-t border-white/5 bg-night-900/30">
         <div className="container-page py-16 lg:py-20">
           <SectionHeading
@@ -350,7 +588,7 @@ export default function HomePage() {
               </Button>
             }
           />
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <Link key={post.id} to={`/blog/${post.slug}`} className="card card-hover group flex flex-col p-6">
                 <div className="flex flex-wrap gap-2">
@@ -377,12 +615,12 @@ export default function HomePage() {
                 No published articles yet. Approved lab reports will appear here.
               </Card>
             )}
-          </div>
+          </Reveal>
         </div>
       </section>
 
       <section className="container-page py-16 lg:py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-brand-400/20 bg-gradient-to-br from-brand-500/[0.12] via-night-900 to-accent-500/[0.12] px-6 py-12 text-center sm:px-12 lg:py-16">
+        <div className="relative overflow-hidden rounded-3xl border border-brand-400/20 bg-slate-50 px-6 py-12 text-center sm:px-12 lg:py-16 dark:bg-night-900">
           <div className="pointer-events-none absolute inset-0 bg-noise opacity-40" />
           <div className="relative mx-auto max-w-2xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">

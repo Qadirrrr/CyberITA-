@@ -70,6 +70,7 @@ export default function LabEditorPage() {
         submissionRequirements: response.lab.submission_requirements || '',
         difficulty: response.lab.difficulty || 'beginner',
         estimatedMinutes: response.lab.estimated_minutes ?? 30,
+        timeLimitMinutes: response.lab.time_limit_minutes ?? 0,
         terminalWelcome: response.lab.terminal_welcome || 'Welcome to your CyberITA+ lab environment.',
         initialCwd: response.lab.initial_cwd || '/home/student',
         containerImage: response.lab.container_image || '',
@@ -103,6 +104,7 @@ export default function LabEditorPage() {
     submissionRequirements: form.submissionRequirements,
     difficulty: form.difficulty,
     estimatedMinutes: Number(form.estimatedMinutes) || 30,
+    timeLimitMinutes: Math.max(0, Number(form.timeLimitMinutes) || 0),
     terminalWelcome: form.terminalWelcome,
     initialCwd: form.initialCwd,
     containerImage: form.containerImage.trim() || null,
@@ -369,7 +371,7 @@ export default function LabEditorPage() {
                 value={form.taskBrief}
                 onChange={update('taskBrief')}
                 required
-                placeholder={'## Your task\nInvestigate the suspicious login attempts in ~/practice/access.log and report:\n- the attacking IP address\n- how many attempts were made\n- whether any attempt succeeded'}
+                placeholder="Enter the task brief"
                 hint="This is the only task text learners see. Do not include step-by-step instructions, commands or hints."
               />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -387,7 +389,7 @@ export default function LabEditorPage() {
                   rows={4}
                   value={form.submissionRequirements}
                   onChange={update('submissionRequirements')}
-                  placeholder={'- Screenshot of the evidence you collected\n- A short note explaining your findings'}
+                  placeholder="Enter submission requirements"
                   hint="Shown to learners together with the task brief."
                 />
               </div>
@@ -400,7 +402,7 @@ export default function LabEditorPage() {
                 rows={4}
                 value={form.objectives}
                 onChange={update('objectives')}
-                placeholder={'- Navigate the Linux filesystem\n- Inspect file permissions\n- Explain the principle of least privilege'}
+                placeholder="Enter learning objectives"
                 hint="One objective per line. Shown to learners before they start the lab."
               />
               <Textarea
@@ -408,7 +410,7 @@ export default function LabEditorPage() {
                 rows={4}
                 value={form.submissionRequirements}
                 onChange={update('submissionRequirements')}
-                placeholder={'- Screenshot proving each step\n- A short solution article explaining your approach'}
+                placeholder="Enter submission requirements"
                 hint={
                   form.isPractice
                     ? 'Open labs are not graded and require no practical report, so this text is not shown.'
@@ -431,6 +433,24 @@ export default function LabEditorPage() {
             </Select>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Lab time limit (minutes)"
+              type="number"
+              min="0"
+              max="600"
+              value={form.timeLimitMinutes}
+              onChange={update('timeLimitMinutes')}
+              hint="How long learners get once they start. Set 0 for no custom limit. The timer ends the session automatically at zero."
+            />
+            <div className="flex items-end pb-2">
+              <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                {Number(form.timeLimitMinutes) > 0
+                  ? `Learners see a ${form.timeLimitMinutes}-minute countdown and can finish early once required work is complete.`
+                  : 'No custom timer. Sessions still end at the platform safety limit if one is configured.'}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Textarea label="Terminal welcome message" rows={2} value={form.terminalWelcome} onChange={update('terminalWelcome')} />
             <Input label="Initial working directory" value={form.initialCwd} onChange={update('initialCwd')} className="font-mono text-xs" />
           </div>
@@ -440,7 +460,7 @@ export default function LabEditorPage() {
               value={form.containerImage}
               onChange={update('containerImage')}
               className="font-mono text-xs"
-              placeholder="ubuntu:22.04"
+              placeholder="Enter Docker image"
               hint="Leave blank to use the server default. The image must provide /bin/sh and coreutils."
             />
             <div className="flex items-end pb-2">
@@ -593,7 +613,7 @@ export default function LabEditorPage() {
                 value={stepModal.expectedCommand}
                 onChange={(event) => setStepModal((current) => ({ ...current, expectedCommand: event.target.value }))}
                 className="font-mono text-xs"
-                placeholder="e.g. ls -la ~"
+                placeholder="Enter expected command"
                 hint="Whitespace is normalised and matching is case-insensitive."
               />
             )}
@@ -603,7 +623,7 @@ export default function LabEditorPage() {
                 value={stepModal.expectedOutputPattern}
                 onChange={(event) => setStepModal((current) => ({ ...current, expectedOutputPattern: event.target.value }))}
                 className="font-mono text-xs"
-                placeholder="e.g. Welcome to your CyberITA\\+ lab environment"
+                placeholder="Enter output pattern"
                 hint="Case-insensitive JavaScript regular expression tested against the command output."
               />
             )}

@@ -22,6 +22,8 @@ import {
     executeInSession,
     getSessionOverview,
     completeManualStep,
+    expireSessionIfNeeded,
+    getUserLabProgress,
 } from '../services/labService.js';
 import { submitLabSession } from '../services/labSubmissions.js';
 import { generateLab } from '../services/labGenerator.js';
@@ -121,6 +123,7 @@ const labSchema = z.object({
     submissionRequirements: z.string().trim().max(4000).default(''),
     difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
     estimatedMinutes: z.coerce.number().int().min(5).max(600).default(30),
+    timeLimitMinutes: z.coerce.number().int().min(0).max(600).default(0),
     terminalWelcome: z.string().trim().max(2000).default('Welcome to your CyberITA+ lab environment.'),
     initialCwd: z.string().trim().max(300).default('/home/student'),
     initialFiles: z.record(z.any()).default({}),
@@ -226,23 +229,74 @@ router.get(
                 );
                 const offset = (page - 1) * limit;
                 const paginatedParams = [...params, limit, offset];
+                // Best-ever progress for the signed-in learner. Guided labs count
+                // verified required steps; real labs count screenshot evidence.
+                const progressSelect = req.user
+                    ? `mp.my_completed_steps, mp.my_evidence_count, mp.my_submission_approved,
+                       mp.my_status, mp.last_started_at,
+                       (SELECT COUNT(*)::int FROM lab_steps st
+                         WHERE st.lab_id = l.id AND st.is_optional = FALSE) AS required_step_count,`
+                    : `NULL::int AS my_completed_steps, NULL::int AS my_evidence_count,
+                       NULL::boolean AS my_submission_approved, NULL AS my_status,
+                       NULL::timestamptz AS last_started_at, NULL::int AS required_step_count,`;
+                const progressJoin = req.user
+                    ? `LEFT JOIN LATERAL (
+                         SELECT
+                           COALESCE(MAX(x.completed_required), 0) AS my_completed_steps,
+                           COALESCE(MAX(x.evidence_count), 0) AS my_evidence_count,
+                           BOOL_OR(x.approved) AS my_submission_approved,
+                           (ARRAY_AGG(x.status ORDER BY x.id DESC))[1] AS my_status,
+                           MAX(x.started_at) AS last_started_at
+                         FROM (
+                           SELECT s.id, s.status, s.started_at,
+                             (SELECT COUNT(*)::int FROM lab_step_progress p
+                                JOIN lab_steps st ON st.id = p.step_id
+                               WHERE p.session_id = s.id AND st.is_optional = FALSE) AS completed_required,
+                             (SELECT COUNT(*)::int FROM screenshots sc WHERE sc.session_id = s.id) AS evidence_count,
+                             EXISTS (SELECT 1 FROM lab_submissions ls
+                                      WHERE ls.session_id = s.id AND ls.status = 'approved') AS approved
+                           FROM lab_sessions s
+                           WHERE s.lab_id = l.id AND s.user_id = ${Number(req.user.id)}
+                         ) x
+                       ) mp ON TRUE`
+                    : '';
                 const { rows } = await query(
-                        `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes, l.status,
-         l.is_practice, l.lab_mode, l.min_evidence, l.course_id, l.lesson_id, l.due_at,
+                        `SELECT l.id, l.slug, l.title, l.summary, l.difficulty, l.estimated_minutes,
+         l.time_limit_minutes, l.status, l.is_practice, l.lab_mode, l.min_evidence,
+         l.course_id, l.lesson_id, l.due_at,
          c.title AS course_title, c.slug AS course_slug,
          l.lab_server_id, srv.name AS lab_server_name,
+         ${progressSelect}
          (SELECT COUNT(*)::int FROM lab_steps s WHERE s.lab_id = l.id) AS step_count,
-         (SELECT COUNT(*)::int FROM lab_sessions s WHERE s.lab_id = l.id) AS session_count,
-         ${req.user ? `(SELECT MAX(s.status) FROM lab_sessions s WHERE s.lab_id = l.id AND s.user_id = ${Number(req.user.id)}) AS my_status,` : ''}
-         (SELECT s.started_at FROM lab_sessions s WHERE s.lab_id = l.id ${req.user ? `AND s.user_id = ${Number(req.user.id)}` : ''} ORDER BY s.id DESC LIMIT 1) AS last_started_at
+         (SELECT COUNT(*)::int FROM lab_sessions s WHERE s.lab_id = l.id) AS session_count
        FROM labs l LEFT JOIN courses c ON c.id = l.course_id
        LEFT JOIN lab_servers srv ON srv.id = l.lab_server_id
+       ${progressJoin}
        ${whereSql}
        ORDER BY l.updated_at DESC
        LIMIT $${paginatedParams.length - 1} OFFSET $${paginatedParams.length}`,
       paginatedParams
     );
-    res.json({ labs: rows, total: countRows[0].total, page, limit });
+    const labs = rows.map((row) => {
+      const isReal = row.lab_mode === 'real';
+      const requiredSteps = Number(row.required_step_count) || 0;
+      const completedSteps = Number(row.my_completed_steps) || 0;
+      const evidenceCount = Number(row.my_evidence_count) || 0;
+      const minEvidence = Math.max(1, Number(row.min_evidence) || 1);
+      const percent = isReal
+        ? Math.min(100, Math.round((evidenceCount / minEvidence) * 100))
+        : requiredSteps > 0
+          ? Math.min(100, Math.round((completedSteps / requiredSteps) * 100))
+          : (row.last_started_at ? 100 : 0);
+      return {
+        ...row,
+        my_progress_percent: percent,
+        my_completed: isReal
+          ? Boolean(row.my_submission_approved) || evidenceCount >= minEvidence
+          : requiredSteps > 0 && completedSteps >= requiredSteps,
+      };
+    });
+    res.json({ labs, total: countRows[0].total, page, limit });
   })
 );
 
@@ -259,14 +313,21 @@ router.get(
     );
     let sessions = [];
     let mySession = null;
+    let myProgress = null;
     if (req.user) {
       const { rows } = await query(
-        `SELECT id, status, started_at, ended_at, last_activity_at, expires_at, provider, instance_id
+        `SELECT id, status, started_at, ended_at, ended_reason, last_activity_at, expires_at, provider, instance_id
          FROM lab_sessions WHERE lab_id = $1 AND user_id = $2 ORDER BY id DESC`,
         [lab.id, req.user.id]
       );
       sessions = rows;
-      mySession = rows.find((s) => s.status === 'running') || rows[0] || null;
+      mySession =
+        rows.find(
+          (s) => s.status === 'running' && (!s.expires_at || new Date(s.expires_at) > new Date())
+        ) ||
+        rows[0] ||
+        null;
+      myProgress = await getUserLabProgress(req.user.id, lab);
     }
     const { rows: stepCounts } = await query(
       `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE is_optional = FALSE)::int AS required
@@ -279,6 +340,7 @@ router.get(
       steps,
       sessions,
       mySession,
+      myProgress,
       stepCounts: stepCounts[0],
     });
   })
@@ -310,7 +372,13 @@ router.get(
   '/sessions/:sessionId',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const session = await getSessionOr404(req.params.sessionId, req.user);
+    let session = await getSessionOr404(req.params.sessionId, req.user);
+    // End the lab the moment its timer reaches zero, even if the periodic
+    // cleanup job has not run yet.
+    if (session.status === 'running' && session.expires_at && new Date(session.expires_at) <= new Date()) {
+      await expireSessionIfNeeded(session, req.user);
+      session = await getSessionOr404(req.params.sessionId, req.user);
+    }
     const lab = await getLab(session.lab_id, { staff: true });
     const includeAnswers = await canManageLab(req.user, lab);
     const overview = await getSessionOverview(session, { includeAnswers });
@@ -325,6 +393,7 @@ router.get(
         lab_mode: lab.lab_mode || 'practice',
         task_brief: lab.task_brief || '',
         min_evidence: lab.min_evidence ?? 1,
+        time_limit_minutes: lab.time_limit_minutes ?? 0,
         course_id: lab.course_id,
         due_at: lab.due_at,
       },
@@ -362,8 +431,21 @@ router.post(
   asyncHandler(async (req, res) => {
     const session = await getSessionOr404(req.params.sessionId, req.user);
     if (session.user_id !== req.user.id) throw forbidden('Only the session owner can stop it.');
-    const stopped = await stopSession(session, req.user);
-    res.json({ session: { id: stopped.id, status: stopped.status, ended_at: stopped.ended_at } });
+    const expired = Boolean(session.expires_at && new Date(session.expires_at) <= new Date());
+    const requested = ['completed', 'expired'].includes(req.body?.reason)
+      ? req.body.reason
+      : 'stopped';
+    const stopped = await stopSession(session, req.user, {
+      reason: expired ? 'expired' : requested,
+    });
+    res.json({
+      session: {
+        id: stopped.id,
+        status: stopped.status,
+        ended_at: stopped.ended_at,
+        ended_reason: stopped.ended_reason || null,
+      },
+    });
   })
 );
 
@@ -460,7 +542,7 @@ router.post(
       });
 
       // Automatically clean up container after lab completion/submission while preserving evidence
-      await stopSession(session, req.user).catch((cleanupErr) => {
+      await stopSession(session, req.user, { reason: 'submitted' }).catch((cleanupErr) => {
         logger.warn('Failed to stop lab session after submission', {
           sessionId: session.id,
           error: cleanupErr.message,
@@ -508,6 +590,7 @@ const generateLabSchema = z.object({
   details: z.string().trim().max(4000).default(''),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
   stepCount: z.coerce.number().int().min(3).max(12).default(8),
+  timeLimitMinutes: z.coerce.number().int().min(0).max(600).default(0),
   labMode: z.enum(LAB_MODES).default('practice'),
   minEvidence: z.coerce.number().int().min(1).max(20).default(1),
   isPractice: z.boolean().default(false),
@@ -570,8 +653,9 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
            submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-           initial_cwd, status, created_by, is_practice, lab_mode, task_brief, min_evidence)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
+           initial_cwd, status, created_by, is_practice, lab_mode, task_brief, min_evidence,
+           time_limit_minutes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
         [
           slug,
           generated.title,
@@ -592,6 +676,7 @@ router.post(
           labMode,
           generated.taskBrief || '',
           labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
+          Math.max(0, Number(b.timeLimitMinutes) || 0),
         ]
       );
       const id = rows[0].id;
@@ -705,14 +790,15 @@ router.post(
       `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
          submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
          initial_cwd, container_image, network_enabled, status, created_by, is_practice, due_at,
-         lab_mode, task_brief, min_evidence)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
+         lab_mode, task_brief, min_evidence, time_limit_minutes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) RETURNING *`,
       [slug, b.title, labCourseId, labLessonId, b.summary, b.description,
        b.objectives, b.submissionRequirements, b.difficulty, b.estimatedMinutes, b.terminalWelcome,
        JSON.stringify(b.initialFiles), b.initialCwd, b.containerImage || null,
        'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, isOpenLab,
        labCourseId ? b.dueAt ?? null : null, labMode, b.taskBrief || '',
-       labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1]
+       labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
+       Math.max(0, Number(b.timeLimitMinutes) || 0)]
     );
     res.status(201).json({ lab: rows[0] });
   })
@@ -779,7 +865,8 @@ router.put(
          due_at = CASE WHEN $21::boolean THEN $22::timestamptz ELSE due_at END,
          lab_mode = $23,
          task_brief = CASE WHEN $24::boolean THEN $25 ELSE task_brief END,
-         min_evidence = COALESCE($26, min_evidence)
+         min_evidence = COALESCE($26, min_evidence),
+         time_limit_minutes = COALESCE($27, time_limit_minutes)
        WHERE id = $17 RETURNING *`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.difficulty ?? null,
@@ -795,6 +882,7 @@ router.put(
         nextMode === 'real'
           ? Math.max(1, Number('minEvidence' in b ? b.minEvidence : lab.min_evidence ?? 1))
           : ('minEvidence' in b ? Number(b.minEvidence) : null),
+        'timeLimitMinutes' in b ? Math.max(0, Number(b.timeLimitMinutes) || 0) : null,
       ]
     );
     res.json({ lab: rows[0] });

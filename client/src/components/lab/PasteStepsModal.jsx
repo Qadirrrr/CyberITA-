@@ -173,7 +173,7 @@ export default function PasteStepsModal({ open, onClose, labId, onImported }) {
                       value={step.expectedCommand}
                       onChange={(event) => updateStep(index, 'expectedCommand', event.target.value)}
                       className="font-mono text-xs"
-                      placeholder="e.g. ls -la ~"
+                      placeholder="Enter expected command"
                     />
                   )}
                   {step.verification === 'output' && (
@@ -182,7 +182,7 @@ export default function PasteStepsModal({ open, onClose, labId, onImported }) {
                       value={step.expectedOutputPattern}
                       onChange={(event) => updateStep(index, 'expectedOutputPattern', event.target.value)}
                       className="font-mono text-xs"
-                      placeholder="e.g. PRETTY_NAME="
+                      placeholder="Enter output pattern"
                     />
                   )}
                 </div>

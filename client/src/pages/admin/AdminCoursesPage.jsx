@@ -326,7 +326,7 @@ export default function AdminCoursesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">Course</th>

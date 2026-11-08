@@ -27,6 +27,7 @@ const packSchema = z
     difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'),
     publish: z.boolean().default(true),
     stepCount: z.coerce.number().int().min(3).max(12).default(8),
+    timeLimitMinutes: z.coerce.number().int().min(0).max(600).default(0),
     isPractice: z.boolean().default(false),
     dueInDays: z.coerce.number().int().min(1).max(120).optional().nullable(),
   })
@@ -79,8 +80,8 @@ router.post(
       const { rows: labRows } = await client.query(
         `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
            submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
-           initial_cwd, status, created_by, is_practice, due_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+           initial_cwd, status, created_by, is_practice, due_at, time_limit_minutes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
         [
           slug,
           labDraft.title,
@@ -99,6 +100,7 @@ router.post(
           req.user.id,
           isPractice,
           dueAt,
+          Math.max(0, Number(b.timeLimitMinutes) || 0),
         ]
       );
       const labId = labRows[0].id;

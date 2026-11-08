@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
-import { Badge, Button, Card, EmptyState, Skeleton } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, ProgressBar, Skeleton } from '../../components/ui';
 import {
   IconArrowRight,
   IconCheckCircle,
@@ -367,11 +367,34 @@ export default function LabsPage() {
                       : `${lab.course_title || 'Independent lab'} · ${lab.step_count} steps`}
                 </p>
 
+                {(lab.my_completed || lab.my_progress_percent > 0) && (
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="font-medium text-slate-600 dark:text-slate-300">
+                        {lab.my_completed ? 'Completed' : 'Your progress'}
+                      </span>
+                      <span className="font-mono font-semibold text-slate-600 dark:text-slate-300">
+                        {lab.my_completed ? '100%' : `${Math.round(lab.my_progress_percent)}%`}
+                      </span>
+                    </div>
+                    <ProgressBar
+                      value={lab.my_completed ? 100 : lab.my_progress_percent}
+                      tone={lab.my_completed ? 'emerald' : 'brand'}
+                      size="sm"
+                    />
+                  </div>
+                )}
+
                 <div className="mt-auto flex items-center justify-between gap-2 pt-4">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
                       <IconClock size={11} /> {lab.estimated_minutes} min
                     </span>
+                    {Number(lab.time_limit_minutes) > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        · <IconClock size={11} /> {lab.time_limit_minutes} min limit
+                      </span>
+                    )}
                     {lab.last_started_at && <span>· started {timeAgo(lab.last_started_at)}</span>}
                   </div>
                   {isPractice ? (

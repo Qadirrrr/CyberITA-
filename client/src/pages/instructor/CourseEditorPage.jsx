@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -56,6 +56,7 @@ export default function CourseEditorPage() {
   const { id } = useParams();
   const isNew = !id;
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -63,7 +64,9 @@ export default function CourseEditorPage() {
   const [details, setDetails] = useState(emptyDetails);
   const [data, setData] = useState(null);
   const [instructors, setInstructors] = useState([]);
-  const [tab, setTab] = useState('details');
+  const [tab, setTab] = useState(location.state?.tab === 'curriculum' ? 'curriculum' : 'details');
+  const [newModules, setNewModules] = useState([{ title: '', description: '' }]);
+  const [newLessons, setNewLessons] = useState([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -130,10 +133,70 @@ export default function CourseEditorPage() {
 
   const updateDetail = (field) => (event) => setDetails((current) => ({ ...current, [field]: event.target.value }));
 
+  const updateNewModule = (index, field) => (event) =>
+    setNewModules((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: event.target.value } : row)));
+
+  const addNewModule = () => setNewModules((current) => [...current, { title: '', description: '' }]);
+
+  const removeNewModule = (index) =>
+    setNewModules((current) => (current.length === 1 ? [{ title: '', description: '' }] : current.filter((_, rowIndex) => rowIndex !== index)));
+
+  const addNewLesson = () =>
+    setNewLessons((current) => [
+      ...current,
+      { title: '', moduleIndex: -1, type: 'reading', duration: 10, content: '' },
+    ]);
+
+  const updateNewLesson = (index, field) => (event) =>
+    setNewLessons((current) =>
+      current.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: event.target.value } : row))
+    );
+
+  const removeNewLesson = (index) =>
+    setNewLessons((current) => current.filter((_, rowIndex) => rowIndex !== index));
+
+  const updateCategory = (event) => {
+    const category = event.target.value;
+    setDetails((current) => {
+      const allowed = SUBCATEGORY_SUGGESTIONS[category] || [];
+      const keep = allowed.includes(current.subcategory) ? current.subcategory : '';
+      return { ...current, category, subcategory: keep };
+    });
+  };
+
+  // Keep the dropdown on the canonical category list, but never hide a value
+  // already stored on an older course.
+  const categoryOptions = useMemo(() => {
+    const current = (details.category || '').trim();
+    return current && !CATEGORIES.includes(current) ? [...CATEGORIES, current] : CATEGORIES;
+  }, [details.category]);
+
+  // Subcategory options follow the selected category; keep any existing custom
+  // value so older courses don't lose data when edited.
+  const subcategoryOptions = useMemo(() => {
+    const suggestions = SUBCATEGORY_SUGGESTIONS[details.category] || [];
+    const current = (details.subcategory || '').trim();
+    return current && !suggestions.includes(current) ? [...suggestions, current] : suggestions;
+  }, [details.category, details.subcategory]);
+
   const saveDetails = async (event) => {
     event?.preventDefault();
     if (!details.title.trim()) {
       toast.error('Give the course a title.');
+      return;
+    }
+    const modulesToCreate = newModules
+      .map((module) => ({ title: module.title.trim(), description: module.description.trim() }))
+      .filter((module) => module.title);
+    const lessonsToCreate = newLessons
+      .map((lesson) => ({ ...lesson, title: lesson.title.trim() }))
+      .filter((lesson) => lesson.title);
+    if (modulesToCreate.some((module) => module.title.length < 2)) {
+      toast.error('Module titles need at least 2 characters.');
+      return;
+    }
+    if (lessonsToCreate.some((lesson) => lesson.title.length < 2)) {
+      toast.error('Lesson titles need at least 2 characters.');
       return;
     }
     setSaving(true);
@@ -156,8 +219,53 @@ export default function CourseEditorPage() {
     try {
       if (isNew) {
         const { data: response } = await api.post('/courses', payload);
-        toast.success('Course created. Add your curriculum next.');
-        navigate(`/instructor/courses/${response.course.id}`, { replace: true });
+        const courseId = response.course.id;
+        let failedModules = 0;
+        let failedLessons = 0;
+        const moduleIds = [];
+        for (const module of modulesToCreate) {
+          try {
+            const { data: moduleResponse } = await api.post(`/courses/${courseId}/modules`, {
+              title: module.title,
+              description: module.description || null,
+            });
+            moduleIds.push(moduleResponse.module.id);
+          } catch {
+            failedModules += 1;
+            moduleIds.push(null);
+          }
+        }
+        for (const lesson of lessonsToCreate) {
+          const moduleIndex = Number(lesson.moduleIndex);
+          const moduleId = moduleIndex >= 0 && moduleIndex < moduleIds.length ? moduleIds[moduleIndex] : null;
+          try {
+            await api.post(`/courses/${courseId}/lessons`, {
+              moduleId,
+              title: lesson.title,
+              content: lesson.content || '',
+              durationMinutes: Number(lesson.duration) || 0,
+              lessonType: lesson.type || 'reading',
+              isFreePreview: false,
+            });
+          } catch {
+            failedLessons += 1;
+          }
+        }
+        const parts = [];
+        if (modulesToCreate.length) {
+          parts.push(`${modulesToCreate.length - failedModules} of ${modulesToCreate.length} modules`);
+        }
+        if (lessonsToCreate.length) {
+          parts.push(`${lessonsToCreate.length - failedLessons} of ${lessonsToCreate.length} lessons`);
+        }
+        if (parts.length === 0) {
+          toast.success('Course created. Add your curriculum next.');
+        } else if (failedModules > 0 || failedLessons > 0) {
+          toast.error(`Course created, but some items could not be added (${parts.join(', ')}).`);
+        } else {
+          toast.success(`Course created with ${parts.join(' and ')}.`);
+        }
+        navigate(`/instructor/courses/${courseId}`, { replace: true, state: { tab: 'curriculum' } });
       } else {
         await api.put(`/courses/${id}`, payload);
         toast.success('Course details saved.');
@@ -399,34 +507,180 @@ export default function CourseEditorPage() {
       {(isNew || tab === 'details') && (
         <Card className="p-6">
           <form onSubmit={saveDetails} className="space-y-4">
-            <Input label="Title" value={details.title} onChange={updateDetail('title')} required placeholder="e.g. Linux Fundamentals for Security Analysts" />
-            <Textarea label="Summary" rows={2} value={details.summary} onChange={updateDetail('summary')} placeholder="One sentence shown on catalog cards." />
-            <Textarea label="Description (markdown)" rows={7} value={details.description} onChange={updateDetail('description')} placeholder="What the course covers, who it's for, prerequisites…" />
+            <Input label="Title" value={details.title} onChange={updateDetail('title')} required placeholder="Enter course title" />
+            <Textarea label="Summary" rows={2} value={details.summary} onChange={updateDetail('summary')} placeholder="Enter course summary" />
+            <Textarea label="Description (markdown)" rows={7} value={details.description} onChange={updateDetail('description')} placeholder="Enter course description" />
+
+            {isNew && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.02]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Course modules</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Outline what this course covers. Modules are created with the course, then you can add lessons inside them.
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={addNewModule}>
+                    <IconPlus size={13} /> Add module
+                  </Button>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {newModules.map((module, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-night-900/60"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 font-mono text-[11px] font-semibold text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+                          {index + 1}
+                        </span>
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            aria-label={`Module ${index + 1} title`}
+                            placeholder="Enter module title"
+                            value={module.title}
+                            onChange={updateNewModule(index, 'title')}
+                          />
+                          <Input
+                            aria-label={`Module ${index + 1} description`}
+                            placeholder="Enter module description"
+                            value={module.description}
+                            onChange={updateNewModule(index, 'description')}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeNewModule(index)}
+                          title="Remove module"
+                          aria-label={`Remove module ${index + 1}`}
+                        >
+                          <IconTrash size={14} className="text-slate-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-500">
+                  Tip: start with 4–6 modules so learners can see the full course outline before enrolling.
+                </p>
+              </div>
+            )}
+
+            {isNew && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.02]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Course lessons</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Add lessons that belong to this course. Pick a module for each lesson, or leave it unassigned for course-wide content.
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={addNewLesson}>
+                    <IconPlus size={13} /> Add lesson
+                  </Button>
+                </div>
+                {newLessons.length === 0 ? (
+                  <p className="mt-4 text-xs text-slate-500 dark:text-slate-500">
+                    No lessons yet. You can add them now or later from the curriculum tab.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {newLessons.map((lesson, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-night-900/60"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 font-mono text-[11px] font-semibold text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+                            {index + 1}
+                          </span>
+                          <div className="flex-1 space-y-2">
+                            <Input
+                              aria-label={`Lesson ${index + 1} title`}
+                              placeholder="Lesson title (e.g. Creating users and groups)"
+                              value={lesson.title}
+                              onChange={updateNewLesson(index, 'title')}
+                            />
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              <Select
+                                aria-label={`Lesson ${index + 1} module`}
+                                value={lesson.moduleIndex}
+                                onChange={updateNewLesson(index, 'moduleIndex')}
+                              >
+                                <option value={-1}>Unassigned</option>
+                                {newModules
+                                  .map((module, moduleIndex) => ({ module, moduleIndex }))
+                                  .filter(({ module }) => module.title.trim())
+                                  .map(({ module, moduleIndex }) => (
+                                    <option key={moduleIndex} value={moduleIndex}>
+                                      {module.title.trim()}
+                                    </option>
+                                  ))}
+                              </Select>
+                              <Select
+                                aria-label={`Lesson ${index + 1} type`}
+                                value={lesson.type}
+                                onChange={updateNewLesson(index, 'type')}
+                              >
+                                <option value="reading">Reading</option>
+                                <option value="video">Video</option>
+                                <option value="lab">Lab</option>
+                              </Select>
+                              <Input
+                                type="number"
+                                min="0"
+                                aria-label={`Lesson ${index + 1} duration`}
+                                placeholder="Minutes"
+                                value={lesson.duration}
+                                onChange={updateNewLesson(index, 'duration')}
+                              />
+                            </div>
+                            <Textarea
+                              rows={2}
+                              aria-label={`Lesson ${index + 1} content`}
+                              placeholder="Lesson content (markdown, optional)"
+                              value={lesson.content}
+                              onChange={updateNewLesson(index, 'content')}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeNewLesson(index)}
+                            title="Remove lesson"
+                            aria-label={`Remove lesson ${index + 1}`}
+                          >
+                            <IconTrash size={14} className="text-slate-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-500">
+                  Tip: keep lessons short and focused; you can attach labs and videos after creating the course.
+                </p>
+              </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="course-category" className="label">Category</label>
-                <input id="course-category" list="course-categories" className="input mt-1.5" value={details.category} onChange={updateDetail('category')} />
-                <datalist id="course-categories">
-                  {CATEGORIES.map((category) => (
-                    <option key={category} value={category} />
+                <Select label="Category" id="course-category" value={details.category} onChange={updateCategory}>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>{category}</option>
                   ))}
-                </datalist>
+                </Select>
               </div>
               <div>
-                <label htmlFor="course-subcategory" className="label">Subcategory</label>
-                <input
-                  id="course-subcategory"
-                  list="course-subcategories"
-                  className="input mt-1.5"
-                  value={details.subcategory}
-                  onChange={updateDetail('subcategory')}
-                  placeholder="e.g. React, Express, Linux Administration"
-                />
-                <datalist id="course-subcategories">
-                  {(SUBCATEGORY_SUGGESTIONS[details.category] || []).map((subcategory) => (
-                    <option key={subcategory} value={subcategory} />
+                <Select label="Subcategory" id="course-subcategory" value={details.subcategory} onChange={updateDetail('subcategory')}>
+                  <option value="">Select subcategory</option>
+                  {subcategoryOptions.map((subcategory) => (
+                    <option key={subcategory} value={subcategory}>{subcategory}</option>
                   ))}
-                </datalist>
+                </Select>
               </div>
               <Select label="Level" value={details.level} onChange={updateDetail('level')}>
                 {Object.entries(DIFFICULTIES).map(([key, value]) => (
@@ -436,8 +690,8 @@ export default function CourseEditorPage() {
               <Input label="Duration (hours)" type="number" min="0" step="0.5" value={details.durationHours} onChange={updateDetail('durationHours')} />
               <Input label="Price (USD)" type="number" min="0" step="1" value={details.price} onChange={updateDetail('price')} hint="Use 0 for free courses." />
             </div>
-            <Input label="Cover image URL" value={details.coverImage} onChange={updateDetail('coverImage')} placeholder="https://… or /images/courses/…" />
-            <Input label="Tags" value={details.tags} onChange={updateDetail('tags')} placeholder="linux, hardening, cli" hint="Comma separated, up to 12." />
+            <Input label="Cover image URL" value={details.coverImage} onChange={updateDetail('coverImage')} placeholder="Enter cover image URL" />
+            <Input label="Tags" value={details.tags} onChange={updateDetail('tags')} placeholder="Enter tags" hint="Comma separated, up to 12." />
             <Select label="Status" value={details.status} onChange={updateDetail('status')}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>

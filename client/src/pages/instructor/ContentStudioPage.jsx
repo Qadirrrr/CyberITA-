@@ -9,7 +9,7 @@ import { DIFFICULTIES } from '../../lib/constants';
 
 const initialForm = {
   title: '', details: '', courseId: '', lessonId: '', difficulty: 'intermediate', publish: true,
-  stepCount: 8, isPractice: false, dueInDays: 7,
+  stepCount: 8, isPractice: false, dueInDays: 7, timeLimitMinutes: 0,
 };
 
 export default function ContentStudioPage() {
@@ -65,6 +65,7 @@ export default function ContentStudioPage() {
         lessonId: form.isPractice || !form.lessonId ? null : Number(form.lessonId), difficulty: form.difficulty,
         publish: Boolean(form.publish), stepCount: Math.max(3, Number(form.stepCount) || 8), isPractice: Boolean(form.isPractice),
         dueInDays: form.isPractice ? null : Math.max(1, Number(form.dueInDays) || 7),
+        timeLimitMinutes: Math.max(0, Number(form.timeLimitMinutes) || 0),
       }, { timeout: 120000 });
       setResult(data);
       toast.success(form.publish ? 'Lab assignment generated and published.' : 'Lab assignment saved as a draft.');
@@ -90,8 +91,8 @@ export default function ContentStudioPage() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="p-6">
           <form onSubmit={generate} className="space-y-5">
-            <Input label="Lab assignment title" placeholder="e.g. Analyse a web access log for brute force" value={form.title} onChange={update('title')} required />
-            <Textarea label="Scenario and learning objectives" rows={5} value={form.details} onChange={update('details')} placeholder="Describe the security scenario, tools and outcome the learner must achieve." />
+            <Input label="Lab assignment title" placeholder="Enter lab assignment title" value={form.title} onChange={update('title')} required />
+            <Textarea label="Scenario and learning objectives" rows={5} value={form.details} onChange={update('details')} placeholder="Enter scenario and objectives" />
             <div className="grid gap-4 sm:grid-cols-2">
               <Select label={form.isPractice ? 'Course (not used for practice)' : 'Course'} value={form.courseId} disabled={form.isPractice || loadingCourses} onChange={(event) => loadLessons(event.target.value)} required={!form.isPractice}>
                 <option value="">{form.isPractice ? 'Practice lab' : 'Select a course'}</option>
@@ -102,12 +103,13 @@ export default function ContentStudioPage() {
                 {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.moduleTitle ? `${lesson.moduleTitle} · ` : ''}{lesson.title}</option>)}
               </Select>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Select label="Difficulty" value={form.difficulty} onChange={update('difficulty')}>
                 {Object.entries(DIFFICULTIES).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
               </Select>
               <Input label="Verified steps" type="number" min="3" max="12" value={form.stepCount} onChange={update('stepCount')} />
               <Input label="Due in days" type="number" min="1" max="120" value={form.dueInDays} onChange={update('dueInDays')} disabled={form.isPractice} />
+              <Input label="Time limit (min)" type="number" min="0" max="600" value={form.timeLimitMinutes} onChange={update('timeLimitMinutes')} hint="0 = no custom limit" />
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
               <Checkbox label={form.isPractice ? 'Practice lab (not graded)' : 'Course lab assignment (instructor-reviewed)'} checked={form.isPractice} onChange={update('isPractice')} />
@@ -127,6 +129,7 @@ export default function ContentStudioPage() {
               <div className="flex justify-between gap-3"><dt className="text-slate-500">Activity</dt><dd className="text-right text-slate-300">{form.stepCount} verified steps</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-slate-500">Review</dt><dd className="text-right text-slate-300">{form.isPractice ? 'Not graded' : 'Instructor reviewed'}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-slate-500">Deadline</dt><dd className="text-right text-slate-300">{form.isPractice ? 'None' : `${form.dueInDays} days`}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-slate-500">Time limit</dt><dd className="text-right text-slate-300">{Number(form.timeLimitMinutes) > 0 ? `${form.timeLimitMinutes} minutes` : 'None'}</dd></div>
             </dl>
           </Card>
           <Card className="p-5">

@@ -323,9 +323,27 @@ export async function resolveServerForNewSession(lab) {
         id ASC`
   );
   if (!rows.length) {
-    const error = new AppError('All lab servers are currently busy. Please try again later.', 503, 'lab_servers_busy');
-    error.expose = true;
-    throw error;
+    // Servers that are healthy but completely full should show "busy";
+    // otherwise (e.g. remote agents are offline) fall back to the default
+    // local Docker host so labs keep working (backward compatible).
+    const { rows: fullButHealthy } = await query(
+      `SELECT COUNT(*)::int AS count
+       FROM lab_servers
+       WHERE status = 'active'
+         AND (server_type IS NULL OR server_type <> 'remote-agent'
+              OR (last_heartbeat_at IS NOT NULL AND last_heartbeat_at > now() - interval '2 minutes'))
+         AND (docker_available IS NULL OR docker_available = TRUE)
+         AND (cpu_percent IS NULL OR cpu_percent < 90)
+         AND (memory_total_mb IS NULL OR memory_total_mb = 0 OR memory_used_mb::float / memory_total_mb < 0.95)
+         AND (disk_total_gb IS NULL OR disk_total_gb = 0 OR disk_used_gb::float / disk_total_gb < 0.95)
+         AND max_sessions > 0 AND active_sessions >= max_sessions`
+    );
+    if (Number(fullButHealthy[0]?.count || 0) > 0) {
+      const error = new AppError('All lab servers are currently busy. Please try again later.', 503, 'lab_servers_busy');
+      error.expose = true;
+      throw error;
+    }
+    return { host: null, server: null };
   }
   const server = rows[0];
   const host = isRemoteAgent(server) ? server.agent_url : (server.docker_host || null);

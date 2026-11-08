@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import useClickOutside from '../../hooks/useClickOutside';
 import {
   Alert,
   Badge,
@@ -15,6 +16,7 @@ import {
 } from '../../components/ui';
 import {
   IconCheckCircle,
+  IconChevronDown,
   IconCloud,
   IconEdit,
   IconPlus,
@@ -58,6 +60,13 @@ export default function LabServerAdminPanel() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [openActionId, setOpenActionId] = useState(null);
+  const actionRef = useRef(null);
+  useClickOutside(actionRef, () => setOpenActionId(null), openActionId !== null);
+
+  const [openUsageId, setOpenUsageId] = useState(null);
+  const usageRef = useRef(null);
+  useClickOutside(usageRef, () => setOpenUsageId(null), openUsageId !== null);
   const [verifyResults, setVerifyResults] = useState({});
   const [assigningId, setAssigningId] = useState(null);
   const [assignSearch, setAssignSearch] = useState('');
@@ -307,12 +316,58 @@ export default function LabServerAdminPanel() {
                               : (server.docker_host || 'Local daemon (default)')}
                           </span>
                           {server.server_type === 'remote-agent' && (
-                            <div className="mt-1 text-[10px] text-slate-500">
-                              {server.last_heartbeat_at
-                                ? `Heartbeat ${new Date(server.last_heartbeat_at).toLocaleTimeString()} · ${server.cpu_percent ?? 0}% CPU · ${server.memory_used_mb ?? 0}/${server.memory_total_mb ?? 0} MB · ${server.disk_used_gb ?? 0}/${server.disk_total_gb ?? 0} GB`
-                                : 'No heartbeat yet'}
-                              {server.docker_available === false && <span className="ml-1 text-rose-300">· Docker down</span>}
-                              {server.last_error && <div className="text-rose-300">{server.last_error}</div>}
+                            <div className="mt-1.5">
+                              <div
+                                className="relative inline-block"
+                                ref={openUsageId === server.id ? usageRef : null}
+                              >
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setOpenUsageId(openUsageId === server.id ? null : server.id)}
+                                >
+                                  <IconCpu size={12} /> Usage
+                                </Button>
+                                {openUsageId === server.id && (
+                                  <div className="absolute left-0 z-30 mt-1 w-56 overflow-hidden rounded-xl border border-white/10 bg-night-900/95 p-3 text-[11px] shadow-xl backdrop-blur">
+                                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                                      Live metrics
+                                    </p>
+                                    <div className="space-y-1.5 text-slate-300">
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-400">Heartbeat</span>
+                                        <span className="font-mono text-slate-200">
+                                          {server.last_heartbeat_at
+                                            ? new Date(server.last_heartbeat_at).toLocaleTimeString()
+                                            : 'none'}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-400">CPU</span>
+                                        <span className="font-mono text-slate-200">{server.cpu_percent ?? 0}%</span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-400">RAM</span>
+                                        <span className="font-mono text-slate-200">
+                                          {server.memory_used_mb ?? 0} / {server.memory_total_mb ?? 0} MB
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="text-slate-400">Disk</span>
+                                        <span className="font-mono text-slate-200">
+                                          {server.disk_used_gb ?? 0} / {server.disk_total_gb ?? 0} GB
+                                        </span>
+                                      </div>
+                                      {server.docker_available === false && (
+                                        <div className="pt-1 text-rose-300">Docker daemon is down</div>
+                                      )}
+                                      {server.last_error && (
+                                        <div className="pt-1 text-rose-300">{server.last_error}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </td>
@@ -325,29 +380,53 @@ export default function LabServerAdminPanel() {
                         </td>
                         <td className="px-3 py-3 text-slate-400">{server.assigned_labs}</td>
                         <td className="px-3 py-3">
-                          <div className="flex flex-wrap justify-end gap-1">
+                          <div
+                            className="relative inline-block text-right"
+                            ref={openActionId === server.id ? actionRef : null}
+                          >
                             <Button
                               size="sm"
-                              variant="ghost"
-                              onClick={() => verify(server)}
-                              loading={verifyingId === server.id}
-                              title="Test this Docker host and lab image"
+                              variant="secondary"
+                              onClick={() => setOpenActionId(openActionId === server.id ? null : server.id)}
                             >
-                              <IconCpuCheck />
+                              Actions <IconChevronDown size={12} className={`transition ${openActionId === server.id ? 'rotate-180' : ''}`} />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(server)} title="Edit server">
-                              <IconEdit size={13} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-rose-400 hover:text-rose-300"
-                              onClick={() => remove(server)}
-                              loading={deletingId === server.id}
-                              title="Delete server"
-                            >
-                              <IconTrash size={13} />
-                            </Button>
+                            {openActionId === server.id && (
+                              <div className="absolute right-0 z-30 mt-1 w-40 overflow-hidden rounded-xl border border-white/10 bg-night-900/95 p-1 shadow-xl backdrop-blur">
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === server.id}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-slate-200 transition hover:bg-white/5 disabled:opacity-50"
+                                  onClick={() => {
+                                    verify(server);
+                                    setOpenActionId(null);
+                                  }}
+                                >
+                                  <IconCpuCheck /> {verifyingId === server.id ? 'Verifying…' : 'Verify'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-slate-200 transition hover:bg-white/5"
+                                  onClick={() => {
+                                    openEdit(server);
+                                    setOpenActionId(null);
+                                  }}
+                                >
+                                  <IconEdit size={13} /> Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={deletingId === server.id}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+                                  onClick={() => {
+                                    remove(server);
+                                    setOpenActionId(null);
+                                  }}
+                                >
+                                  <IconTrash size={13} /> {deletingId === server.id ? 'Deleting…' : 'Delete'}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -373,7 +452,7 @@ export default function LabServerAdminPanel() {
             placeholder="Search labs..."
             value={assignSearch}
             onChange={(event) => setAssignSearch(event.target.value)}
-            className="w-56 text-xs"
+            className="w-full text-xs sm:w-56"
           />
         </div>
 
@@ -453,7 +532,7 @@ export default function LabServerAdminPanel() {
             label="Name"
             value={form.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            placeholder="e.g. Lab node 1"
+            placeholder="Enter lab name"
             required
             maxLength={120}
           />
@@ -471,7 +550,7 @@ export default function LabServerAdminPanel() {
                 label="Agent URL"
                 value={form.agentUrl}
                 onChange={(event) => setForm((current) => ({ ...current, agentUrl: event.target.value }))}
-                placeholder="http://10.0.0.5:9100"
+                placeholder="Enter agent URL"
                 hint="Private URL of the Lab Agent. Only the Main Server should reach it."
                 required
                 maxLength={500}
@@ -481,7 +560,7 @@ export default function LabServerAdminPanel() {
                 type="password"
                 value={form.agentSecret}
                 onChange={(event) => setForm((current) => ({ ...current, agentSecret: event.target.value }))}
-                placeholder="Shared secret (min 8 chars)"
+                placeholder="Enter agent secret"
                 maxLength={200}
               />
             </>
@@ -490,7 +569,7 @@ export default function LabServerAdminPanel() {
               label="Docker host"
               value={form.dockerHost}
               onChange={(event) => setForm((current) => ({ ...current, dockerHost: event.target.value }))}
-              placeholder="ssh://lab@10.0.0.5 or tcp://10.0.0.5:2376 — leave empty for local"
+              placeholder="Enter Docker host"
               hint="Must be reachable from the API server. The Docker CLI uses this as DOCKER_HOST."
               maxLength={500}
             />
@@ -500,7 +579,7 @@ export default function LabServerAdminPanel() {
               label="Location"
               value={form.location}
               onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
-              placeholder="e.g. Campus lab B"
+              placeholder="Enter location"
               maxLength={160}
             />
             <Input

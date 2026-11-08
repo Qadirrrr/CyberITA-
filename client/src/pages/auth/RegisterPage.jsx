@@ -84,7 +84,7 @@ export default function RegisterPage() {
               value={form.fullName}
               onChange={update('fullName')}
               error={errors.fullName}
-              placeholder="Alex Rivera"
+              placeholder="Enter your name"
               className="pr-10"
             />
             <IconUser size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
@@ -99,7 +99,7 @@ export default function RegisterPage() {
               value={form.email}
               onChange={update('email')}
               error={errors.email}
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               className="pr-10"
             />
             <IconMail size={16} className="pointer-events-none absolute right-3.5 top-[38px] text-slate-500" />
@@ -116,7 +116,7 @@ export default function RegisterPage() {
             onChange={update('password')}
             error={errors.password}
             hint="At least 8 characters, with a letter and a number."
-            placeholder="••••••••"
+            placeholder="Enter your password"
             minLength={PASSWORD_MIN_LENGTH}
             maxLength={PASSWORD_MAX_LENGTH}
             className="pr-10"
@@ -139,7 +139,7 @@ export default function RegisterPage() {
           value={form.confirm}
           onChange={update('confirm')}
           error={errors.confirm}
-          placeholder="••••••••"
+          placeholder="Confirm your password"
         />
         <div>
           <Checkbox

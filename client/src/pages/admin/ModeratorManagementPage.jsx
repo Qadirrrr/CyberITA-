@@ -389,7 +389,7 @@ export default function ModeratorManagementPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-2.5 font-medium">Moderator</th>
@@ -505,7 +505,7 @@ export default function ModeratorManagementPage() {
               onChange={(event) => setCreateForm((current) => ({ ...current, fullName: event.target.value }))}
               error={createErrors.fullName}
               autoComplete="name"
-              placeholder="e.g. Ayesha Khan"
+              placeholder="Enter full name"
             />
             <Input
               label="Email"
@@ -514,7 +514,7 @@ export default function ModeratorManagementPage() {
               onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
               error={createErrors.email}
               autoComplete="email"
-              placeholder="moderator@cyberita.pk"
+              placeholder="Enter email"
             />
             <Input
               label="Temporary password"
@@ -548,7 +548,7 @@ export default function ModeratorManagementPage() {
               label="Display name (optional)"
               value={createForm.displayName}
               onChange={(event) => setCreateForm((current) => ({ ...current, displayName: event.target.value }))}
-              placeholder="Shown on moderation screens"
+              placeholder="Enter display name"
             />
           </div>
 
@@ -557,7 +557,7 @@ export default function ModeratorManagementPage() {
             rows={2}
             value={createForm.notes}
             onChange={(event) => setCreateForm((current) => ({ ...current, notes: event.target.value }))}
-            placeholder="Why this moderator exists, handover notes, etc."
+            placeholder="Enter internal notes"
           />
 
           <div>

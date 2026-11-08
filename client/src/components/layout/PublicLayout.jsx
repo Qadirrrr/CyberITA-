@@ -10,11 +10,18 @@ import { Button } from '../ui';
 import ThemeToggle from '../ThemeToggle';
 import {
   IconArrowRight,
+  IconAward,
+  IconCheckCircle,
   IconChevronDown,
   IconChevronRight,
+  IconCpu,
+  IconGlobe,
+  IconLock,
   IconMail,
   IconMenu,
+  IconServer,
   IconShield,
+  IconTerminal,
   IconX,
 } from '../icons';
 
@@ -25,7 +32,39 @@ const navLinks = [
   { to: '/contact', label: 'Contact' },
 ];
 
-const footerLinks = [{ to: '/courses', label: 'Courses' }, ...navLinks];
+const footerPlatform = [
+  { to: '/courses', label: 'Course catalogue' },
+  { to: '/learning-paths', label: 'Learning paths' },
+  { to: '/student/labs', label: 'Hands-on labs' },
+  { to: '/verify', label: 'Verify a certificate' },
+];
+
+const footerCompany = [
+  { to: '/about', label: 'About CyberITA+' },
+  { to: '/blog', label: 'Learner reports' },
+  { to: '/contact', label: 'Contact & support' },
+  { to: '/register', label: 'Create free account' },
+];
+
+const footerCategories = [
+  'Cybersecurity',
+  'Networking',
+  'DevOps',
+  'Linux',
+  'System Administration',
+  'Cloud Computing',
+  'Programming',
+  'Designing',
+];
+
+const platformDetails = [
+  { icon: IconTerminal, label: 'Real Linux containers', value: 'Docker-based sandboxes' },
+  { icon: IconServer, label: 'Remote lab servers', value: 'Auto load-balanced' },
+  { icon: IconCpu, label: 'Capacity per server', value: '10 concurrent sessions' },
+  { icon: IconLock, label: 'Agent security', value: 'AES-256 encrypted' },
+  { icon: IconGlobe, label: 'Delivery', value: '100% browser-based' },
+  { icon: IconAward, label: 'Recognition', value: 'Verifiable certificates' },
+];
 
 function groupCatalog(items = []) {
   const categories = new Map();
@@ -216,9 +255,17 @@ function Navbar() {
   const [open, setOpen] = useState(false);
   const [catalog, setCatalog] = useState({ courses: [], labs: [] });
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
   const onAuthPage = ['/login', '/register'].includes(location.pathname);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -247,7 +294,28 @@ function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/5 dark:bg-night-950/80">
+    <header
+      className={`sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl transition-shadow duration-300 dark:border-white/5 dark:bg-night-950/80 ${
+        scrolled ? 'shadow-lg shadow-slate-900/5 dark:shadow-black/40' : ''
+      }`}
+    >
+      <div className="h-0.5 w-full bg-brand-500" />
+      <div className="hidden border-b border-slate-200/70 bg-slate-50/80 dark:border-white/5 dark:bg-night-950/60 sm:block">
+        <div className="container-page flex h-9 items-center justify-between gap-4 text-[11px] font-medium">
+          <p className="inline-flex items-center gap-2 truncate text-slate-600 dark:text-slate-400">
+            <IconShield size={12} className="shrink-0 text-brand-600 dark:text-brand-400" />
+            <span className="truncate">Practical IT &amp; cybersecurity training with real terminal labs on isolated cloud servers</span>
+          </p>
+          <div className="flex shrink-0 items-center gap-4 text-slate-500 dark:text-slate-400">
+            <Link to="/verify" className="inline-flex items-center gap-1 transition hover:text-brand-600 dark:hover:text-brand-300">
+              <IconAward size={12} /> Verify certificate
+            </Link>
+            <Link to="/contact" className="inline-flex items-center gap-1 transition hover:text-brand-600 dark:hover:text-brand-300">
+              <IconMail size={12} /> Support
+            </Link>
+          </div>
+        </div>
+      </div>
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
           <Logo />
@@ -275,7 +343,7 @@ function Navbar() {
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  `nav-underline rounded-lg px-3 py-2 text-sm font-medium transition ${
                     isActive ? 'font-semibold text-brand-600 dark:text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
                   }`
                 }
@@ -394,77 +462,125 @@ function Navbar() {
 }
 
 function Footer() {
+  const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-slate-200 bg-slate-50/70 dark:border-white/5 dark:bg-night-950/60">
-      <div className="container-page grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="sm:col-span-2 lg:col-span-1">
+    <footer className="site-footer relative overflow-hidden">
+      <div className="container-page relative grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-12">
+        <div className="sm:col-span-2 lg:col-span-4">
           <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-6 text-slate-500">
-            Practical IT training built around real terminal labs, verified work reports and industry-recognised
-            certificates.
+          <p className="mt-4 max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-400">
+            CyberITA+ is a practical IT &amp; cybersecurity training platform. Learn inside a real browser-based
+            terminal, verify every command, document your work and earn certificates employers can check.
           </p>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-            <IconShield size={14} className="text-brand-400" />
-            100% browser-based sandboxed environments
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="chip">
+              <IconTerminal size={12} /> Real labs
+            </span>
+            <span className="chip">
+              <IconCheckCircle size={12} /> Verified work
+            </span>
+            <span className="chip">
+              <IconShield size={12} /> Isolated sandboxes
+            </span>
+          </div>
+          <div className="mt-6 space-y-2.5 text-sm text-slate-600 dark:text-slate-400">
+            <a
+              href="mailto:hello@cyberita.plus"
+              className="inline-flex items-center gap-2 transition hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              <IconMail size={15} className="text-brand-600 dark:text-brand-400" /> hello@cyberita.plus
+            </a>
+            <p className="inline-flex items-center gap-2">
+              <IconGlobe size={15} className="text-brand-600 dark:text-brand-400" /> Remote labs on AWS EC2 + Docker
+            </p>
           </div>
         </div>
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Platform</h4>
+
+        <div className="lg:col-span-2">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Platform</h4>
           <ul className="mt-4 space-y-2.5 text-sm">
-            {footerLinks.slice(0, 5).map((link) => (
+            {footerPlatform.map((link) => (
               <li key={link.to}>
-                <Link to={link.to} className="text-slate-500 transition hover:text-brand-300">
+                <Link
+                  to={link.to}
+                  className="text-slate-600 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300"
+                >
                   {link.label}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Resources</h4>
-          <ul className="mt-4 space-y-2.5 text-sm text-slate-500">
-            <li>
-              <Link to="/verify" className="transition hover:text-brand-300">
-                Verify a certificate
-              </Link>
-            </li>
-            <li>
-              <Link to="/contact" className="transition hover:text-brand-300">
-                Support &amp; enquiries
-              </Link>
-            </li>
-            <li>
-              <Link to="/about" className="transition hover:text-brand-300">
-                Our approach
-              </Link>
-            </li>
-            <li>
-              <Link to="/register" className="transition hover:text-brand-300">
-                Create an account
-              </Link>
-            </li>
+
+        <div className="lg:col-span-2">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Company</h4>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {footerCompany.map((link) => (
+              <li key={link.to}>
+                <Link
+                  to={link.to}
+                  className="text-slate-600 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Stay sharp</h4>
-          <p className="mt-4 text-sm leading-6 text-slate-500">
-            New labs and courses are added every month. Start with a free account and upgrade your skills at your pace.
-          </p>
-          <Button as={Link} to="/register" size="sm" className="mt-4">
-            Start learning <IconArrowRight size={15} />
-          </Button>
-          <a
-            href="mailto:hello@cyberita.plus"
-            className="mt-4 inline-flex items-center gap-2 text-xs text-slate-500 transition hover:text-brand-300"
-          >
-            <IconMail size={14} /> hello@cyberita.plus
-          </a>
+
+        <div className="lg:col-span-2">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Categories</h4>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {footerCategories.map((category) => (
+              <li key={category}>
+                <Link
+                  to={`/courses?category=${encodeURIComponent(category)}`}
+                  className="text-slate-600 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300"
+                >
+                  {category}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="lg:col-span-2">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Inside the platform
+          </h4>
+          <ul className="mt-4 space-y-3 text-sm">
+            {platformDetails.map(({ icon: IconComponent, label, value }) => (
+              <li key={label} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+                  <IconComponent size={13} />
+                </span>
+                <span>
+                  <span className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">{label}</span>
+                  <span className="block text-[11px] text-slate-500 dark:text-slate-500">{value}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
-      <div className="border-t border-white/5">
-        <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-xs text-slate-600 sm:flex-row">
-          <p>&copy; {new Date().getFullYear()} CyberITA+. All rights reserved.</p>
-          <p>Designed for hands-on learners, built for real-world results.</p>
+
+      <div className="site-footer-bottom relative">
+        <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-xs text-slate-500 dark:text-slate-500 sm:flex-row">
+          <p>&copy; {year} CyberITA+. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Browser-based sandboxed labs
+            </span>
+            <Link to="/about" className="transition hover:text-brand-600 dark:hover:text-brand-300">
+              How it works
+            </Link>
+            <Link to="/verify" className="transition hover:text-brand-600 dark:hover:text-brand-300">
+              Certificate check
+            </Link>
+            <Link to="/contact" className="transition hover:text-brand-600 dark:hover:text-brand-300">
+              Support
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -472,10 +588,11 @@ function Footer() {
 }
 
 export default function PublicLayout() {
+  const location = useLocation();
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-1">
+      <main key={location.pathname} className="flex-1 animate-page-in public-main">
         <Outlet />
       </main>
       <Footer />

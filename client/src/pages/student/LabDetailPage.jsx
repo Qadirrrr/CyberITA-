@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
-import { Alert, Badge, Button, Card, Skeleton } from '../../components/ui';
+import { Alert, Badge, Button, Card, ProgressBar, Skeleton } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -102,7 +102,7 @@ export default function LabDetailPage() {
     );
   }
 
-  const { lab, steps, sessions = [], mySession, stepCounts } = data;
+  const { lab, steps, sessions = [], mySession, myProgress, stepCounts } = data;
   const running = mySession?.status === 'running';
   const tone = DIFFICULTIES[lab.difficulty]?.tone || 'brand';
   const isPractice = Boolean(lab.is_practice);
@@ -128,6 +128,11 @@ export default function LabDetailPage() {
               <Badge tone="slate">
                 <IconClock size={11} /> {lab.estimated_minutes} min
               </Badge>
+              {Number(lab.time_limit_minutes) > 0 && (
+                <Badge tone="brand">
+                  <IconClock size={11} /> {lab.time_limit_minutes} min limit
+                </Badge>
+              )}
               <Badge tone={isReal ? 'rose' : 'sky'}>{isReal ? 'Real lab' : 'Guided practice'}</Badge>
               {isReal ? (
                 <Badge tone="slate"><IconCamera size={11} /> {minEvidence}+ screenshots</Badge>
@@ -210,6 +215,40 @@ export default function LabDetailPage() {
         </Card>
 
         <div className="space-y-5">
+          {myProgress && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-display text-base font-semibold">Your progress</h2>
+                {myProgress.completed ? (
+                  <Badge tone="emerald"><IconCheckCircle size={11} /> Completed</Badge>
+                ) : (
+                  <span className="font-mono text-xs font-semibold text-slate-400">{myProgress.percent}%</span>
+                )}
+              </div>
+              <div className="mt-3">
+                <ProgressBar
+                  value={myProgress.completed ? 100 : myProgress.percent}
+                  tone={myProgress.completed ? 'emerald' : 'brand'}
+                  size="sm"
+                />
+              </div>
+              <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                {isReal
+                  ? `${myProgress.evidenceCount} of ${myProgress.minEvidence} screenshot${myProgress.minEvidence === 1 ? '' : 's'} attached${myProgress.approved ? ' · approved by your instructor' : ''}.`
+                  : myProgress.requiredSteps > 0
+                    ? `${myProgress.completedSteps} of ${myProgress.requiredSteps} required steps verified.`
+                    : myProgress.started
+                      ? 'Session started.'
+                      : 'Start the lab to begin tracking progress.'}
+              </p>
+              {Number(lab.time_limit_minutes) > 0 && (
+                <p className="mt-2 border-t border-white/5 pt-2 text-[11px] leading-5 text-slate-500">
+                  You get {lab.time_limit_minutes} minutes once you start. The session ends automatically at zero, and you can finish early when your required work is complete.
+                </p>
+              )}
+            </Card>
+          )}
+
           <Card className="p-5">
             <h2 className="font-display text-base font-semibold">{isReal ? 'Your task' : "What you'll do"}</h2>
             {isReal ? (

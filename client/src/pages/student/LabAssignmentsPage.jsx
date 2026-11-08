@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
-import { Alert, Badge, Button, Card, EmptyState, Skeleton, Tabs } from '../../components/ui';
+import { Alert, Badge, Button, Card, EmptyState, ProgressBar, Skeleton, Tabs } from '../../components/ui';
 import { IconArrowRight, IconCheckCircle, IconClock, IconRefresh, IconSearch, IconTerminal, IconXCircle } from '../../components/icons';
 import { LAB_SUBMISSION_STATUS } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
@@ -106,10 +106,27 @@ export default function LabAssignmentsPage() {
                         <Badge tone="slate">{item.step_count} verified steps</Badge>
                       )}
                       {item.due_at ? <Badge tone={item.is_overdue ? 'rose' : 'brand'}><IconClock size={11} /> {item.is_overdue ? 'Overdue' : 'Due'} {formatDateTime(item.due_at)}</Badge> : <Badge tone="slate">No deadline</Badge>}
+                      {Number(item.time_limit_minutes) > 0 && (
+                        <Badge tone="brand"><IconClock size={11} /> {item.time_limit_minutes} min limit</Badge>
+                      )}
                       {status && <Badge tone={status.tone}>{status.label}</Badge>}
                     </div>
                     <Link to={`/labs/${item.id}`} className="mt-2 block truncate font-display text-base font-semibold text-white hover:text-brand-200">{item.title}</Link>
                     {item.summary && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{item.summary}</p>}
+                    {(item.is_completed || item.progress_percent > 0) && (
+                      <div className="mt-3 flex max-w-sm items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <ProgressBar
+                            value={item.is_completed ? 100 : item.progress_percent}
+                            tone={item.is_completed ? 'emerald' : 'brand'}
+                            size="sm"
+                          />
+                        </div>
+                        <span className={`shrink-0 font-mono text-[11px] font-semibold ${item.is_completed ? 'text-emerald-300' : 'text-slate-400'}`}>
+                          {item.is_completed ? 'Completed' : `${Math.round(item.progress_percent)}%`}
+                        </span>
+                      </div>
+                    )}
                     {item.submission_status === 'changes_requested' && item.instructor_feedback && <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-400/20 bg-rose-400/[0.05] px-2.5 py-2 text-[11px] leading-5 text-rose-200"><IconRefresh size={12} className="mt-0.5 shrink-0" />Changes requested: {item.instructor_feedback}</p>}
                     {item.submitted_at && <p className="mt-2 text-[11px] text-slate-500">Submitted {timeAgo(item.submitted_at)}</p>}
                   </div>

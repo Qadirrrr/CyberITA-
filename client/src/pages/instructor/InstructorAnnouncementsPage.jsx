@@ -149,7 +149,7 @@ export default function InstructorAnnouncementsPage() {
                 maxLength={200}
                 value={form.title}
                 onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                placeholder="e.g. New lab session this Thursday"
+                placeholder="Enter announcement title"
                 required
               />
               <Textarea
@@ -158,7 +158,7 @@ export default function InstructorAnnouncementsPage() {
                 maxLength={5000}
                 value={form.body}
                 onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
-                placeholder="Share schedule changes, deadlines, or revision guidance…"
+                placeholder="Enter announcement details"
                 required
               />
               <div className="flex flex-wrap items-end justify-between gap-3">

@@ -266,7 +266,7 @@ export default function StudentSupportPage() {
                 onChange={update('name')}
                 error={errors.name}
                 autoComplete="name"
-                placeholder="Full name"
+                placeholder="Enter your name"
               />
               <Input
                 label="Email address"
@@ -275,7 +275,7 @@ export default function StudentSupportPage() {
                 onChange={update('email')}
                 error={errors.email}
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder="Enter your email"
               />
             </div>
             <Select label="Topic" value={form.subject} onChange={update('subject')} error={errors.subject}>
@@ -291,7 +291,7 @@ export default function StudentSupportPage() {
               value={form.message}
               onChange={update('message')}
               error={errors.message}
-              placeholder="Describe the issue, include the course or lab name, and tell us what you already tried…"
+              placeholder="Describe your issue"
               maxLength={5000}
               hint={`${form.message.length}/5000 characters`}
             />
@@ -374,7 +374,7 @@ export default function StudentSupportPage() {
                 value={complaint.title}
                 onChange={updateComplaint('title')}
                 error={complaintErrors.title}
-                placeholder="Short summary of the issue"
+                placeholder="Enter issue title"
               />
             </div>
             <Textarea
@@ -383,7 +383,7 @@ export default function StudentSupportPage() {
               value={complaint.body}
               onChange={updateComplaint('body')}
               error={complaintErrors.body}
-              placeholder="Describe the issue, who was involved, and what outcome you expect…"
+              placeholder="Describe what happened"
               maxLength={10000}
               hint={`${complaint.body.length}/10000 characters`}
             />

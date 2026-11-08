@@ -89,8 +89,7 @@ export default function CoursesPage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0 bg-hero-glow opacity-70" />
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white dark:border-white/5 dark:bg-night-950">
         <div className="container-page relative py-12 lg:py-16">
           <Badge tone="brand" className="mb-4">
             <IconBookOpen size={13} /> Course catalog
@@ -98,92 +97,94 @@ export default function CoursesPage() {
           <h1 className="max-w-2xl text-balance font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
             Practical courses that put you in the terminal
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400 sm:text-base">
             Every course combines concise theory with runnable labs, verified steps and instructor-reviewed reports.
             Filter by topic or level to find your next skill.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_0.9fr]">
-            <div className="relative">
-              <IconSearch size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                value={search}
+          <Card className="mt-8 p-4 sm:p-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="relative">
+                <IconSearch size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search courses, topics or categories…"
+                  className="input pl-10"
+                  aria-label="Search courses"
+                />
+              </div>
+              <select
+                value={category}
                 onChange={(event) => {
-                  setSearch(event.target.value);
+                  setCategory(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Search courses, topics or categories…"
-                className="input pl-10"
-                aria-label="Search courses"
-              />
+                className="input"
+                aria-label="Filter by category"
+              >
+                <option value="">All categories</option>
+                {(meta?.categories || []).map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={level}
+                onChange={(event) => {
+                  setLevel(event.target.value);
+                  setPage(1);
+                }}
+                className="input"
+                aria-label="Filter by level"
+              >
+                {levels.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <select value={sort} onChange={(event) => setSort(event.target.value)} className="input" aria-label="Sort courses">
+                <option value="newest">Newest</option>
+                <option value="popular">Most popular</option>
+                <option value="title">A-Z</option>
+              </select>
             </div>
-            <select
-              value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
-                setPage(1);
-              }}
-              className="input"
-              aria-label="Filter by category"
-            >
-              <option value="">All categories</option>
-              {(meta?.categories || []).map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            <select
-              value={level}
-              onChange={(event) => {
-                setLevel(event.target.value);
-                setPage(1);
-              }}
-              className="input"
-              aria-label="Filter by level"
-            >
-              {levels.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-            <select value={sort} onChange={(event) => setSort(event.target.value)} className="input" aria-label="Sort courses">
-              <option value="newest">Newest</option>
-              <option value="popular">Most popular</option>
-              <option value="title">A-Z</option>
-            </select>
-          </div>
 
-          {(activeFilters.length > 0 || sort !== 'newest') && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
-                <IconFilter size={13} /> Filters:
-              </span>
-              {activeFilters.map((filter) => (
-                <button
-                  key={filter.key}
-                  type="button"
-                  onClick={filter.clear}
-                  className="chip border-white/10 bg-white/5 text-slate-300 hover:border-rose-400/30 hover:text-rose-300"
-                >
-                  {filter.label} <IconX size={12} />
+            {(activeFilters.length > 0 || sort !== 'newest') && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  <IconFilter size={13} /> Filters:
+                </span>
+                {activeFilters.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={filter.clear}
+                    className="chip"
+                  >
+                    {filter.label} <IconX size={12} />
+                  </button>
+                ))}
+                {sort !== 'newest' && (
+                  <button
+                    type="button"
+                    onClick={() => setSort('newest')}
+                    className="chip"
+                  >
+                    Sort: {sort} <IconX size={12} />
+                  </button>
+                )}
+                <button type="button" onClick={resetAll} className="text-xs text-brand-600 underline-offset-4 hover:underline dark:text-brand-300">
+                  Clear all
                 </button>
-              ))}
-              {sort !== 'newest' && (
-                <button
-                  type="button"
-                  onClick={() => setSort('newest')}
-                  className="chip border-white/10 bg-white/5 text-slate-300 hover:border-rose-400/30 hover:text-rose-300"
-                >
-                  Sort: {sort} <IconX size={12} />
-                </button>
-              )}
-              <button type="button" onClick={resetAll} className="text-xs text-slate-500 underline-offset-4 hover:text-white hover:underline">
-                Clear all
-              </button>
-            </div>
-          )}
+              </div>
+            )}
+          </Card>
         </div>
       </section>
 

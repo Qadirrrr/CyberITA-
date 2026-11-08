@@ -73,8 +73,8 @@ function SeriesBars({ data, tone = 'brand' }) {
               <div
                 className={`w-full rounded-t-md transition-all duration-300 ${
                   isBrand
-                    ? 'bg-gradient-to-t from-brand-500/70 to-cyan-400/80 group-hover:from-brand-400 group-hover:to-cyan-300'
-                    : 'bg-gradient-to-t from-violet-500/70 to-accent-400/80 group-hover:from-violet-400 group-hover:to-accent-300'
+                    ? 'bg-brand-500 group-hover:bg-brand-400'
+                    : 'bg-accent-500 group-hover:bg-accent-400'
                 }`}
                 style={{ height: `${height}%` }}
                 title={`${new Date(item.week).toLocaleDateString()} · ${item.count}`}
@@ -379,7 +379,7 @@ export default function AdminOverview() {
                   </div>
                   <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-brand-400 to-accent-400"
+                      className="h-full rounded-full bg-brand-500"
                       style={{ width: `${Math.min(100, Math.max(0, Number(course.avg_progress)))}%` }}
                     />
                   </div>

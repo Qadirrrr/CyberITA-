@@ -93,6 +93,7 @@ export default function ManageLabsPage() {
         description: modal.description,
         difficulty: modal.difficulty,
         estimatedMinutes: Number(modal.estimatedMinutes) || 30,
+        timeLimitMinutes: Math.max(0, Number(modal.timeLimitMinutes) || 0),
         courseId: modal.courseId ? Number(modal.courseId) : null,
         status: modal.status,
         labMode: modal.labMode,
@@ -120,6 +121,7 @@ export default function ManageLabsPage() {
       details: '',
       difficulty: 'beginner',
       stepCount: 8,
+      timeLimitMinutes: 0,
       labMode: 'practice',
       minEvidence: 1,
       labPractice: false,
@@ -152,6 +154,7 @@ export default function ManageLabsPage() {
           details: autoModal.details.trim(),
           difficulty: autoModal.difficulty,
           stepCount: Math.max(3, Number(autoModal.stepCount) || 8),
+          timeLimitMinutes: Math.max(0, Number(autoModal.timeLimitMinutes) || 0),
           labMode: autoModal.labMode,
           minEvidence: Math.max(1, Number(autoModal.minEvidence) || 1),
           isPractice: isReal ? false : Boolean(autoModal.labPractice),
@@ -199,6 +202,7 @@ export default function ManageLabsPage() {
             onClick={() =>
               setModal({
                 title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30,
+                timeLimitMinutes: 0,
                 dueAt: '', courseId: '', status: 'draft', isPractice: false,
                 labMode: 'practice', taskBrief: '', minEvidence: 1,
               })
@@ -259,6 +263,7 @@ export default function ManageLabsPage() {
               onClick={() =>
                 setModal({
                   title: '', summary: '', description: '', difficulty: 'beginner', estimatedMinutes: 30,
+                  timeLimitMinutes: 0,
                   dueAt: '', courseId: '', status: 'draft', isPractice: false,
                   labMode: 'practice', taskBrief: '', minEvidence: 1,
                 })
@@ -292,6 +297,7 @@ export default function ManageLabsPage() {
                     ? `Question-only · ${lab.min_evidence || 1}+ screenshot${(lab.min_evidence || 1) === 1 ? '' : 's'}`
                     : `${lab.is_practice ? 'Open to all learners' : lab.course_title || 'Standalone lab'} · ${lab.step_count} steps`}
                   {' · '}{lab.estimated_minutes} min
+                  {lab.time_limit_minutes > 0 ? ` · ${lab.time_limit_minutes} min limit` : ''}
                 </p>
                 <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-500">
                   {lab.session_count} sessions started
@@ -382,6 +388,15 @@ export default function ManageLabsPage() {
                 <option value="published">Published</option>
               </Select>
             </div>
+            <Input
+              label="Lab time limit (minutes)"
+              type="number"
+              min="0"
+              max="600"
+              value={modal.timeLimitMinutes}
+              onChange={(event) => setModal((current) => ({ ...current, timeLimitMinutes: event.target.value }))}
+              hint="How long learners get once they start. 0 means no custom limit. The lab ends automatically when the timer reaches zero."
+            />
             {modal.labMode !== 'real' && (
               <Input label="Due date (optional)" type="datetime-local" value={modal.dueAt || ''} disabled={modal.isPractice} onChange={(event) => setModal((current) => ({ ...current, dueAt: event.target.value }))} />
             )}
@@ -443,7 +458,7 @@ export default function ManageLabsPage() {
             </Select>
             <Input
               label="Lab title / topic"
-              placeholder="e.g. Analyse a web access log for brute force"
+              placeholder="Enter lab title / topic"
               value={autoModal.title}
               onChange={(event) => setAutoModal((current) => ({ ...current, title: event.target.value }))}
               required
@@ -488,6 +503,15 @@ export default function ManageLabsPage() {
                 <option value="published">Publish now</option>
               </Select>
             </div>
+            <Input
+              label="Lab time limit (minutes)"
+              type="number"
+              min="0"
+              max="600"
+              value={autoModal.timeLimitMinutes}
+              onChange={(event) => setAutoModal((current) => ({ ...current, timeLimitMinutes: event.target.value }))}
+              hint="How long learners get once they start. 0 means no custom limit. The lab ends automatically when the timer reaches zero."
+            />
             <Select
               label="Course"
               value={autoModal.labPractice && autoModal.labMode !== 'real' ? '' : autoModal.courseId}

@@ -545,7 +545,7 @@ export default function ReportReviewDetailPage() {
                 rows={5}
                 value={feedback}
                 onChange={(event) => setFeedback(event.target.value)}
-                placeholder="Highlight what was done well and what needs more detail…"
+                placeholder="Enter your review comment"
               />
 
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -595,7 +595,7 @@ export default function ReportReviewDetailPage() {
                   label="Tags"
                   value={publishForm.tags}
                   onChange={(event) => setPublishForm((current) => ({ ...current, tags: event.target.value }))}
-                  placeholder="linux, troubleshooting, lab-report"
+                  placeholder="Enter tags"
                   hint="Comma separated, up to 10."
                 />
                 <Input

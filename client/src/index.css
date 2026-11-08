@@ -27,10 +27,29 @@
     --shadow-card: 0 18px 45px -24px rgba(0, 0, 0, 0.85);
   }
 
-  html,
-  body,
-  #root {
-    min-height: 100%;
+  /* Responsive safety: allow flex/grid children to shrink instead of overflowing. */
+  .flex > *,
+  .grid > *,
+  .inline-flex > * {
+    min-width: 0;
+  }
+
+  table {
+    table-layout: auto;
+  }
+
+  td,
+  th {
+    overflow-wrap: anywhere;
+  }
+
+  img,
+  video,
+  iframe,
+  canvas,
+  table,
+  pre {
+    max-width: 100%;
   }
 
   body {
@@ -43,9 +62,7 @@
 
   html.dark body {
     @apply text-slate-300;
-    background-image:
-      radial-gradient(ellipse 62% 42% at 50% -12%, rgba(34, 211, 238, 0.055), transparent 70%),
-      linear-gradient(to bottom, #05070d, #080b12);
+    background-color: #05070d;
   }
 
   h1,
@@ -128,11 +145,23 @@
   }
 
   .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-colors dark:border-white/[0.08] dark:bg-night-900/60 dark:shadow-card;
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-night-900/70 dark:shadow-card;
   }
 
   .card-hover {
-    @apply transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:hover:border-white/20 dark:hover:bg-night-900/80;
+    @apply transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl dark:hover:border-white/20 dark:hover:bg-night-900/80;
+  }
+
+  /* Public layout cards — subtle brand glow on hover */
+  .public-main .card:hover {
+    box-shadow:
+      0 0 0 1px rgba(6, 182, 212, 0.35),
+      0 18px 45px -12px rgba(6, 182, 212, 0.22);
+  }
+  html.dark .public-main .card:hover {
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.3),
+      0 18px 45px -12px rgba(34, 211, 238, 0.18);
   }
 
   .label {
@@ -442,9 +471,7 @@ html:not(.dark) a[class*="bg-brand"] .text-white,
 html:not(.dark) button[class*="bg-rose"].text-white,
 html:not(.dark) button[class*="bg-rose"] .text-white,
 html:not(.dark) button[class*="bg-emerald"].text-white,
-html:not(.dark) button[class*="bg-emerald"] .text-white,
-html:not(.dark) [class*="bg-gradient"].text-white,
-html:not(.dark) [class*="bg-gradient"] .text-white {
+html:not(.dark) button[class*="bg-emerald"] .text-white {
   color: #ffffff !important;
 }
 
@@ -467,17 +494,6 @@ html:not(.dark) .markdown pre code {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   }
 
-  html.dark .bg-grid-fade {
-    background-image: radial-gradient(ellipse at top, rgba(34, 211, 238, 0.12), transparent 55%),
-      linear-gradient(to bottom, #05070d, #080c15);
-  }
-
-  html.dark .bg-hero-glow {
-    background-image: radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.16), transparent 45%),
-      radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.14), transparent 40%);
-  }
-
-
   /* Ensure high legibility: scale ultra-tiny text up to at least 12px */
   .text-\[9px\],
   .text-\[10px\],
@@ -490,6 +506,165 @@ html:not(.dark) .markdown pre code {
   .text-\[13px\] {
     font-size: 0.875rem !important; /* 14px */
     line-height: 1.25rem !important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Public site — immersive visuals & motion
+   --------------------------------------------------------------- */
+
+/* Glow ring around the hero terminal */
+.terminal-glow {
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.18),
+    0 30px 80px -30px rgba(8, 145, 178, 0.55),
+    0 0 90px -30px rgba(139, 92, 246, 0.45);
+}
+html.dark .terminal-glow {
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.25),
+    0 40px 100px -30px rgba(0, 0, 0, 0.9),
+    0 0 110px -25px rgba(34, 211, 238, 0.35);
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Animated nav underline */
+.nav-underline {
+  position: relative;
+}
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.35rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: #06b6d4;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.nav-underline:hover::after,
+.nav-underline[aria-current='page']::after {
+  transform: scaleX(1);
+}
+
+/* ---------------------------------------------------------------
+   Trust badge marquee
+   --------------------------------------------------------------- */
+.trust-marquee {
+  overflow: hidden;
+}
+.trust-track {
+  display: flex;
+  gap: 0.75rem;
+  width: max-content;
+  animation: trust-marquee 32s linear infinite;
+}
+.trust-marquee:hover .trust-track {
+  animation-play-state: paused;
+}
+@keyframes trust-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trust-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+    justify-content: center;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Public footer — solid theme surface (no gradients)
+   --------------------------------------------------------------- */
+.site-footer {
+  background-color: #071019;
+  color: #cbd5e1;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.site-footer .chip {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #cbd5e1 !important;
+}
+
+.site-footer h4,
+html.dark .site-footer h4 {
+  color: #7dd3fc !important;
+}
+
+html:not(.dark) .site-footer h4,
+html:not(.dark) .site-footer h4.text-slate-400,
+html:not(.dark) .site-footer h4.text-slate-500 {
+  color: #7dd3fc !important;
+}
+
+.site-footer .logo-wordmark {
+  color: #f8fafc !important;
+}
+
+.site-footer .site-footer-bottom {
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+html:not(.dark) .site-footer .text-slate-300,
+html:not(.dark) .site-footer .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.dark) .site-footer .text-slate-500,
+html:not(.dark) .site-footer .text-slate-600,
+html:not(.dark) .site-footer .text-slate-700 {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .site-footer .text-brand-300,
+html:not(.dark) .site-footer .text-brand-400,
+html:not(.dark) .site-footer .text-brand-600,
+html:not(.dark) .site-footer .text-brand-700 {
+  color: #67e8f9 !important;
+}
+
+html:not(.dark) .site-footer span.text-white {
+  color: #f8fafc !important;
+}
+
+html:not(.dark) .site-footer .bg-brand-50 {
+  background-color: rgba(34, 211, 238, 0.12) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-page-in {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 
