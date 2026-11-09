@@ -697,8 +697,8 @@ export default function LabSessionPage() {
         </div>
       )}
 
-      {/* Exit report (real labs): the complete record of the ended session,
-          shown to the student before they submit it to the instructor. */}
+      {/* Exit report (real labs): just the task question and the student's
+          own screenshots, shown before they submit to the instructor. */}
       {isRealLab && !running && !isPractice && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Lab report">
@@ -710,7 +710,7 @@ export default function LabSessionPage() {
                 <div className="min-w-0">
                   <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Lab Report</h2>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {data.lab?.title} · generated when this session ended
+                    {data.lab?.title}
                   </p>
                 </div>
               </div>
@@ -719,37 +719,8 @@ export default function LabSessionPage() {
               </Badge>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-4 px-5 py-4 lg:grid-cols-4">
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Student</dt>
-                <dd className="mt-1 truncate text-sm font-medium text-slate-800 dark:text-slate-100">{student?.name || 'Student'}</dd>
-              </div>
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Started</dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                  {session.started_at ? new Date(session.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Ended</dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                  {session.ended_at ? new Date(session.ended_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Time used</dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">{timeUsedLabel || '-'}</dd>
-              </div>
-            </dl>
-
-            <p className="px-5 pb-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              You ended this session with <span className="font-semibold text-slate-800 dark:text-slate-100">{endSummary}</span>
-              {timeUsedLabel ? <> in <span className="font-semibold text-slate-800 dark:text-slate-100">{timeUsedLabel}</span></> : ''}.
-              Review the report below. This is exactly what your instructor will receive when you submit.
-            </p>
-
             {data.lab?.task_brief && (
-              <div className="px-5 pb-4">
+              <div className="px-5 pb-4 pt-4">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Task</p>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/30">
                   <div className="markdown max-w-none text-sm leading-6 text-slate-700 dark:text-slate-300">
@@ -781,11 +752,6 @@ export default function LabSessionPage() {
                       <figcaption className="px-2.5 py-2">
                         <p className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{shot.original_name || `Screenshot ${index + 1}`}</p>
                         {shot.note && <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{shot.note}</p>}
-                        {shot.created_at && (
-                          <p className="mt-0.5 text-[10px] text-slate-400">
-                            {new Date(shot.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                          </p>
-                        )}
                       </figcaption>
                     </figure>
                   ))}
