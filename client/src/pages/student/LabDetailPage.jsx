@@ -13,6 +13,7 @@ import {
   IconClock,
   IconExternalLink,
   IconPlay,
+  IconSend,
   IconTerminal,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
@@ -26,7 +27,15 @@ export default function LabDetailPage() {
   const [labStatus, setLabStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [submittingId, setSubmittingId] = useState(null);
   const [error, setError] = useState('');
+
+  const refresh = async () => {
+    try {
+      const res = await api.get(`/labs/${id}`);
+      setData(res.data);
+    } catch (_) {}
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +122,41 @@ export default function LabDetailPage() {
   // provider, so availability is required for all of them.
   const infrastructureReady = !labStatus || Boolean(labStatus.available);
   const offlineReason = 'This lab cannot start right now. Please try again later.';
+  const requiredSteps = stepCounts?.required ?? 0;
+
+  // Saved-work submission: an ended session can be sent for instructor review
+  // straight from this page when its work is complete. The server re-checks
+  // the same rules, so this state only drives what the student sees.
+  const sessionSubmitState = (session) => {
+    if (isPractice) return null;
+    if (session.submission_status === 'approved') return 'approved';
+    if (session.submission_status === 'submitted') return 'submitted';
+    if (session.status === 'running' || session.status === 'error') return null;
+    const eligible = isReal
+      ? (session.screenshot_count || 0) >= minEvidence
+      : (session.completed_steps || 0) >= requiredSteps;
+    if (!eligible) return 'ineligible';
+    return session.submission_status === 'changes_requested' ? 'changes' : 'eligible';
+  };
+
+  const submitSession = async (session) => {
+    const message = isReal
+      ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?`
+      : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
+    if (!window.confirm(message)) return;
+    setSubmittingId(session.id);
+    try {
+      const form = new FormData();
+      form.append('note', isReal ? 'Submitted from the lab page with screenshot evidence.' : 'Submitted from the lab page.');
+      await api.post(`/labs/sessions/${session.id}/submit`, form);
+      toast.success('Lab submitted for instructor review.');
+      await refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not submit this lab.'));
+    } finally {
+      setSubmittingId(null);
+    }
+  };
 
   return (
     <div className="animate-fade-up space-y-5">
@@ -305,20 +349,72 @@ export default function LabDetailPage() {
 
           {sessions.length > 0 && (
             <Card className="p-5">
-              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Recent sessions</h2>
-              <ul className="mt-2 divide-y divide-slate-100 dark:divide-white/5">
-                {sessions.slice(0, 5).map((session) => (
-                  <li key={session.id} className="flex items-center justify-between gap-2 py-2.5 text-xs">
-                    <Link to={`/labs/session/${session.id}`} target="_blank" rel="noopener noreferrer" className="font-medium text-slate-600 transition hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-300">
-                      {formatDateTime(session.started_at)}
-                    </Link>
-                    {session.status === 'running' ? (
-                      <Badge tone="emerald" dot="animate-pulse">Running</Badge>
-                    ) : (
-                      <Badge tone="slate">{session.status}</Badge>
-                    )}
-                  </li>
-                ))}
+              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Your saved work</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Ended labs stay saved here with their steps and screenshots.
+                {!isPractice && ' Submit any completed one for instructor review.'}
+              </p>
+              <ul className="mt-1 divide-y divide-slate-100 dark:divide-white/5">
+                {sessions.slice(0, 5).map((session) => {
+                  const state = sessionSubmitState(session);
+                  const missingShots = minEvidence - (session.screenshot_count || 0);
+                  return (
+                    <li key={session.id} className="py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Link to={`/labs/session/${session.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-slate-600 transition hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-300">
+                          {formatDateTime(session.started_at)}
+                        </Link>
+                        {session.status === 'running' ? (
+                          <Badge tone="emerald" dot="animate-pulse">Running</Badge>
+                        ) : (
+                          <Badge tone="slate">
+                            {session.ended_reason === 'completed'
+                              ? 'Completed'
+                              : session.ended_reason === 'expired'
+                                ? 'Time expired'
+                                : session.ended_reason === 'submitted'
+                                  ? 'Submitted'
+                                  : 'Ended'}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {isReal
+                          ? `${session.screenshot_count || 0} screenshot${session.screenshot_count === 1 ? '' : 's'} attached`
+                          : `${session.completed_steps || 0} of ${requiredSteps} required steps · ${session.screenshot_count || 0} screenshot${session.screenshot_count === 1 ? '' : 's'}`}
+                      </p>
+                      {state === 'submitted' && (
+                        <Badge tone="amber" className="mt-2">
+                          <IconClock size={11} /> Pending instructor review
+                        </Badge>
+                      )}
+                      {state === 'approved' && (
+                        <Badge tone="emerald" className="mt-2">
+                          <IconCheckCircle size={11} /> Approved by instructor
+                        </Badge>
+                      )}
+                      {(state === 'eligible' || state === 'changes') && (
+                        <div className="mt-2.5">
+                          {state === 'changes' && (
+                            <p className="mb-1.5 text-[11px] font-medium leading-4 text-rose-600 dark:text-rose-300">
+                              Your instructor requested changes — review the feedback, fix the work and resubmit.
+                            </p>
+                          )}
+                          <Button size="sm" onClick={() => submitSession(session)} loading={submittingId === session.id}>
+                            <IconSend size={13} /> {state === 'changes' ? 'Resubmit lab' : 'Submit for review'}
+                          </Button>
+                        </div>
+                      )}
+                      {state === 'ineligible' && (
+                        <p className="mt-1.5 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                          {isReal
+                            ? `Add ${missingShots} more screenshot${missingShots === 1 ? '' : 's'} inside the session to submit this lab.`
+                            : 'Finish all required steps in a session to submit it for review.'}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </Card>
           )}

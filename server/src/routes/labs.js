@@ -37,6 +37,43 @@ import {
 
 const router = Router();
 
+/**
+ * Tell the right students that a lab is now available. Course labs go to the
+ * enrolled students as a new assignment; open practice labs go to every
+ * student. Call this ONLY when a lab becomes published (created published,
+ * or a draft -> published transition) so routine edits to a live lab never
+ * re-notify the class.
+ */
+async function notifyLabPublished(lab) {
+  if (!lab || lab.status !== 'published') return;
+  const isOpenLab = Boolean(lab.is_practice) && !lab.course_id;
+  let userIds = [];
+  if (isOpenLab) {
+    const { rows } = await query(`SELECT id AS user_id FROM users WHERE role = 'student' AND is_active = TRUE`);
+    userIds = rows.map((row) => row.user_id);
+  } else if (lab.course_id) {
+    const { rows } = await query(
+      `SELECT user_id FROM enrollments WHERE course_id = $1 AND status <> 'dropped'`,
+      [lab.course_id]
+    );
+    userIds = rows.map((row) => row.user_id);
+  }
+  if (!userIds.length) return;
+
+  const dueText = lab.due_at
+    ? ` Deadline: ${new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lab.due_at))}.`
+    : '';
+  await notify(null, {
+    userIds,
+    type: 'lab',
+    title: isOpenLab ? `New practice lab: ${lab.title}` : `New lab assignment: ${lab.title}`,
+    body: isOpenLab
+      ? `A new practice lab "${lab.title}" is ready for hands-on practice.`
+      : `${lab.lab_mode === 'real' ? 'A new question-only lab' : 'A new hands-on lab'} "${lab.title}" is available in your course.${dueText} Complete it and submit your work for instructor review.`,
+    link: isOpenLab ? `/labs/${lab.id}` : '/student/lab-assignments',
+  });
+}
+
 const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -316,8 +353,14 @@ router.get(
     let myProgress = null;
     if (req.user) {
       const { rows } = await query(
-        `SELECT id, status, started_at, ended_at, ended_reason, last_activity_at, expires_at, provider, instance_id
-         FROM lab_sessions WHERE lab_id = $1 AND user_id = $2 ORDER BY id DESC`,
+        `SELECT s.id, s.status, s.started_at, s.ended_at, s.ended_reason, s.last_activity_at, s.expires_at, s.provider, s.instance_id,
+                (SELECT COUNT(*)::int FROM lab_step_progress p
+                   JOIN lab_steps st ON st.id = p.step_id
+                  WHERE p.session_id = s.id AND st.is_optional = FALSE) AS completed_steps,
+                (SELECT COUNT(*)::int FROM screenshots sc WHERE sc.session_id = s.id) AS screenshot_count,
+                (SELECT ls.id FROM lab_submissions ls WHERE ls.session_id = s.id LIMIT 1) AS submission_id,
+                (SELECT ls.status FROM lab_submissions ls WHERE ls.session_id = s.id LIMIT 1) AS submission_status
+         FROM lab_sessions s WHERE s.lab_id = $1 AND s.user_id = $2 ORDER BY s.id DESC`,
         [lab.id, req.user.id]
       );
       sessions = rows;
@@ -821,6 +864,7 @@ router.post(
        labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
        Math.max(0, Number(b.timeLimitMinutes) || 0)]
     );
+    await notifyLabPublished(rows[0]);
     res.status(201).json({ lab: rows[0] });
   })
 );
@@ -906,6 +950,9 @@ router.put(
         'timeLimitMinutes' in b ? Math.max(0, Number(b.timeLimitMinutes) || 0) : null,
       ]
     );
+    if (lab.status !== 'published' && rows[0].status === 'published') {
+      await notifyLabPublished(rows[0]);
+    }
     res.json({ lab: rows[0] });
   })
 );
