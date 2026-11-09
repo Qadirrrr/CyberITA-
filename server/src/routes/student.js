@@ -40,7 +40,11 @@ router.get(
          SELECT s.id, s.status
          FROM lab_sessions s
          WHERE s.lab_id = l.id AND s.user_id = $1
-         ORDER BY s.id DESC
+         -- The student's working session for this assignment: the one holding
+         -- the most screenshot evidence (ties: most recent), so the upload
+         -- option on the assignments page targets the same work the
+         -- progress bar is measured from.
+         ORDER BY (SELECT COUNT(*) FROM screenshots sc WHERE sc.session_id = s.id) DESC, s.id DESC
          LIMIT 1
        ) sess ON TRUE
        LEFT JOIN LATERAL (
