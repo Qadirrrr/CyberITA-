@@ -614,7 +614,7 @@ export default function DashboardLayout() {
 
       <div
         className={cx(
-          'flex min-h-screen flex-1 flex-col bg-slate-100 transition-[padding] duration-300 dark:bg-transparent',
+          'flex min-h-screen min-w-0 flex-1 flex-col bg-slate-100 transition-[padding] duration-300 dark:bg-transparent',
           sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[224px]'
         )}
       >
