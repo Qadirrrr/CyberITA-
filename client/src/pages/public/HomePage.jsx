@@ -138,7 +138,7 @@ export default function HomePage() {
   return (
     <div>
       <section className="relative bg-white dark:bg-night-950">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 relative grid items-center gap-14 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 relative grid items-center gap-14 pt-8 pb-16 lg:grid-cols-[1.05fr_0.95fr] lg:pt-12 lg:pb-24">
           <div className="animate-fade-up">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-sm dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-200">
               <span className="relative flex h-2 w-2">
