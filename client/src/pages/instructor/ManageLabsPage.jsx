@@ -21,6 +21,7 @@ import {
   IconPlus,
   IconSearch,
   IconTerminal,
+  IconTrash,
   IconZap,
 } from '../../components/icons';
 import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
@@ -43,6 +44,7 @@ export default function ManageLabsPage() {
   const [modeFilter, setModeFilter] = useState('all');
   const [autoModal, setAutoModal] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +65,20 @@ export default function ManageLabsPage() {
       cancelled = true;
     };
   }, [user]);
+
+  const removeLab = async (lab) => {
+    if (!window.confirm(`Delete lab "${lab.title}" permanently? Its steps, sessions, student progress, screenshots and submissions will be removed too. This cannot be undone.`)) return;
+    setDeletingId(lab.id);
+    try {
+      await api.delete(`/labs/${lab.id}`);
+      setLabs((prev) => prev.filter((item) => item.id !== lab.id));
+      toast.success(`Lab "${lab.title}" deleted.`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not delete the lab.'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const courseIds = useMemo(() => new Set(courses.map((course) => course.id)), [courses]);
 
@@ -305,6 +321,16 @@ export default function ManageLabsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm" variant="ghost"
+                  className="text-rose-500 hover:text-rose-400"
+                  onClick={() => removeLab(lab)}
+                  loading={deletingId === lab.id}
+                  title="Delete lab permanently"
+                  aria-label={`Delete ${lab.title}`}
+                >
+                  <IconTrash size={13} />
+                </Button>
                 <Button as={Link} to={`/labs/${lab.id}`} size="sm" variant="ghost">
                   <IconPlay size={13} /> Preview
                 </Button>

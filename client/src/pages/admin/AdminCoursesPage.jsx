@@ -19,6 +19,7 @@ import {
   IconLayers,
   IconRefresh,
   IconSearch,
+  IconTrash,
 } from '../../components/icons';
 import { formatDate } from '../../lib/format';
 import DonutChart from '../../components/DonutChart';
@@ -64,6 +65,7 @@ export default function AdminCoursesPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [listLoading, setListLoading] = useState(true);
   const [changingStatus, setChangingStatus] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -121,6 +123,21 @@ export default function AdminCoursesPage() {
       toast.error(getErrorMessage(err, 'Could not update course status.'));
     } finally {
       setChangingStatus(null);
+    }
+  };
+
+  const handleDeleteCourse = async (course) => {
+    if (!window.confirm(`Delete "${course.title}" permanently? Its modules, lessons, quizzes, labs, enrollments and student progress will be removed too. This cannot be undone.`)) return;
+    setDeletingId(course.id);
+    try {
+      await api.delete(`/courses/${course.id}`);
+      toast.success(`Course "${course.title}" deleted.`);
+      loadCourses();
+      loadCatalog();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not delete the course.'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -414,6 +431,16 @@ export default function AdminCoursesPage() {
                               Archive
                             </Button>
                           )}
+                          <Button
+                            size="sm" variant="ghost"
+                            className="text-rose-400 hover:text-rose-300"
+                            onClick={() => handleDeleteCourse(course)}
+                            loading={deletingId === course.id}
+                            title="Delete course permanently"
+                            aria-label={`Delete ${course.title}`}
+                          >
+                            <IconTrash size={13} />
+                          </Button>
                         </div>
                       </td>
                     </tr>
