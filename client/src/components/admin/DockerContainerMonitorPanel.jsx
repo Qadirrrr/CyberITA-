@@ -35,6 +35,7 @@ import {
   IconZap,
 } from '../icons';
 import { formatDateTime } from '../../lib/format';
+import { useConfirm } from '../ConfirmDialog';
 
 const statusTone = {
   running: 'emerald',
@@ -44,6 +45,7 @@ const statusTone = {
 };
 
 export default function DockerContainerMonitorPanel() {
+  const [confirmNode, askConfirm] = useConfirm();
   const toast = useToast();
   const [containers, setContainers] = useState([]);
   const [counts, setCounts] = useState({
@@ -235,8 +237,8 @@ export default function DockerContainerMonitorPanel() {
     executeAction('start', container.sessionId, `Container started for ${container.studentName}.`);
   };
 
-  const handleStop = (container) => {
-    if (!window.confirm(`Stop container for ${container.studentName} (${container.shortId})?`)) return;
+  const handleStop = async (container) => {
+    if (!(await askConfirm({ title: 'Stop container?', message: `Stop container for ${container.studentName} (${container.shortId})?`, confirmLabel: 'Stop container', danger: true }))) return;
     executeAction('stop', container.sessionId, `Container stopped.`);
   };
 
@@ -280,6 +282,7 @@ export default function DockerContainerMonitorPanel() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       {/* Live Monitoring Header & Status Banner */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

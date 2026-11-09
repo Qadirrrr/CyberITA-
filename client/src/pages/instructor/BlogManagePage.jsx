@@ -24,10 +24,12 @@ import {
   IconTrash,
 } from '../../components/icons';
 import { formatDate } from '../../lib/format';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const emptyPost = { title: '', excerpt: '', content: '', coverImage: '', tags: '', status: 'draft' };
 
 export default function BlogManagePage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const toast = useToast();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,7 @@ export default function BlogManagePage() {
   };
 
   const remove = async (post) => {
-    if (!window.confirm(`Delete "${post.title}"?`)) return;
+    if (!(await askConfirm({ title: 'Delete post?', message: `Delete "${post.title}"?`, confirmLabel: 'Delete post', danger: true }))) return;
     try {
       await api.delete(`/posts/${post.id}`);
       toast.success('Article deleted.');
@@ -135,6 +137,7 @@ export default function BlogManagePage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Articles</h1>

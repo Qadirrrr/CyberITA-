@@ -18,8 +18,10 @@ import {
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function LabDetailPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -92,6 +94,7 @@ export default function LabDetailPage() {
   if (loading) {
     return (
       <div className="space-y-4">
+        {confirmNode}
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-56 w-full" />
@@ -145,7 +148,7 @@ export default function LabDetailPage() {
     const message = isReal
       ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?${missingShots > 0 ? ` That is ${missingShots} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
       : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
-    if (!window.confirm(message)) return;
+    if (!(await askConfirm({ title: 'Submit lab for review?', message, confirmLabel: 'Submit lab' }))) return;
     setSubmittingId(session.id);
     try {
       const form = new FormData();

@@ -28,6 +28,7 @@ import {
 } from '../../components/icons';
 import PasteStepsModal from '../../components/lab/PasteStepsModal';
 import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const verificationTone = { command: 'brand', output: 'accent', manual: 'amber' };
 
@@ -43,6 +44,7 @@ const emptyStep = {
 };
 
 export default function LabEditorPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -148,7 +150,7 @@ export default function LabEditorPage() {
   };
 
   const removeLab = async () => {
-    if (!window.confirm('Delete this lab and all its steps and sessions? This cannot be undone.')) return;
+    if (!(await askConfirm({ title: 'Delete lab?', message: 'Delete this lab and all its steps and sessions? This cannot be undone.', confirmLabel: 'Delete lab', danger: true }))) return;
     try {
       await api.delete(`/labs/${id}`);
       toast.success('Lab deleted.');
@@ -202,7 +204,7 @@ export default function LabEditorPage() {
   };
 
   const deleteStep = async (step) => {
-    if (!window.confirm(`Delete step "${step.title}"?`)) return;
+    if (!(await askConfirm({ title: 'Delete step?', message: `Delete step "${step.title}"?`, confirmLabel: 'Delete step', danger: true }))) return;
     try {
       await api.delete(`/labs/steps/${step.id}`);
       toast.success('Step deleted.');
@@ -230,6 +232,7 @@ export default function LabEditorPage() {
   if (loading) {
     return (
       <div className="space-y-4">
+        {confirmNode}
         <Skeleton className="h-9 w-1/2" />
         <Skeleton className="h-72 w-full" />
         <Skeleton className="h-48 w-full" />

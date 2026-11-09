@@ -29,6 +29,7 @@ import {
 } from '../../components/icons';
 import { CATEGORIES, DIFFICULTIES, SUBCATEGORY_SUGGESTIONS } from '../../lib/constants';
 import { formatDate, formatDateTime } from '../../lib/format';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const tabs = [
   { id: 'details', label: 'Details' },
@@ -53,6 +54,7 @@ const emptyDetails = {
 };
 
 export default function CourseEditorPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const { id } = useParams();
   const isNew = !id;
   const navigate = useNavigate();
@@ -320,7 +322,7 @@ export default function CourseEditorPage() {
   };
 
   const deleteModule = async (module) => {
-    if (!window.confirm(`Delete module "${module.title}"? Lessons inside will be removed too.`)) return;
+    if (!(await askConfirm({ title: 'Delete module?', message: `Delete module "${module.title}"? Lessons inside will be removed too.`, confirmLabel: 'Delete module', danger: true }))) return;
     try {
       await api.delete(`/courses/modules/${module.id}`);
       toast.success('Module deleted.');
@@ -391,7 +393,7 @@ export default function CourseEditorPage() {
   };
 
   const deleteLesson = async (lesson) => {
-    if (!window.confirm(`Delete lesson "${lesson.title}"?`)) return;
+    if (!(await askConfirm({ title: 'Delete lesson?', message: `Delete lesson "${lesson.title}"?`, confirmLabel: 'Delete lesson', danger: true }))) return;
     try {
       await api.delete(`/courses/lessons/${lesson.id}`);
       toast.success('Lesson deleted.');
@@ -430,6 +432,7 @@ export default function CourseEditorPage() {
   if (loading) {
     return (
       <div className="space-y-4">
+        {confirmNode}
         <Skeleton className="h-9 w-1/3" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-80 w-full" />

@@ -32,6 +32,7 @@ import { formatDateTime, timeAgo } from '../../lib/format';
 import LabServerAdminPanel from '../../components/admin/LabServerAdminPanel';
 import LabSubmissionsRecordPanel from '../../components/admin/LabSubmissionsRecordPanel';
 import DockerContainerMonitorPanel from '../../components/admin/DockerContainerMonitorPanel';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const statusTone = {
   running: 'emerald',
@@ -41,6 +42,7 @@ const statusTone = {
 };
 
 export default function AdminLabsPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const toast = useToast();
   const [health, setHealth] = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -101,7 +103,7 @@ export default function AdminLabsPage() {
   };
 
   const handleStopSession = async (session) => {
-    if (!window.confirm(`Force-stop session #${session.id} for ${session.user_email}?`)) return;
+    if (!(await askConfirm({ title: 'Force-stop session?', message: `Force-stop session #${session.id} for ${session.user_email}?`, confirmLabel: 'Force stop', danger: true }))) return;
     setActionBusy(session.id);
     try {
       await api.post(`/admin/lab-sessions/${session.id}/stop`);
@@ -146,6 +148,7 @@ export default function AdminLabsPage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-white">Lab Infrastructure & Sessions</h1>

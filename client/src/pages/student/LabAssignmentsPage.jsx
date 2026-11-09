@@ -5,6 +5,7 @@ import { Alert, Badge, Button, Card, EmptyState, ProgressBar, Skeleton, Tabs } f
 import { IconArrowRight, IconCamera, IconCheckCircle, IconClock, IconRefresh, IconSearch, IconSend, IconTerminal, IconTrash, IconUpload, IconXCircle } from '../../components/icons';
 import { LAB_SUBMISSION_STATUS } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 function assignmentState(item) {
   if (!item.submission_id || item.submission_status === 'changes_requested') return 'pending';
@@ -13,6 +14,7 @@ function assignmentState(item) {
 }
 
 export default function LabAssignmentsPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const [assignments, setAssignments] = useState([]);
   const [tab, setTab] = useState('pending');
   const [search, setSearch] = useState('');
@@ -72,7 +74,7 @@ export default function LabAssignmentsPage() {
   };
 
   const removeShot = async (shotId) => {
-    if (!window.confirm('Remove this screenshot from your evidence?')) return;
+    if (!(await askConfirm({ title: 'Remove screenshot?', message: 'Remove this screenshot from your evidence?', confirmLabel: 'Remove screenshot', danger: true }))) return;
     try {
       await api.delete(`/labs/screenshots/${shotId}`);
       setPanel((current) => ({ ...current, shots: current.shots.filter((shot) => shot.id !== shotId) }));
@@ -85,7 +87,7 @@ export default function LabAssignmentsPage() {
     if (!item.session_id) return;
     const minEvidence = Math.max(1, item.min_evidence || 1);
     const shortfall = Math.max(0, minEvidence - panel.shots.length);
-    if (!window.confirm(`Submit this lab with ${panel.shots.length} screenshot evidence file${panel.shots.length === 1 ? '' : 's'} for instructor review?${shortfall > 0 ? ` That is ${shortfall} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`)) return;
+    if (!(await askConfirm({ title: 'Submit lab for review?', message: `Submit this lab with ${panel.shots.length} screenshot evidence file${panel.shots.length === 1 ? '' : 's'} for instructor review?${shortfall > 0 ? ` That is ${shortfall} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`, confirmLabel: 'Submit lab' }))) return;
     setPanel((current) => ({ ...current, submitting: true, error: '' }));
     try {
       const form = new FormData();
@@ -118,6 +120,7 @@ export default function LabAssignmentsPage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Lab assignments</h1>

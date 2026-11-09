@@ -25,10 +25,12 @@ import {
   IconZap,
 } from '../../components/icons';
 import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const statusTone = { published: 'emerald', draft: 'amber' };
 
 export default function ManageLabsPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -67,7 +69,7 @@ export default function ManageLabsPage() {
   }, [user]);
 
   const removeLab = async (lab) => {
-    if (!window.confirm(`Delete lab "${lab.title}" permanently? Its steps, sessions, student progress, screenshots and submissions will be removed too. This cannot be undone.`)) return;
+    if (!(await askConfirm({ title: 'Delete lab?', message: `Delete lab "${lab.title}" permanently? Its steps, sessions, student progress, screenshots and submissions will be removed too. This cannot be undone.`, confirmLabel: 'Delete lab', danger: true }))) return;
     setDeletingId(lab.id);
     try {
       await api.delete(`/labs/${lab.id}`);
@@ -195,6 +197,7 @@ export default function ManageLabsPage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">

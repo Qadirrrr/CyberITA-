@@ -15,11 +15,13 @@ import {
   IconUsers,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const statusTone = { published: 'emerald', draft: 'amber', archived: 'slate' };
 const statuses = ['all', 'published', 'draft', 'archived'];
 
 export default function ManageCoursesPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -71,7 +73,7 @@ export default function ManageCoursesPage() {
   };
 
   const remove = async (course) => {
-    if (!window.confirm(`Delete "${course.title}"? Lessons, labs and enrollments will be removed.`)) return;
+    if (!(await askConfirm({ title: 'Delete course?', message: `Delete "${course.title}"? Lessons, labs and enrollments will be removed.`, confirmLabel: 'Delete course', danger: true }))) return;
     setBusyId(course.id);
     try {
       await api.delete(`/courses/${course.id}`);
@@ -86,6 +88,7 @@ export default function ManageCoursesPage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">

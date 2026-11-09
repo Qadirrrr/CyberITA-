@@ -25,6 +25,7 @@ import {
   IconTrash,
   IconXCircle,
 } from '../../components/icons';
+import { useConfirm } from '../ConfirmDialog';
 
 const EMPTY_FORM = {
   name: '',
@@ -47,6 +48,7 @@ const STATUS_TONE = { active: 'emerald', maintenance: 'amber', disabled: 'slate'
  * server; every student still receives a separate isolated container there.
  */
 export default function LabServerAdminPanel() {
+  const [confirmNode, askConfirm] = useConfirm();
   const toast = useToast();
   const [servers, setServers] = useState([]);
   const [defaultHost, setDefaultHost] = useState(null);
@@ -157,7 +159,7 @@ export default function LabServerAdminPanel() {
   };
 
   const remove = async (server) => {
-    if (!window.confirm(`Delete the lab server "${server.name}"? Labs assigned to it will fall back to the default host.`)) return;
+    if (!(await askConfirm({ title: 'Delete lab server?', message: `Delete the lab server "${server.name}"? Labs assigned to it will fall back to the default host.`, confirmLabel: 'Delete server', danger: true }))) return;
     setDeletingId(server.id);
     try {
       await api.delete(`/admin/lab-servers/${server.id}`);
@@ -218,6 +220,7 @@ export default function LabServerAdminPanel() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <Card className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

@@ -23,6 +23,7 @@ import {
 } from '../../components/icons';
 import { formatDate } from '../../lib/format';
 import DonutChart from '../../components/DonutChart';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 const statusTone = { published: 'emerald', draft: 'amber', archived: 'slate' };
 
@@ -51,6 +52,7 @@ function DonutLegend({ segments, total }) {
 }
 
 export default function AdminCoursesPage() {
+  const [confirmNode, askConfirm] = useConfirm();
   const toast = useToast();
 
   const [catalog, setCatalog] = useState(null);
@@ -112,7 +114,7 @@ export default function AdminCoursesPage() {
   useEffect(() => { loadCourses(); }, [page, debouncedSearch, statusFilter, categoryFilter]);
 
   const handleStatusChange = async (course, newStatus) => {
-    if (!window.confirm(`Change "${course.title}" to "${newStatus}"?`)) return;
+    if (!(await askConfirm({ title: 'Change course status?', message: `Change "${course.title}" to "${newStatus}"?`, confirmLabel: 'Change status' }))) return;
     setChangingStatus(course.id);
     try {
       await api.post(`/admin/courses/${course.id}/status`, { status: newStatus });
@@ -127,7 +129,7 @@ export default function AdminCoursesPage() {
   };
 
   const handleDeleteCourse = async (course) => {
-    if (!window.confirm(`Delete "${course.title}" permanently? Its modules, lessons, quizzes, labs, enrollments and student progress will be removed too. This cannot be undone.`)) return;
+    if (!(await askConfirm({ title: 'Delete course?', message: `Delete "${course.title}" permanently? Its modules, lessons, quizzes, labs, enrollments and student progress will be removed too. This cannot be undone.`, confirmLabel: 'Delete course', danger: true }))) return;
     setDeletingId(course.id);
     try {
       await api.delete(`/courses/${course.id}`);
@@ -154,6 +156,7 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="space-y-6">
+      {confirmNode}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Courses & Enrollment</h1>
