@@ -1,74 +1,84 @@
+import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import PublicLayout from './components/layout/PublicLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 
-import HomePage from './pages/public/HomePage';
-import CoursesPage from './pages/public/CoursesPage';
-import CourseDetailPage from './pages/public/CourseDetailPage';
-import LearningPathsPage from './pages/public/LearningPathsPage';
-import LearningPathDetailPage from './pages/public/LearningPathDetailPage';
-import BlogPage from './pages/public/BlogPage';
-import BlogDetailPage from './pages/public/BlogDetailPage';
-import AboutPage from './pages/public/AboutPage';
-import ContactPage from './pages/public/ContactPage';
-import VerifyCertificatePage from './pages/public/VerifyCertificatePage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import VerifyEmailPage from './pages/auth/VerifyEmailPage';
+const HomePage = lazy(() => import('./pages/public/HomePage'));
+const CoursesPage = lazy(() => import('./pages/public/CoursesPage'));
+const CourseDetailPage = lazy(() => import('./pages/public/CourseDetailPage'));
+const LearningPathsPage = lazy(() => import('./pages/public/LearningPathsPage'));
+const LearningPathDetailPage = lazy(() => import('./pages/public/LearningPathDetailPage'));
+const BlogPage = lazy(() => import('./pages/public/BlogPage'));
+const BlogDetailPage = lazy(() => import('./pages/public/BlogDetailPage'));
+const AboutPage = lazy(() => import('./pages/public/AboutPage'));
+const ContactPage = lazy(() => import('./pages/public/ContactPage'));
+const VerifyCertificatePage = lazy(() => import('./pages/public/VerifyCertificatePage'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 import NotFoundPage from './pages/NotFoundPage';
 
-import StudentDashboard from './pages/student/StudentDashboard';
-import MyCoursesPage from './pages/student/MyCoursesPage';
-import StudentLessonsPage from './pages/student/StudentLessonsPage';
-import LearnPage from './pages/student/LearnPage';
-import LabAssignmentsPage from './pages/student/LabAssignmentsPage';
-import StudentCalendarPage from './pages/student/StudentCalendarPage';
-import LabsPage from './pages/student/LabsPage';
-import LabDetailPage from './pages/student/LabDetailPage';
-import LabSessionPage from './pages/student/LabSessionPage';
-import ReportsPage from './pages/student/ReportsPage';
-import ReportEditorPage from './pages/student/ReportEditorPage';
-import CertificatesPage from './pages/student/CertificatesPage';
-import HistoryPage from './pages/student/HistoryPage';
-import ProfilePage from './pages/student/ProfilePage';
-import StudentSupportPage from './pages/student/StudentSupportPage';
-import StudentNotificationsPage from './pages/student/StudentNotificationsPage';
-import ChatPage from './pages/chat/ChatPage';
+const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
+const MyCoursesPage = lazy(() => import('./pages/student/MyCoursesPage'));
+const StudentLessonsPage = lazy(() => import('./pages/student/StudentLessonsPage'));
+const LearnPage = lazy(() => import('./pages/student/LearnPage'));
+const LabAssignmentsPage = lazy(() => import('./pages/student/LabAssignmentsPage'));
+const StudentCalendarPage = lazy(() => import('./pages/student/StudentCalendarPage'));
+const LabsPage = lazy(() => import('./pages/student/LabsPage'));
+const LabDetailPage = lazy(() => import('./pages/student/LabDetailPage'));
+const LabSessionPage = lazy(() => import('./pages/student/LabSessionPage'));
+const ReportsPage = lazy(() => import('./pages/student/ReportsPage'));
+const ReportEditorPage = lazy(() => import('./pages/student/ReportEditorPage'));
+const CertificatesPage = lazy(() => import('./pages/student/CertificatesPage'));
+const HistoryPage = lazy(() => import('./pages/student/HistoryPage'));
+const ProfilePage = lazy(() => import('./pages/student/ProfilePage'));
+const StudentSupportPage = lazy(() => import('./pages/student/StudentSupportPage'));
+const StudentNotificationsPage = lazy(() => import('./pages/student/StudentNotificationsPage'));
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
 
-import StaffDashboard from './pages/instructor/StaffDashboard';
-import ManageCoursesPage from './pages/instructor/ManageCoursesPage';
-import CourseEditorPage from './pages/instructor/CourseEditorPage';
-import ManageLabsPage from './pages/instructor/ManageLabsPage';
-import LabEditorPage from './pages/instructor/LabEditorPage';
-import LabSubmissionsPage from './pages/instructor/LabSubmissionsPage';
-import ReportsReviewPage from './pages/instructor/ReportsReviewPage';
-import ReportReviewDetailPage from './pages/instructor/ReportReviewDetailPage';
-import BlogManagePage from './pages/instructor/BlogManagePage';
-import StudentsPage from './pages/instructor/StudentsPage';
-import ContentStudioPage from './pages/instructor/ContentStudioPage';
-import InstructorAnnouncementsPage from './pages/instructor/InstructorAnnouncementsPage';
+const StaffDashboard = lazy(() => import('./pages/instructor/StaffDashboard'));
+const ManageCoursesPage = lazy(() => import('./pages/instructor/ManageCoursesPage'));
+const CourseEditorPage = lazy(() => import('./pages/instructor/CourseEditorPage'));
+const ManageLabsPage = lazy(() => import('./pages/instructor/ManageLabsPage'));
+const LabEditorPage = lazy(() => import('./pages/instructor/LabEditorPage'));
+const LabSubmissionsPage = lazy(() => import('./pages/instructor/LabSubmissionsPage'));
+const ReportsReviewPage = lazy(() => import('./pages/instructor/ReportsReviewPage'));
+const ReportReviewDetailPage = lazy(() => import('./pages/instructor/ReportReviewDetailPage'));
+const BlogManagePage = lazy(() => import('./pages/instructor/BlogManagePage'));
+const StudentsPage = lazy(() => import('./pages/instructor/StudentsPage'));
+const ContentStudioPage = lazy(() => import('./pages/instructor/ContentStudioPage'));
+const InstructorAnnouncementsPage = lazy(() => import('./pages/instructor/InstructorAnnouncementsPage'));
 
-import AdminOverview from './pages/admin/AdminOverview';
-import UsersPage from './pages/admin/UsersPage';
-import MessagesPage from './pages/admin/MessagesPage';
-import BroadcastPage from './pages/admin/BroadcastPage';
-import AdminLabsPage from './pages/admin/AdminLabsPage';
-import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminCoursesPage from './pages/admin/AdminCoursesPage';
-import AdminContentPage from './pages/admin/AdminContentPage';
-import AdminSystemPage from './pages/admin/AdminSystemPage';
-import ModeratorManagementPage from './pages/admin/ModeratorManagementPage';
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
+const MessagesPage = lazy(() => import('./pages/admin/MessagesPage'));
+const BroadcastPage = lazy(() => import('./pages/admin/BroadcastPage'));
+const AdminLabsPage = lazy(() => import('./pages/admin/AdminLabsPage'));
+const AdminAuditLogsPage = lazy(() => import('./pages/admin/AdminAuditLogsPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
+const AdminContentPage = lazy(() => import('./pages/admin/AdminContentPage'));
+const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
+const ModeratorManagementPage = lazy(() => import('./pages/admin/ModeratorManagementPage'));
 
-import SeniorModeratorDashboard from './pages/moderator/SeniorModeratorDashboard';
-import SubjectModeratorDashboard from './pages/moderator/SubjectModeratorDashboard';
-import ModerationReportsPage from './pages/moderator/ModerationReportsPage';
+const SeniorModeratorDashboard = lazy(() => import('./pages/moderator/SeniorModeratorDashboard'));
+const SubjectModeratorDashboard = lazy(() => import('./pages/moderator/SubjectModeratorDashboard'));
+const ModerationReportsPage = lazy(() => import('./pages/moderator/ModerationReportsPage'));
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="Loading page">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-cyan-400" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
@@ -160,5 +170,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </Suspense>
   );
 }
