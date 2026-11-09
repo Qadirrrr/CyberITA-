@@ -29,7 +29,7 @@ export function getProvider(name = env.labs.provider) {
 /**
  * Picks the provider for a lab.
  *
- * Every lab — guided practice, open-to-all practice and real assessment — runs
+ * Every lab, guided practice, open-to-all practice and real assessment, runs
  * in the configured real-lab provider (`LAB_PROVIDER`, "docker" in production
  * and "mock" in automated tests). `labs.is_practice` now only controls access
  * and grading; it must never switch a lab to the simulated shell.

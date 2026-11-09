@@ -388,7 +388,7 @@ export default function ModerationReportsPage() {
                       <td className="px-3 py-3">
                         <Badge tone={severityInfo.tone}>{severityInfo.label}</Badge>
                       </td>
-                      <td className="px-3 py-3 text-[11px] text-slate-400">{report.course_title || '—'}</td>
+                      <td className="px-3 py-3 text-[11px] text-slate-400">{report.course_title || '-'}</td>
                       <td className="px-3 py-3">
                         <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
                       </td>

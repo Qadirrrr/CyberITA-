@@ -66,7 +66,7 @@ const BLUEPRINTS = {
     steps: [
       step('Who am I?', 'Print the effective username of your shell session.\n\n```bash\nwhoami\n```', {
         command: 'whoami',
-        hint: 'The prompt already shows your name — now prove it from the shell.',
+        hint: 'The prompt already shows your name. Now prove it from the shell.',
       }),
       step('Where am I?', 'Print the absolute path of your current working directory.\n\n```bash\npwd\n```', {
         command: 'pwd',
@@ -185,7 +185,7 @@ const BLUEPRINTS = {
       }),
       step('Find your shell process', 'Search the process list for the running `bash` process.\n\n```bash\npgrep -a bash\n```', {
         pattern: 'bash',
-        hint: 'If no bash process is listed, run the command again — it executes inside a fresh shell each time.',
+        hint: 'If no bash process is listed, run the command again. It executes inside a fresh shell each time.',
       }),
       step('Check disk pressure', 'Show filesystem usage.\n\n```bash\ndf -h\n```', {
         pattern: 'Filesystem',
@@ -215,7 +215,7 @@ const BLUEPRINTS = {
       }),
       step('List listening sockets', 'Show listening TCP and UDP sockets with the owning process.\n\n```bash\nss -tulpn\n```', {
         pattern: 'Netid',
-        hint: 'This container runs few services, so the list may be short — that is the finding.',
+        hint: 'This container runs few services, so the list may be short. That is the finding.',
       }),
       step('Test loopback reachability', 'Send two ICMP echo requests to the loopback address.\n\n```bash\nping -c 2 127.0.0.1\n```', {
         pattern: '2 packets transmitted, 2 received',
@@ -251,7 +251,7 @@ const BLUEPRINTS = {
     steps: [
       step('Measure the log', 'Count the lines in the access log.\n\n```bash\nwc -l ~/practice/access.log\n```', {
         pattern: '\\d+\\s+\\/home\\/student\\/practice\\/access\\.log',
-        hint: 'The file is already in your workspace — no download needed.',
+        hint: 'The file is already in your workspace. No download needed.',
       }),
       step('Read the first entries', 'Show the first three log lines.\n\n```bash\nhead -n 3 ~/practice/access.log\n```', {
         pattern: 'GET / HTTP/1\\.1',
@@ -300,7 +300,7 @@ const BLUEPRINTS = {
       }),
       step('Compare with MD5', 'Compute the MD5 digest of `/etc/hostname`.\n\n```bash\nmd5sum /etc/hostname\n```', {
         pattern: '[a-f0-9]{32}',
-        hint: 'MD5 is fast but not collision resistant — never use it for passwords.',
+        hint: 'MD5 is fast but not collision resistant. Never use it for passwords.',
       }),
       step('Identify the real file type', 'Ask `file` what `/bin/bash` actually is.\n\n```bash\nfile /bin/bash\n```', {
         pattern: 'ELF 64-bit',
@@ -366,7 +366,7 @@ const BLUEPRINTS = {
     label: 'Practice sandbox',
     summary: 'A safe, disposable Linux sandbox: warm up, explore and experiment freely.',
     scenario:
-      'This sandbox is yours. It is a disposable Linux container with common security tooling installed, so you can experiment without breaking anything. Run the guided warm-up, then keep exploring on your own — nothing here is graded.',
+      'This sandbox is yours. It is a disposable Linux container with common security tooling installed, so you can experiment without breaking anything. Run the guided warm-up, then keep exploring on your own. Nothing here is graded.',
     objectives: [
       'Warm up on the commands every security analyst uses daily',
       'Collect system, process and network evidence',
@@ -530,10 +530,10 @@ export function generateLab({
     difficulty: difficultyLabel,
     estimatedMinutes: estimate,
     terminalWelcome: isReal
-      ? `Welcome to "${cleanTitle}". This is a real, unguided assessment — read the task brief and complete the work.`
+      ? `Welcome to "${cleanTitle}". This is a real, unguided assessment. Read the task brief and complete the work.`
       : isPractice
-        ? `Welcome to "${cleanTitle}". This is a real practice lab container — install packages and explore freely. Run \`help\` for a quick reference.`
-        : `Welcome to "${cleanTitle}". This is a real Linux container — run \`help\` or explore freely.`,
+        ? `Welcome to "${cleanTitle}". This is a real practice lab container. Install packages and explore freely. Run \`help\` for a quick reference.`
+        : `Welcome to "${cleanTitle}". This is a real Linux container. Run \`help\` or explore freely.`,
     initialCwd: '/home/student',
     initialFiles: blueprint.files,
     isPractice: Boolean(isPractice),

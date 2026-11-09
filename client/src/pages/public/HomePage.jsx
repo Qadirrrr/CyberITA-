@@ -45,7 +45,7 @@ const platformPillars = [
   {
     icon: IconGlobe,
     title: 'Browser terminal',
-    body: 'xterm.js streams a real Linux PTY over WebSocket — no installs, no local VMs.',
+    body: 'xterm.js streams a real Linux PTY over WebSocket. No installs, no local VMs.',
   },
   {
     icon: IconServer,
@@ -79,7 +79,7 @@ const features = [
   {
     icon: IconTerminal,
     title: 'Browser-based Linux labs',
-    body: 'Work inside a real isolated Linux container with full root access — install packages and run any tool you need.',
+    body: 'Work inside a real isolated Linux container with full root access. Install packages and run any tool you need.',
   },
   {
     icon: IconFileText,
@@ -286,7 +286,7 @@ export default function HomePage() {
       </section>
 
       <section className="relative border-b border-brand-700 bg-brand-600 dark:border-brand-800 dark:bg-brand-700">
-        {/* Top wave divider — irregular shape transition from previous section */}
+        {/* Top wave divider - irregular shape transition from previous section */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -translate-y-[99%]">
           <svg
             viewBox="0 0 1440 72"

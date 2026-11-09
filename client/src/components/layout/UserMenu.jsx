@@ -57,7 +57,7 @@ export default function UserMenu() {
 
           {/* Menu items */}
           <div className="p-1.5 space-y-0.5">
-            {/* Settings — available for all roles */}
+            {/* Settings - available for all roles */}
             <Link
               to={settingsPath}
               onClick={() => setOpen(false)}

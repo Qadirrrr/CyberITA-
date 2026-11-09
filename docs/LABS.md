@@ -31,12 +31,12 @@ not start until the engine and image are ready.
 
 Real labs need a Docker engine reachable by the API process:
 
-1. **A Docker engine** — Docker Desktop (Windows/macOS) or Docker Engine (Linux).
-2. **Disk space** — plan for ~4-6 GB (Docker Desktop + WSL2 data + the lab image).
+1. **A Docker engine**: Docker Desktop (Windows/macOS) or Docker Engine (Linux).
+2. **Disk space**: plan for ~4-6 GB (Docker Desktop + WSL2 data + the lab image).
    On Windows, if `C:` is full, install Docker Desktop on another drive and move
    the WSL2 data there (Docker Desktop *Settings → Resources → Advanced →
    Disk image location*).
-3. **The API process must reach the daemon** — verify from the same user that
+3. **The API process must reach the daemon**: verify from the same user that
    runs the server:
 
 ```bash
@@ -45,7 +45,7 @@ docker version
 
 ### Windows install options
 
-**Option A — Docker Desktop (recommended for development)**
+**Option A: Docker Desktop (recommended for development)**
 
 1. Install Docker Desktop: `winget install Docker.DockerDesktop` (needs an
    elevated shell) or download from docker.com. WSL2 is already enabled on this
@@ -54,7 +54,7 @@ docker version
    Desktop when you sign in* enabled.
 3. Verify: `docker version` shows a `Server.Version`.
 
-**Option B — docker-ce inside the existing WSL2 Ubuntu distro (no Desktop)**
+**Option B: docker-ce inside the existing WSL2 Ubuntu distro (no Desktop)**
 
 ```bash
 wsl -d Ubuntu
@@ -149,7 +149,7 @@ hosts that run student containers:
 
 Each lab is then assigned exactly one server in the **Lab → server assignment**
 table. Every student still gets an isolated container; the assignment only
-decides where it runs. Reassigning a lab affects new sessions — running sessions
+decides where it runs. Reassigning a lab affects new sessions. Running sessions
 keep the host they started on, and stop/cleanup always targets that host.
 
 Deleting a server is blocked while it has running sessions. Deleting it
@@ -171,7 +171,7 @@ output excerpts, screenshots, lab server, session ids) into
 ### Instructor review
 
 Instructors open **Lab submissions** (`/instructor/lab-submissions`). The API
-only returns submissions whose `instructor_id` is that instructor — there is no
+only returns submissions whose `instructor_id` is that instructor. There is no
 client-side filtering and no cross-instructor visibility.
 
 - **Approve** → `approved` (final).
@@ -273,7 +273,7 @@ Generated labs only use tooling that exists in `cyberita/lab-runtime:1.0`
 (coreutils, procps, iproute2, nmap, ping, file, grep, awk, sha256sum, python3).
 Starter data is shipped through `initial_files` (for example
 `practice/access.log` for log analysis), so a lab works without internet access.
-Those are ordinary files inside the real container — nothing about the runtime is
+Those are ordinary files inside the real container. Nothing about the runtime is
 simulated. Steps are verified against real command output inside the container.
 
 The same blueprints are used for practice labs, and the practice shell implements

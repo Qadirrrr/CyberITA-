@@ -227,7 +227,7 @@ export default function SubjectModeratorDashboard() {
                           {course.category || 'Uncategorised'} · {course.status}
                         </p>
                       </td>
-                      <td className="px-3 py-3 text-[11px] text-slate-400">{course.instructor_name || '—'}</td>
+                      <td className="px-3 py-3 text-[11px] text-slate-400">{course.instructor_name || '-'}</td>
                       <td className="px-3 py-3 text-[11px] text-slate-300">{course.learners}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1.5">

@@ -379,7 +379,7 @@ export default function AdminCoursesPage() {
                       <td className="whitespace-nowrap px-3 py-3">
                         <Badge tone={statusTone[course.status] ?? 'slate'}>{course.status}</Badge>
                       </td>
-                      <td className="px-3 py-3 text-[11px] text-slate-400">{course.category || '—'}</td>
+                      <td className="px-3 py-3 text-[11px] text-slate-400">{course.category || '-'}</td>
                       <td className="px-3 py-3 text-[11px] tabular-nums text-slate-300">{course.enrolled_count}</td>
                       <td className="px-3 py-3 text-[11px] tabular-nums text-slate-300">{course.completed_count}</td>
                       <td className="px-3 py-3">

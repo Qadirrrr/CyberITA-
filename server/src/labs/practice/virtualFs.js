@@ -106,14 +106,14 @@ export const defaultFs = () => ({
       student: dir(
         {
           'welcome.txt': file(
-            'Welcome to your CyberITA+ practice terminal.\nThis shell is simulated in-process — nothing leaves the browser session.\nType "help" for the command reference.\n',
+            'Welcome to your CyberITA+ practice terminal.\nThis shell is simulated in-process. Nothing leaves the browser session.\nType "help" for the command reference.\n',
             'rw-r--r--',
             'student'
           ),
           notes: dir({}, 'rwxr-xr-x', 'student'),
           scripts: dir({}, 'rwxr-xr-x', 'student'),
           '.bashrc': file(
-            '# ~/.bashrc — CyberITA+ practice profile\nexport PS1="\\u@\\h:\\w# "\nalias ll="ls -alF"\nalias la="ls -A"\n',
+            '# ~/.bashrc: CyberITA+ practice profile\nexport PS1="\\u@\\h:\\w# "\nalias ll="ls -alF"\nalias la="ls -A"\n',
             'rw-r--r--',
             'student'
           ),

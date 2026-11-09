@@ -350,8 +350,8 @@ export default function LabEditorPage() {
               }))}
               hint={LAB_MODES[form.labMode]?.description}
             >
-              <option value="practice">Guided practice — steps, hints and automatic verification</option>
-              <option value="real">Real assessment — question only, screenshot evidence</option>
+              <option value="practice">Guided practice: steps, hints and automatic verification</option>
+              <option value="real">Real assessment: question only, screenshot evidence</option>
             </Select>
           </div>
           <Input label="Title" value={form.title} onChange={update('title')} required />

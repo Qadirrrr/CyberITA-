@@ -370,8 +370,8 @@ export default function ManageLabsPage() {
               }))}
               hint={LAB_MODES[modal.labMode]?.description}
             >
-              <option value="practice">Guided practice — steps, hints and automatic verification</option>
-              <option value="real">Real assessment — question only, screenshot evidence</option>
+              <option value="practice">Guided practice: steps, hints and automatic verification</option>
+              <option value="real">Real assessment: question only, screenshot evidence</option>
             </Select>
             <Input label="Lab title" value={modal.title} onChange={(event) => setModal((current) => ({ ...current, title: event.target.value }))} required />
             <Textarea label="Summary" rows={2} value={modal.summary} onChange={(event) => setModal((current) => ({ ...current, summary: event.target.value }))} />
@@ -390,7 +390,7 @@ export default function ManageLabsPage() {
                   onChange={(event) => setModal((current) => ({ ...current, taskBrief: event.target.value }))}
                   required
                   placeholder={'## Your task\nInvestigate the suspicious login attempts and report the attacking IP, the number of attempts and whether any succeeded.'}
-                  hint="Learners only see this question — no steps or hints."
+                  hint="Learners only see this question. No steps or hints."
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
@@ -483,8 +483,8 @@ export default function ManageLabsPage() {
               }))}
               hint={LAB_MODES[autoModal.labMode]?.description}
             >
-              <option value="practice">Guided practice — steps, hints and automatic verification</option>
-              <option value="real">Real assessment — question only, screenshot evidence</option>
+              <option value="practice">Guided practice: steps, hints and automatic verification</option>
+              <option value="real">Real assessment: question only, screenshot evidence</option>
             </Select>
             <Input
               label="Lab title / topic"

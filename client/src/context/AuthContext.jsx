@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (payload) => {
     const { data } = await api.post('/auth/register', payload);
-    // Registration no longer issues a session — the account must be email-verified
+    // Registration no longer issues a session - the account must be email-verified
     // before the user can sign in.  We just return the verification metadata so
     // the caller (RegisterPage) can redirect to /login with the right banner.
     return data;

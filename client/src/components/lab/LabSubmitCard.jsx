@@ -96,7 +96,7 @@ export default function LabSubmitCard({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <p className={`text-sm font-semibold ${approved ? 'text-emerald-200' : 'text-amber-200'}`}>
-                  {approved ? 'Lab approved by your instructor' : 'Submitted — awaiting instructor review'}
+                  {approved ? 'Lab approved by your instructor' : 'Submitted, awaiting instructor review'}
                 </p>
                 {status && <Badge tone={status.tone}>{status.label}</Badge>}
               </div>

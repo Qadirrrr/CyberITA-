@@ -8,7 +8,7 @@ const HOME = '/home/student';
 
 /**
  * ============================================================
- * PracticeLabProvider — container-less practice terminals
+ * PracticeLabProvider - container-less practice terminals
  * ============================================================
  * Practice labs (`labs.is_practice = true`) are warm-up labs that are not
  * graded and are not tied to a course. They must never consume a Docker

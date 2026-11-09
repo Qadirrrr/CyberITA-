@@ -76,7 +76,7 @@ export default function LoginPage() {
           Your account is ready.{' '}
           {verificationSent ? (
             <>
-              We emailed you a verification link — open it to verify your address.
+              We emailed you a verification link. Open it to verify your address.
             </>
           ) : (
             <>Sign in to continue.</>
@@ -112,7 +112,7 @@ export default function LoginPage() {
       {emailUnverified && (
         <Alert tone="warning" title="Email not verified" className="mb-5">
           Please verify your email before signing in.{' '}
-          We just re-sent a verification link to <strong>{form.email}</strong> — check your inbox
+          We just re-sent a verification link to <strong>{form.email}</strong>. Check your inbox
           (and spam folder). Or{' '}
           <Link
             to={`/verify-email?email=${encodeURIComponent(form.email)}`}

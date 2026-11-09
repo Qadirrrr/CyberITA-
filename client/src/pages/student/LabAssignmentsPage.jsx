@@ -229,7 +229,7 @@ export default function LabAssignmentsPage() {
                       {!item.session_id ? (
                         <div className="mt-3">
                           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            You have not started this lab yet. Start it once so your workspace is created — after
+                            You have not started this lab yet. Start it once so your workspace is created. After
                             that you can upload your screenshots here, even after the session ends, and submit them
                             for review.
                           </p>
@@ -243,7 +243,7 @@ export default function LabAssignmentsPage() {
                         <>
                           {item.session_status === 'running' && (
                             <p className="mt-3 text-[11px] leading-5 text-slate-500">
-                              Your latest session is still running — uploads attach to it, and submitting will end it.
+                              Your latest session is still running. Uploads attach to it, and submitting will end it.
                             </p>
                           )}
                           {panel.shots.length > 0 && (
@@ -296,7 +296,7 @@ export default function LabAssignmentsPage() {
                             <p className="text-[11px] leading-5 text-slate-500">
                               {remaining > 0
                                 ? `Attach ${remaining} more screenshot${remaining === 1 ? '' : 's'} to unlock submission.`
-                                : 'Your evidence is complete — submit it to your instructor for review.'}
+                                : 'Your evidence is complete. Submit it to your instructor for review.'}
                             </p>
                             <Button size="sm" onClick={() => submitFromPanel(item)} loading={panel.submitting} disabled={remaining > 0} className="gap-1.5">
                               <IconSend size={13} /> {item.submission_status === 'changes_requested' ? 'Resubmit for review' : 'Submit for review'}

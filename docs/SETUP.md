@@ -82,7 +82,7 @@ PASSWORD_RESET_TTL_MINUTES=60
   fallback for emails sent outside a request (e.g. background jobs) and should
   still be the public origin, e.g. `https://cyberita.example.com` or
   `http://203.0.113.10:4000`. If the link still times out, the port is blocked
-  by the host firewall / cloud security group — open it or serve the app on
+  by the host firewall / cloud security group. Open it or serve the app on
   80/443 through a reverse proxy.
 
 Security properties: tokens are random 32-byte values stored only as SHA-256
@@ -157,7 +157,7 @@ LAB_DOCKER_TIMEOUT_MS=180000
 
 > **Running the API as a service?** The lab runtime needs the Docker CLI, and services often start with a minimal `PATH`. The API looks for `docker` on `PATH` and then in `/usr/bin`, `/usr/local/bin`, `/snap/bin`, Homebrew and Docker Desktop locations. If your install is elsewhere, set `LAB_DOCKER_BINARY=/full/path/to/docker` in `server/.env`. `GET /api/labs/status` reports the binary it resolved (`dockerBinary`, `dockerBinarySource`), and the API logs a readiness line at startup.
 
-> Full runbook — install options on Windows (Docker Desktop vs docker-ce in WSL2), image contents, the admin readiness check and troubleshooting: **[docs/LABS.md](./LABS.md)**.
+> Full runbook: install options on Windows (Docker Desktop vs docker-ce in WSL2), image contents, the admin readiness check and troubleshooting: **[docs/LABS.md](./LABS.md)**.
 
 To use a remote Docker host, set `LAB_DOCKER_HOST=ssh://labuser@lab-host` and configure SSH key authentication for the API process. The SSH user must be allowed to use the Docker daemon.
 

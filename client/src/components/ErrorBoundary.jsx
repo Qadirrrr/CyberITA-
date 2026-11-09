@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
           </div>
           <h1 className="text-lg font-semibold text-slate-100">Something went wrong</h1>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            The page hit an unexpected error. Your work is saved on the server — reloading usually fixes this.
+            The page hit an unexpected error. Your work is saved on the server. Reloading usually fixes this.
           </p>
           <button
             type="button"

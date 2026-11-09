@@ -185,11 +185,11 @@ export default function AdminAuditLogsPage() {
                           {log.entity_id ? ` #${log.entity_id}` : ''}
                         </span>
                       ) : (
-                        '—'
+                        '-'
                       )}
                     </td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-400 max-w-xs truncate">
-                      {log.metadata ? JSON.stringify(log.metadata) : '—'}
+                      {log.metadata ? JSON.stringify(log.metadata) : '-'}
                     </td>
                   </tr>
                 ))}

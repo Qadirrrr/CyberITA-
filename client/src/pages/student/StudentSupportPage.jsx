@@ -45,7 +45,7 @@ const faqs = [
   {
     question: 'My lab terminal will not start. What should I do?',
     answer:
-      'Labs run in a real Docker container on the server. If the terminal will not start, send us a support request with the lab name, time and any error text you saw — the administrator can check the Docker engine.',
+      'Labs run in a real Docker container on the server. If the terminal will not start, send us a support request with the lab name, time and any error text you saw. The administrator can check the Docker engine.',
   },
   {
     question: 'Can I resubmit a lab assignment?',

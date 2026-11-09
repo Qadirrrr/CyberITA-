@@ -118,7 +118,7 @@ export default function LabDetailPage() {
   const isPractice = Boolean(lab.is_practice);
   const isReal = lab.lab_mode === 'real';
   const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
-  // Every lab — including open-to-all practice labs — needs a running Docker
+  // Every lab - including open-to-all practice labs - needs a running Docker
   // provider, so availability is required for all of them.
   const infrastructureReady = !labStatus || Boolean(labStatus.available);
   const offlineReason = 'This lab cannot start right now. Please try again later.';
@@ -235,7 +235,7 @@ export default function LabDetailPage() {
               {isReal
                 ? `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
                 : isPractice
-                  ? 'Runs in a real isolated Linux container. Not graded — start as many sessions as you like.'
+                  ? 'Runs in a real isolated Linux container. Not graded. Start as many sessions as you like.'
                   : 'Finish the required steps, then submit this lab assignment for instructor review.'}
             </p>
           </div>
@@ -397,7 +397,7 @@ export default function LabDetailPage() {
                         <div className="mt-2.5">
                           {state === 'changes' && (
                             <p className="mb-1.5 text-[11px] font-medium leading-4 text-rose-600 dark:text-rose-300">
-                              Your instructor requested changes — review the feedback, fix the work and resubmit.
+                              Your instructor requested changes. Review the feedback, fix the work and resubmit.
                             </p>
                           )}
                           <Button size="sm" onClick={() => submitSession(session)} loading={submittingId === session.id}>

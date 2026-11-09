@@ -242,12 +242,12 @@ export default function AdminContentPage() {
                       <p className="text-[10px] text-slate-500">{report.student_email}</p>
                     </td>
                     <td className="px-3 py-2.5 text-slate-300 max-w-[150px] truncate">{report.lab_title}</td>
-                    <td className="px-3 py-2.5 text-slate-400 max-w-[120px] truncate">{report.course_title || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-400 max-w-[120px] truncate">{report.course_title || '-'}</td>
                     <td className="px-3 py-2.5">
                       {report.max_score > 0 ? (
                         <Badge tone="brand">{report.score}/{report.max_score}</Badge>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-slate-600">-</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-slate-500">{timeAgo(report.created_at)}</td>

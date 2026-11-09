@@ -88,7 +88,7 @@ export default function PasteStepsModal({ open, onClose, labId, onImported }) {
       open={open}
       onClose={() => !importing && onClose?.()}
       title="Paste steps"
-      description="Paste a guide, checklist or notes. CyberITA+ extracts the steps deterministically — no AI service is used."
+      description="Paste a guide, checklist or notes. CyberITA+ extracts the steps deterministically. No AI service is used."
       size="xl"
       footer={
         <>

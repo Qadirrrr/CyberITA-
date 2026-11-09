@@ -248,7 +248,7 @@ export class PracticeShell {
   banner() {
     return [
       this.welcome,
-      'CyberITA+ practice terminal — a simulated Ubuntu shell that runs in-process.',
+      'CyberITA+ practice terminal. A simulated Ubuntu shell that runs in-process.',
       'Type "help" for the command reference, "exit" to leave the practice prompt.',
       '',
     ]
@@ -499,7 +499,7 @@ export class PracticeShell {
 
   cmdHelp() {
     return [
-      'CyberITA+ practice shell — supported commands',
+      'CyberITA+ practice shell: supported commands',
       '',
       '  Files      pwd  cd  ls  cat  head  tail  touch  mkdir  rm  cp  mv  find  tree',
       '  Inspect    stat  file  wc  du  df  tree  which  man',
@@ -511,7 +511,7 @@ export class PracticeShell {
       '  Session    clear  exit',
       '',
       'Pipelines (|), redirection (> and >>), and && / ; chaining are supported.',
-      'Everything runs in a private, in-process filesystem — no container and no network traffic.',
+      'Everything runs in a private, in-process filesystem. No container and no network traffic.',
     ].join('\n');
   }
 
@@ -1359,7 +1359,7 @@ export class PracticeShell {
 
   cmdMan(args) {
     if (!args[0]) return 'What manual page do you want?';
-    return `${args[0].toUpperCase()}(1)\t\tUser Commands\t\t${args[0].toUpperCase()}(1)\n\nNAME\n    ${args[0]} — simulated manual page for the CyberITA+ practice terminal.\n\nDESCRIPTION\n    See the lab instructions for the expected usage. Run "help" for the full command list.`;
+    return `${args[0].toUpperCase()}(1)\t\tUser Commands\t\t${args[0].toUpperCase()}(1)\n\nNAME\n    ${args[0]} - simulated manual page for the CyberITA+ practice terminal.\n\nDESCRIPTION\n    See the lab instructions for the expected usage. Run "help" for the full command list.`;
   }
 
   cmdLsbRelease() {

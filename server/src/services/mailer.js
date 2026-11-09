@@ -127,7 +127,7 @@ export async function sendPasswordResetEmail({ user, token, baseUrl }) {
       `Open this link to choose a new password: ${link}`,
       '',
       'The link expires in ' + Math.round(env.mail.resetTtlMinutes) + ' minute(s).',
-      'If this was not you, ignore this email — your password stays unchanged.',
+      'If this was not you, ignore this email. Your password stays unchanged.',
     ].join('\n'),
     html: layout(
       'Reset your password',

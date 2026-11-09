@@ -266,7 +266,7 @@ export default function AdminLabsPage() {
           <div>
             <h2 className="font-display text-base font-semibold text-white">Runtime readiness</h2>
             <p className="mt-1 text-[11px] text-slate-500">
-              Provisions a real throwaway container, runs a command as UID 1000 and cleans it up — proving labs work end to end.
+              Provisions a real throwaway container, runs a command as UID 1000 and cleans it up, proving labs work end to end.
             </p>
           </div>
           <Button size="sm" onClick={handleVerifyRuntime} loading={verifying}>
@@ -280,11 +280,11 @@ export default function AdminLabsPage() {
               label: 'Engine',
               value: dockerAvailable ? health?.infrastructure?.docker?.reason || 'Online' : 'Unavailable',
             },
-            { label: 'Default image', value: health?.infrastructure?.limits?.image || '—' },
-            { label: 'Session TTL', value: `${health?.infrastructure?.limits?.sessionTtlMinutes ?? '—'} min` },
+            { label: 'Default image', value: health?.infrastructure?.limits?.image || '-' },
+            { label: 'Session TTL', value: `${health?.infrastructure?.limits?.sessionTtlMinutes ?? '-'} min` },
             {
               label: 'Per-session limits',
-              value: `${health?.infrastructure?.limits?.memoryMb ?? '—'} MB · ${health?.infrastructure?.limits?.cpus ?? '—'} CPU · ${health?.infrastructure?.limits?.pidsLimit ?? '—'} PIDs`,
+              value: `${health?.infrastructure?.limits?.memoryMb ?? '-'} MB · ${health?.infrastructure?.limits?.cpus ?? '-'} CPU · ${health?.infrastructure?.limits?.pidsLimit ?? '-'} PIDs`,
             },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-3">

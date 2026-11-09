@@ -88,7 +88,7 @@ export default function LabSessionPage() {
         setData(response);
         setError('');
         // The steps are shown as one scrolling list, so the "current" step
-        // is always the first one still incomplete — completing a step
+        // is always the first one still incomplete. Completing a step
         // automatically moves the highlight (and the scroll) to the next.
         setActiveStepId(() => {
           const next =
@@ -223,7 +223,7 @@ export default function LabSessionPage() {
       if (images.length === 0) return;
       event.preventDefault();
       if (uploading) {
-        toast.error('A screenshot is still uploading — try pasting again in a moment.');
+        toast.error('A screenshot is still uploading. Try pasting again in a moment.');
         return;
       }
       const stepId = activeStepId ?? null;
@@ -271,7 +271,7 @@ export default function LabSessionPage() {
       message: isPractice
         ? 'Its container will be destroyed and you can start a fresh one any time.'
         : isRealLab
-          ? 'This terminal will close. Your screenshots and progress are saved — your complete lab report will appear on this page, ready to submit to your instructor.'
+          ? 'This terminal will close. Your screenshots and progress are saved. Your complete lab report will appear on this page, ready to submit to your instructor.'
           : 'You can start a new one later, but this terminal will close. Your verified steps and progress are saved.',
       confirmLabel: isPractice ? 'End session' : 'Stop session',
       cancelLabel: 'Keep working',
@@ -402,7 +402,7 @@ export default function LabSessionPage() {
     askConfirm({
       title: 'Exit the lab?',
       message:
-        'Your session keeps running and your work is saved — you can resume any time from the lab page. To end the session completely, use Stop instead.',
+        'Your session keeps running and your work is saved. You can resume any time from the lab page. To end the session completely, use Stop instead.',
       confirmLabel: 'Exit lab',
       cancelLabel: 'Stay in lab',
       onConfirm: leave,
@@ -533,7 +533,7 @@ export default function LabSessionPage() {
           </div>
         </div>
 
-        {/* Countdown — large and always in front, next to the lab title */}
+        {/* Countdown: large and always in front, next to the lab title */}
         <div className="hidden shrink-0 lg:block">
           <LabTimer
             size="lg"
@@ -593,7 +593,7 @@ export default function LabSessionPage() {
                 onClick={finishLab}
                 loading={stopping}
                 className="gap-1 rounded-xl border-0 bg-emerald-600 px-3 text-white shadow-sm shadow-emerald-500/20 hover:bg-emerald-500"
-                title="All required work is complete — end this lab now"
+                title="All required work is complete. End this lab now"
               >
                 <IconFlag size={13} /> Finish
               </Button>
@@ -667,10 +667,10 @@ export default function LabSessionPage() {
 
       {!isRealLab && !running && session.ended_reason === 'completed' && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
-          <Alert tone="success" title="Lab completed — nice work">
+          <Alert tone="success" title="Lab completed. Nice work">
             You finished this session with {endSummary}
             {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. Your progress is
-            saved — you can review it any time from the lab page.
+            saved. You can review it any time from the lab page.
           </Alert>
         </div>
       )}
@@ -679,7 +679,7 @@ export default function LabSessionPage() {
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <Alert tone="warning" title="Lab time is over">
             This session ended automatically when the lab timer reached zero. You had achieved {endSummary}
-            {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''} — that progress is
+            {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. That progress is
             saved. Start a new session to continue practising.
           </Alert>
         </div>
@@ -690,7 +690,7 @@ export default function LabSessionPage() {
           <Alert tone="info" title={session.ended_reason === 'submitted' ? 'Lab submitted' : 'Session ended'}>
             You ended this session with {endSummary}
             {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. Your progress is
-            saved — restart any time to keep going.
+            saved. Restart any time to keep going.
           </Alert>
         </div>
       )}
@@ -725,25 +725,25 @@ export default function LabSessionPage() {
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Started</dt>
                 <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                  {session.started_at ? new Date(session.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                  {session.started_at ? new Date(session.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
                 </dd>
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Ended</dt>
                 <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                  {session.ended_at ? new Date(session.ended_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                  {session.ended_at ? new Date(session.ended_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
                 </dd>
               </div>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Time used</dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">{timeUsedLabel || '—'}</dd>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">{timeUsedLabel || '-'}</dd>
               </div>
             </dl>
 
             <p className="px-5 pb-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
               You ended this session with <span className="font-semibold text-slate-800 dark:text-slate-100">{endSummary}</span>
               {timeUsedLabel ? <> in <span className="font-semibold text-slate-800 dark:text-slate-100">{timeUsedLabel}</span></> : ''}.
-              Review the report below — this is exactly what your instructor will receive when you submit.
+              Review the report below. This is exactly what your instructor will receive when you submit.
             </p>
 
             {data.lab?.task_brief && (
@@ -1067,14 +1067,14 @@ export default function LabSessionPage() {
                           </div>
                         ) : parts.commands.length > 0 ? (
                           <p className="text-[13px] leading-5 text-slate-500 dark:text-slate-400">
-                            Work this step out in the terminal. If you get stuck, open the hint below — it shows the exact command.
+                            Work this step out in the terminal. If you get stuck, open the hint below. It shows the exact command.
                           </p>
                         ) : (
                           <p className="text-[13px] text-slate-500">No instructions for this step.</p>
                         )}
                       </div>
 
-                      {/* Hint drawer — also holds the exact command, revealed only on demand */}
+                      {/* Hint drawer: also holds the exact command, revealed only on demand */}
                       {(step.hint || parts.commands.length > 0) && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-400/25 dark:bg-amber-400/[0.04]">
                           <button

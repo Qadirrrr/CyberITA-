@@ -209,17 +209,17 @@ export async function getLiveContainers(
     const hostStats = hostStatsCache.get(row.server_docker_host || '');
     const liveStat = hostStats ? hostStats.get(row.container_id) : null;
 
-    let cpu = '—';
-    let mem = '—';
-    let memPerc = '—';
-    let netIO = '—';
-    let blockIO = '—';
-    let pids = '—';
+    let cpu = '-';
+    let mem = '-';
+    let memPerc = '-';
+    let netIO = '-';
+    let blockIO = '-';
+    let pids = '-';
 
     if (row.status === 'running') {
       if (liveStat) {
         cpu = liveStat.cpu || '0.00%';
-        mem = liveStat.mem || '—';
+        mem = liveStat.mem || '-';
         memPerc = liveStat.memPerc || '0.00%';
         netIO = liveStat.netIO || '0B / 0B';
         blockIO = liveStat.blockIO || '0B / 0B';
@@ -365,7 +365,7 @@ export async function getContainerDetails(sessionId) {
     );
     events = eventRows;
   } catch {
-    // Table may not exist yet — return empty array gracefully
+    // Table may not exist yet - return empty array gracefully
   }
 
   return {

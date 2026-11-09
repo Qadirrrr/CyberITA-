@@ -174,7 +174,7 @@ router.post(
     const user = rows[0];
     await logActivity(user.id, 'account.registered');
     const verification = await deliverVerification(user, req);
-    // Do NOT issue a session here — the account must be verified before login.
+    // Do NOT issue a session here - the account must be verified before login.
     // We return a minimal payload so the client can redirect to /login with
     // the appropriate banner without leaking tokens for an unverified account.
     res.status(201).json({
@@ -224,7 +224,7 @@ router.post(
       // Silently re-send a fresh verification link so the user can unblock themselves.
       await deliverVerification(user, req);
       throw unauthorized(
-        'Please verify your email address before signing in. We just sent you a new verification link — check your inbox (and spam folder).'
+        'Please verify your email address before signing in. We just sent you a new verification link. Check your inbox (and spam folder).'
       );
     }
 

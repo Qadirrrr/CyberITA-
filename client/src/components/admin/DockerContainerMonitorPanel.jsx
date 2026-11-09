@@ -469,7 +469,7 @@ export default function DockerContainerMonitorPanel() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
                           <span title={c.containerId} className="cursor-help">
-                            {c.shortId || '—'}
+                            {c.shortId || '-'}
                           </span>
                           <button
                             type="button"
@@ -494,7 +494,7 @@ export default function DockerContainerMonitorPanel() {
                         {c.status === 'running' ? (
                           <span className="text-amber-300 font-semibold">{c.cpuUsage}</span>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-slate-600">-</span>
                         )}
                       </td>
 
@@ -503,12 +503,12 @@ export default function DockerContainerMonitorPanel() {
                         {c.status === 'running' ? (
                           <div>
                             <span className="text-slate-200 font-medium">{c.ramUsage}</span>
-                            {c.ramPerc !== '—' && (
+                            {c.ramPerc !== '-' && (
                               <span className="ml-1 text-[10px] text-slate-500">({c.ramPerc})</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-slate-600">-</span>
                         )}
                       </td>
 
@@ -665,7 +665,7 @@ export default function DockerContainerMonitorPanel() {
         <Modal
           open={inspectModal.open}
           onClose={() => setInspectModal((prev) => ({ ...prev, open: false }))}
-          title={`Container Details — ${inspectModal.data?.session?.containerId?.slice(0, 16) || 'Loading...'}`}
+          title={`Container Details: ${inspectModal.data?.session?.containerId?.slice(0, 16) || 'Loading...'}`}
           size="lg"
         >
           {inspectModal.loading || !inspectModal.data ? (
@@ -787,7 +787,7 @@ export default function DockerContainerMonitorPanel() {
         <Modal
           open={logsModal.open}
           onClose={() => setLogsModal((prev) => ({ ...prev, open: false }))}
-          title={`Container Logs — ${logsModal.containerId?.slice(0, 16)}`}
+          title={`Container Logs: ${logsModal.containerId?.slice(0, 16)}`}
           size="xl"
         >
           <div className="space-y-3">

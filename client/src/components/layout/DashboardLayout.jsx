@@ -678,7 +678,7 @@ export default function DashboardLayout() {
               </p>
               <div className="flex items-center gap-2">
                 {resendStatus === 'sent' && (
-                  <span className="text-xs text-emerald-700 dark:text-emerald-300">Email sent — check your inbox.</span>
+                  <span className="text-xs text-emerald-700 dark:text-emerald-300">Email sent. Check your inbox.</span>
                 )}
                 {resendStatus === 'dev' && (
                   <span className="text-xs text-amber-700 dark:text-amber-300">Verification link opened in a new tab.</span>

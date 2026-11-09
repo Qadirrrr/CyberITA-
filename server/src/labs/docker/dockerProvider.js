@@ -247,7 +247,7 @@ export class DockerLabProvider extends LabProvider {
   }
 
   /**
-   * Phase 1 — runs as root inside the container. It prepares the shared
+   * Phase 1: runs as root inside the container. It prepares the shared
    * `student` account (UID 1000, used by the workspace phase) and creates a
    * per-session account with the learner's own name and UID 0. UID 0 gives the
    * learner full permission to install packages and use real tooling, while
@@ -300,7 +300,7 @@ export class DockerLabProvider extends LabProvider {
   }
 
   /**
-   * Phase 2 — runs as the unprivileged student (UID/GID 1000), the owner of
+   * Phase 2: runs as the unprivileged student (UID/GID 1000), the owner of
    * the home directory, exactly like every terminal command. Files created
    * here are owned by 1000 automatically, so no privileged chown is needed.
    */

@@ -28,7 +28,7 @@ export async function ensureDatabase(dbName = env.db.name) {
     }
   } catch (err) {
     // Maintenance DB 'postgres' might not be accessible if custom DB user is used.
-    // That's normal — the target database itself is already created.
+    // That's normal - the target database itself is already created.
   }
 }
 

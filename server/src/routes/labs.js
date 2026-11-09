@@ -385,7 +385,7 @@ router.get(
         null;
       myProgress = await getUserLabProgress(req.user.id, lab);
       // Per-step ticks for the detail page: mark the steps this student
-      // completed in their best session — the same session the progress
+      // completed in their best session - the same session the progress
       // percentage above is based on, so the ticks and the % always agree.
       const { rows: bestRows } = await query(
         `SELECT s.id FROM lab_sessions s

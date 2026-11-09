@@ -9,7 +9,7 @@ import { notify, recordActivity } from '../utils/activity.js';
 import { generateLab } from '../services/labGenerator.js';
 
 /**
- * Content Studio — one topic, a complete practical module.
+ * Content Studio - one topic, a complete practical module.
  *
  * CyberITA+ is lab-only: every topic becomes a hands-on lab with verified
  * steps. The lab can be attached to one of the instructor's courses (as a lab

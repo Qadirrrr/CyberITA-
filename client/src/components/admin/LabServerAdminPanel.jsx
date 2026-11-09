@@ -302,7 +302,7 @@ export default function LabServerAdminPanel() {
                                   )}
                                   <span className={check.ok ? 'text-slate-400' : 'text-rose-300'}>
                                     {check.label}
-                                    {check.detail ? ` — ${check.detail}` : ''}
+                                    {check.detail ? `: ${check.detail}` : ''}
                                   </span>
                                 </div>
                               ))}
@@ -312,7 +312,7 @@ export default function LabServerAdminPanel() {
                         <td className="px-3 py-3">
                           <span className="font-mono text-[11px] text-slate-400">
                             {server.server_type === 'remote-agent'
-                              ? `Agent: ${server.agent_url || '—'}`
+                              ? `Agent: ${server.agent_url || '-'}`
                               : (server.docker_host || 'Local daemon (default)')}
                           </span>
                           {server.server_type === 'remote-agent' && (
@@ -596,9 +596,9 @@ export default function LabServerAdminPanel() {
             value={form.status}
             onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
           >
-            <option value="active">Active — accepts new sessions</option>
-            <option value="maintenance">Maintenance — refuse new sessions</option>
-            <option value="disabled">Disabled — refuse new sessions</option>
+            <option value="active">Active: accepts new sessions</option>
+            <option value="maintenance">Maintenance: refuse new sessions</option>
+            <option value="disabled">Disabled: refuse new sessions</option>
           </Select>
           <Textarea
             label="Description"

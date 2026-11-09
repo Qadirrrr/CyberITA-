@@ -367,7 +367,7 @@ export default function AdminSystemPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-slate-200">
-                    {session.lab_title} — {session.user_name}
+                    {session.lab_title} · {session.user_name}
                   </p>
                   <p className="text-[10px] text-slate-500">
                     {session.user_email} · Provider: {session.provider} · {timeAgo(session.started_at)}

@@ -71,7 +71,7 @@ export class DockerTerminal {
       `command=$(printf '%s' "$LAB_COMMAND_B64" | base64 -d)`,
       `cd -- "$cwd" || exit 1`,
       // Allocate a real PTY inside the container via `script(1)` so commands
-      // (apt, vim, less, top ...) see a proper terminal — no "not a terminal"
+      // (apt, vim, less, top ...) see a proper terminal - no "not a terminal"
       // warnings and full interactive rendering in the web xterm.
       `exec script -qec "$command" /dev/null`,
     ].join('\n');
