@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
 import LabTimer from '../../components/lab/LabTimer';
-import { Alert, Badge, Button, ProgressBar } from '../../components/ui';
+import { Alert, Badge, Button, Modal, ProgressBar } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -59,6 +59,16 @@ export default function LabSessionPage() {
   const [starting, setStarting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // In-app confirmation popup (replaces the browser's window.confirm, which
+  // shows the raw server IP and looks nothing like the product).
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const askConfirm = (dialog) => setConfirmDialog(dialog);
+  const closeConfirm = () => setConfirmDialog(null);
+  const runConfirmed = async () => {
+    const action = confirmDialog?.onConfirm;
+    setConfirmDialog(null);
+    if (action) await action();
+  };
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   const isRealLab = data?.lab?.lab_mode === 'real';
@@ -227,15 +237,22 @@ export default function LabSessionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, data, error, activeStepId, uploading, sessionId]);
 
-  const deleteScreenshot = async (screenshotId) => {
-    if (!window.confirm('Remove this screenshot from your evidence?')) return;
-    try {
-      await api.delete(`/labs/screenshots/${screenshotId}`);
-      setData((current) => ({ ...current, screenshots: current.screenshots.filter((shot) => shot.id !== screenshotId) }));
-      toast.success('Screenshot removed.');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not remove that screenshot.'));
-    }
+  const deleteScreenshot = (screenshotId) => {
+    askConfirm({
+      title: 'Remove screenshot?',
+      message: 'Remove this screenshot from your evidence? This cannot be undone.',
+      confirmLabel: 'Remove',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/labs/screenshots/${screenshotId}`);
+          setData((current) => ({ ...current, screenshots: current.screenshots.filter((shot) => shot.id !== screenshotId) }));
+          toast.success('Screenshot removed.');
+        } catch (err) {
+          toast.error(getErrorMessage(err, 'Could not remove that screenshot.'));
+        }
+      },
+    });
   };
 
   const markComplete = async (step) => {
@@ -248,39 +265,51 @@ export default function LabSessionPage() {
     }
   };
 
-  const stopSession = async () => {
-    if (
-      !window.confirm(
-        isPractice
-          ? 'End this practice session? Its container will be destroyed and you can start a fresh one any time.'
-          : 'Stop this lab session? You can start a new one later, but this terminal will close.'
-      )
-    )
-      return;
-    setStopping(true);
-    try {
-      await api.post(`/labs/sessions/${sessionId}/stop`);
-      toast.info(isPractice ? 'Practice session ended.' : 'Lab session stopped.');
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not stop the session.'));
-    } finally {
-      setStopping(false);
-    }
+  const stopSession = () => {
+    askConfirm({
+      title: isPractice ? 'End practice session?' : 'Stop this lab session?',
+      message: isPractice
+        ? 'Its container will be destroyed and you can start a fresh one any time.'
+        : isRealLab
+          ? 'This terminal will close. Your screenshots and progress are saved — your complete lab report will appear on this page, ready to submit to your instructor.'
+          : 'You can start a new one later, but this terminal will close. Your verified steps and progress are saved.',
+      confirmLabel: isPractice ? 'End session' : 'Stop session',
+      cancelLabel: 'Keep working',
+      tone: 'danger',
+      onConfirm: async () => {
+        setStopping(true);
+        try {
+          await api.post(`/labs/sessions/${sessionId}/stop`);
+          toast.info(isPractice ? 'Practice session ended.' : 'Lab session stopped.');
+          await load({ silent: true });
+        } catch (err) {
+          toast.error(getErrorMessage(err, 'Could not stop the session.'));
+        } finally {
+          setStopping(false);
+        }
+      },
+    });
   };
 
-  const finishLab = async () => {
-    if (!window.confirm('All required work is complete. End this lab session now?')) return;
-    setStopping(true);
-    try {
-      await api.post(`/labs/sessions/${sessionId}/stop`, { reason: 'completed' });
-      toast.success('Lab completed. Your session has ended.');
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not end the lab session.'));
-    } finally {
-      setStopping(false);
-    }
+  const finishLab = () => {
+    askConfirm({
+      title: 'End this lab session?',
+      message: 'All required work is complete. End this lab session now? Your results are saved.',
+      confirmLabel: 'End lab',
+      cancelLabel: 'Keep working',
+      onConfirm: async () => {
+        setStopping(true);
+        try {
+          await api.post(`/labs/sessions/${sessionId}/stop`, { reason: 'completed' });
+          toast.success('Lab completed. Your session has ended.');
+          await load({ silent: true });
+        } catch (err) {
+          toast.error(getErrorMessage(err, 'Could not end the lab session.'));
+        } finally {
+          setStopping(false);
+        }
+      },
+    });
   };
 
   const handleTimeUp = useCallback(async () => {
@@ -333,31 +362,51 @@ export default function LabSessionPage() {
     const message = isRealLab
       ? `Submit this lab with ${data.screenshots.length} screenshot evidence file${data.screenshots.length === 1 ? '' : 's'} for instructor review?`
       : 'Submit this completed lab assignment for instructor review?';
-    if (!window.confirm(message)) return;
-    setSubmitting(true);
-    try {
-      const form = new FormData();
-      form.append('note', isRealLab
-        ? 'Submitted from the real lab session with screenshot evidence.'
-        : 'Submitted from the completed lab session.');
-      await api.post(`/labs/sessions/${sessionId}/submit`, form);
-      toast.success('Lab assignment submitted for instructor review.');
-      await load({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not submit this lab assignment.'));
-    } finally {
-      setSubmitting(false);
-    }
+    askConfirm({
+      title: 'Submit lab for review?',
+      message,
+      confirmLabel: 'Submit lab',
+      onConfirm: async () => {
+        setSubmitting(true);
+        try {
+          const form = new FormData();
+          form.append('note', isRealLab
+            ? 'Submitted from the real lab session with screenshot evidence.'
+            : 'Submitted from the completed lab session.');
+          await api.post(`/labs/sessions/${sessionId}/submit`, form);
+          toast.success('Lab assignment submitted for instructor review.');
+          await load({ silent: true });
+        } catch (err) {
+          toast.error(getErrorMessage(err, 'Could not submit this lab assignment.'));
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
   };
 
   const handleExit = () => {
-    if (window.opener) {
-      window.close();
-    } else if (data?.session?.lab_id) {
-      navigate(`/labs/${data.session.lab_id}`);
-    } else {
-      navigate('/student/labs');
+    const leave = () => {
+      if (window.opener) {
+        window.close();
+      } else if (data?.session?.lab_id) {
+        navigate(`/labs/${data.session.lab_id}`);
+      } else {
+        navigate('/student/labs');
+      }
+    };
+    if (!running) {
+      leave();
+      return;
     }
+    askConfirm({
+      title: 'Exit the lab?',
+      message:
+        'Your session keeps running and your work is saved — you can resume any time from the lab page. To end the session completely, use Stop instead.',
+      confirmLabel: 'Exit lab',
+      cancelLabel: 'Stay in lab',
+      onConfirm: leave,
+    });
   };
 
   if (loading) {
@@ -429,6 +478,25 @@ export default function LabSessionPage() {
         className="hidden"
         onChange={onFileSelected}
       />
+
+      <Modal
+        open={Boolean(confirmDialog)}
+        onClose={closeConfirm}
+        title={confirmDialog?.title || 'Are you sure?'}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeConfirm}>
+              {confirmDialog?.cancelLabel || 'Cancel'}
+            </Button>
+            <Button variant={confirmDialog?.tone === 'danger' ? 'danger' : 'primary'} onClick={runConfirmed}>
+              {confirmDialog?.confirmLabel || 'Confirm'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{confirmDialog?.message}</p>
+      </Modal>
 
       <header className="z-30 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-1.5 dark:border-white/10 dark:bg-night-950">
         <div className="flex min-w-0 items-center gap-3">
