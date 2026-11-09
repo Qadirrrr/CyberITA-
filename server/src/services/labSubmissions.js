@@ -155,21 +155,10 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
   }
 
   if (lab.lab_mode === 'real') {
-    // Real labs are graded on evidence, not on guided steps: the learner must
-    // attach the minimum number of screenshots before submitting.
-    const minEvidence = Math.max(1, Number(lab.min_evidence ?? 1));
-    const { rows: evidenceRows } = await query(
-      'SELECT COUNT(*)::int AS total FROM screenshots WHERE session_id = $1',
-      [session.id]
-    );
-    const attached = evidenceRows[0]?.total ?? 0;
-    if (attached < minEvidence) {
-      const missing = minEvidence - attached;
-      throw badRequest(
-        `Add at least ${missing} more screenshot${missing === 1 ? '' : 's'} before submitting this lab ` +
-        `(${attached}/${minEvidence} attached).`
-      );
-    }
+    // Real labs are graded on evidence, not on guided steps. Students submit
+    // however much they completed: any number of screenshots may be sent, and
+    // the evidence snapshot records evidence_count against min_evidence so the
+    // instructor can see whether the submission is partial or complete.
   } else {
     const { rows: remainingRows } = await query(
       `SELECT COUNT(*)::int AS remaining FROM lab_steps s

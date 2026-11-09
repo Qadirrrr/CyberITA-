@@ -358,9 +358,11 @@ export default function LabSessionPage() {
   };
 
   const submitLabAssignment = async () => {
-    if (!data?.progress?.allRequiredCompleted || isPractice || data.submission?.status === 'approved') return;
+    if ((!isRealLab && !data?.progress?.allRequiredCompleted) || isPractice || data.submission?.status === 'approved') return;
+    const minEvidence = Math.max(1, data.progress?.minEvidence || data.lab?.min_evidence || 1);
+    const shortfall = isRealLab ? Math.max(0, minEvidence - data.screenshots.length) : 0;
     const message = isRealLab
-      ? `Submit this lab with ${data.screenshots.length} screenshot evidence file${data.screenshots.length === 1 ? '' : 's'} for instructor review?`
+      ? `Submit this lab with ${data.screenshots.length} screenshot evidence file${data.screenshots.length === 1 ? '' : 's'} for instructor review?${shortfall > 0 ? ` That is ${shortfall} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
       : 'Submit this completed lab assignment for instructor review?';
     askConfirm({
       title: 'Submit lab for review?',
@@ -563,8 +565,8 @@ export default function LabSessionPage() {
                   size="xs"
                   onClick={submitLabAssignment}
                   loading={submitting}
-                  disabled={!progress.allRequiredCompleted}
-                  title={!progress.allRequiredCompleted ? 'Attach the required screenshots first' : undefined}
+                  disabled={!isRealLab && !progress.allRequiredCompleted}
+                  title={!isRealLab && !progress.allRequiredCompleted ? 'Finish the required work first' : undefined}
                   className="gap-1 bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20"
                 >
                   <IconSend size={12} /> Submit lab
@@ -766,7 +768,7 @@ export default function LabSessionPage() {
               </p>
               {data.screenshots.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
-                  No screenshots were attached in this session, so there is nothing to submit yet. Screenshots can
+                  No screenshots were attached in this session. You can still submit the report, but your instructor will see no screenshot evidence. Screenshots can
                   still be added from the evidence panel on the left.
                 </p>
               ) : (
@@ -806,11 +808,11 @@ export default function LabSessionPage() {
                 <p className="text-sm text-slate-600 dark:text-slate-300">
                   {progress.allRequiredCompleted
                     ? 'Your evidence is complete. Submit this report to your instructor for review.'
-                    : `Attach ${Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more screenshot${Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length) === 1 ? '' : 's'} to unlock submission.`}
+                    : `You have attached ${data.screenshots.length} of ${Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required screenshots. You can submit this report as it is, or attach more screenshots from the panel on the left first.`}
                 </p>
               )}
               {!data.submission || data.submission.status === 'changes_requested' ? (
-                <Button onClick={submitLabAssignment} loading={submitting} disabled={!progress.allRequiredCompleted} className="gap-1.5 bg-brand-600 text-white shadow-sm shadow-brand-500/20 hover:bg-brand-500">
+                <Button onClick={submitLabAssignment} loading={submitting} className="gap-1.5 bg-brand-600 text-white shadow-sm shadow-brand-500/20 hover:bg-brand-500">
                   <IconSend size={13} /> {data.submission?.status === 'changes_requested' ? 'Resubmit report' : 'Submit report to instructor'}
                 </Button>
               ) : null}
@@ -922,7 +924,7 @@ export default function LabSessionPage() {
                     <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
                       Attach at least {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} screenshot
                       {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1) === 1 ? '' : 's'} proving your work.
-                      You cannot submit the lab until the required evidence is attached.
+                      You can submit with fewer, but your instructor will see a partial submission.
                     </p>
                   ) : (
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -975,7 +977,6 @@ export default function LabSessionPage() {
                   <Button
                     onClick={submitLabAssignment}
                     loading={submitting}
-                    disabled={!progress.allRequiredCompleted}
                     className="w-full gap-1.5"
                   >
                     <IconSend size={13} /> Submit lab for review
@@ -984,8 +985,8 @@ export default function LabSessionPage() {
 
                 {!progress.allRequiredCompleted && !data.submission && (
                   <p className="text-center text-[11px] leading-5 text-slate-500">
-                    Attach {Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more
-                    screenshot{Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length) === 1 ? '' : 's'} to unlock submission.
+                    You can submit now with {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'}, or attach {Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more
+                    to reach the required {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)}.
                   </p>
                 )}
               </div>

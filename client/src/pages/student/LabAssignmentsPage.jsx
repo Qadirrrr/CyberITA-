@@ -83,7 +83,9 @@ export default function LabAssignmentsPage() {
 
   const submitFromPanel = async (item) => {
     if (!item.session_id) return;
-    if (!window.confirm(`Submit this lab with ${panel.shots.length} screenshot evidence file${panel.shots.length === 1 ? '' : 's'} for instructor review?`)) return;
+    const minEvidence = Math.max(1, item.min_evidence || 1);
+    const shortfall = Math.max(0, minEvidence - panel.shots.length);
+    if (!window.confirm(`Submit this lab with ${panel.shots.length} screenshot evidence file${panel.shots.length === 1 ? '' : 's'} for instructor review?${shortfall > 0 ? ` That is ${shortfall} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`)) return;
     setPanel((current) => ({ ...current, submitting: true, error: '' }));
     try {
       const form = new FormData();
@@ -295,10 +297,10 @@ export default function LabAssignmentsPage() {
                           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                             <p className="text-[11px] leading-5 text-slate-500">
                               {remaining > 0
-                                ? `Attach ${remaining} more screenshot${remaining === 1 ? '' : 's'} to unlock submission.`
+                                ? `You can submit now with ${panel.shots.length} screenshot${panel.shots.length === 1 ? '' : 's'}, or attach ${remaining} more to reach the required ${minEvidence}.`
                                 : 'Your evidence is complete. Submit it to your instructor for review.'}
                             </p>
-                            <Button size="sm" onClick={() => submitFromPanel(item)} loading={panel.submitting} disabled={remaining > 0} className="gap-1.5">
+                            <Button size="sm" onClick={() => submitFromPanel(item)} loading={panel.submitting} className="gap-1.5">
                               <IconSend size={13} /> {item.submission_status === 'changes_requested' ? 'Resubmit for review' : 'Submit for review'}
                             </Button>
                           </div>

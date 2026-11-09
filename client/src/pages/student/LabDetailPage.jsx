@@ -125,23 +125,25 @@ export default function LabDetailPage() {
   const requiredSteps = stepCounts?.required ?? 0;
 
   // Saved-work submission: an ended session can be sent for instructor review
-  // straight from this page when its work is complete. The server re-checks
-  // the same rules, so this state only drives what the student sees.
+  // straight from this page. Real labs may be submitted with partial evidence
+  // (the instructor sees the counts); guided labs must finish all required
+  // steps. The server applies the same rules, so this only drives the UI.
   const sessionSubmitState = (session) => {
     if (isPractice) return null;
     if (session.submission_status === 'approved') return 'approved';
     if (session.submission_status === 'submitted') return 'submitted';
     if (session.status === 'running' || session.status === 'error') return null;
     const eligible = isReal
-      ? (session.screenshot_count || 0) >= minEvidence
+      ? true
       : (session.completed_steps || 0) >= requiredSteps;
     if (!eligible) return 'ineligible';
     return session.submission_status === 'changes_requested' ? 'changes' : 'eligible';
   };
 
   const submitSession = async (session) => {
+    const missingShots = isReal ? Math.max(0, minEvidence - (session.screenshot_count || 0)) : 0;
     const message = isReal
-      ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?`
+      ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?${missingShots > 0 ? ` That is ${missingShots} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
       : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
     if (!window.confirm(message)) return;
     setSubmittingId(session.id);
@@ -380,7 +382,7 @@ export default function LabDetailPage() {
                       </div>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {isReal
-                          ? `${session.screenshot_count || 0} screenshot${session.screenshot_count === 1 ? '' : 's'} attached`
+                          ? `${session.screenshot_count || 0} of ${minEvidence} required screenshot${minEvidence === 1 ? '' : 's'} attached`
                           : `${session.completed_steps || 0} of ${requiredSteps} required steps · ${session.screenshot_count || 0} screenshot${session.screenshot_count === 1 ? '' : 's'}`}
                       </p>
                       {state === 'submitted' && (
