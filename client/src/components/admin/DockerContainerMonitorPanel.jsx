@@ -426,19 +426,19 @@ export default function DockerContainerMonitorPanel() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[1200px] text-left text-xs">
               <thead className="border-b border-white/5 bg-white/[0.02] text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Student</th>
-                  <th className="px-4 py-3 font-medium">Lab Title</th>
-                  <th className="px-4 py-3 font-medium">Container ID</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">CPU</th>
-                  <th className="px-4 py-3 font-medium">RAM Usage</th>
-                  <th className="px-4 py-3 font-medium">Duration</th>
-                  <th className="px-4 py-3 font-medium">Server</th>
-                  <th className="px-4 py-3 font-medium">Terminal</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Student</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Lab Title</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Container ID</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">CPU</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">RAM Usage</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Duration</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Server</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Terminal</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-slate-300">
@@ -447,7 +447,7 @@ export default function DockerContainerMonitorPanel() {
                   return (
                     <tr key={c.sessionId} className="hover:bg-white/[0.02] transition">
                       {/* Student */}
-                      <td className="px-4 py-3">
+                      <td className="max-w-[230px] px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar name={c.studentName} size="xs" />
                           <div className="min-w-0">
@@ -483,14 +483,14 @@ export default function DockerContainerMonitorPanel() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <Badge tone={statusTone[c.status] || 'slate'}>
                           {c.status}
                         </Badge>
                       </td>
 
                       {/* CPU */}
-                      <td className="px-4 py-3 font-mono text-[11px]">
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px]">
                         {c.status === 'running' ? (
                           <span className="text-amber-300 font-semibold">{c.cpuUsage}</span>
                         ) : (
@@ -499,7 +499,7 @@ export default function DockerContainerMonitorPanel() {
                       </td>
 
                       {/* RAM Usage */}
-                      <td className="px-4 py-3 text-[11px] font-mono">
+                      <td className="whitespace-nowrap px-4 py-3 text-[11px] font-mono">
                         {c.status === 'running' ? (
                           <div>
                             <span className="text-slate-200 font-medium">{c.ramUsage}</span>
@@ -545,7 +545,7 @@ export default function DockerContainerMonitorPanel() {
                       </td>
 
                       {/* Admin Actions */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             size="xs"

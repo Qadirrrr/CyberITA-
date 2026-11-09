@@ -269,15 +269,15 @@ export default function LabServerAdminPanel() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[1000px] text-left text-xs">
                 <thead className="border-b border-white/5 text-slate-400">
                   <tr>
-                    <th className="px-3 py-2.5 font-medium">Server</th>
-                    <th className="px-3 py-2.5 font-medium">Type / host</th>
-                    <th className="px-3 py-2.5 font-medium">Status</th>
-                    <th className="px-3 py-2.5 font-medium">Load</th>
-                    <th className="px-3 py-2.5 font-medium">Labs</th>
-                    <th className="px-3 py-2.5 text-right font-medium">Actions</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Server</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Type / host</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Status</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Load</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Labs</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-slate-300">
@@ -466,14 +466,14 @@ export default function LabServerAdminPanel() {
             <EmptyState icon={IconServer} title="No labs found" message="Create a lab first, then assign it a server." />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[900px] text-left text-xs">
                 <thead className="border-b border-white/5 text-slate-400">
                   <tr>
-                    <th className="px-3 py-2.5 font-medium">Lab</th>
-                    <th className="px-3 py-2.5 font-medium">Course</th>
-                    <th className="px-3 py-2.5 font-medium">Steps</th>
-                    <th className="px-3 py-2.5 font-medium">Sessions</th>
-                    <th className="px-3 py-2.5 font-medium">Assigned server</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Lab</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Course</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Steps</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Sessions</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Assigned server</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-slate-300">

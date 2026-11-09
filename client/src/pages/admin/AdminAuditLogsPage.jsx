@@ -147,14 +147,14 @@ export default function AdminAuditLogsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[900px] text-left text-xs">
               <thead className="border-b border-white/5 bg-white/[0.02] text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Timestamp</th>
-                  <th className="px-4 py-3 font-medium">Action</th>
-                  <th className="px-4 py-3 font-medium">User</th>
-                  <th className="px-4 py-3 font-medium">Target Entity</th>
-                  <th className="px-4 py-3 font-medium">Metadata / Details</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Timestamp</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Action</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">User</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Target Entity</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Metadata / Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-slate-300">

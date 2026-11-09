@@ -200,15 +200,15 @@ export default function LabSubmissionsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[1000px] text-left text-xs">
               <thead className="border-b border-white/5 bg-white/[0.02] text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Student</th>
-                  <th className="px-4 py-3 font-medium">Lab</th>
-                  <th className="px-4 py-3 font-medium">Course</th>
-                  <th className="px-4 py-3 font-medium">Submitted</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium text-right">Review</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Student</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Lab</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Course</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Submitted</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium text-right">Review</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-slate-300">
