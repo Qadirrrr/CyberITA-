@@ -270,10 +270,10 @@ export default function AdminCoursesPage() {
             <table className="w-full min-w-[600px] text-left text-xs">
               <thead className="border-b border-white/5 text-[10px] uppercase tracking-wider text-slate-500">
                 <tr>
-                  <th className="px-3 py-2">Student</th>
-                  <th className="px-3 py-2">Course</th>
-                  <th className="px-3 py-2">Progress</th>
-                  <th className="px-3 py-2">Issued</th>
+                  <th className="whitespace-nowrap px-3 py-2">Student</th>
+                  <th className="whitespace-nowrap px-3 py-2">Course</th>
+                  <th className="whitespace-nowrap px-3 py-2">Progress</th>
+                  <th className="whitespace-nowrap px-3 py-2">Issued</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -343,18 +343,18 @@ export default function AdminCoursesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-[1080px] text-left text-sm">
                 <thead className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">Course</th>
-                    <th className="px-3 py-2.5 font-medium">Instructor</th>
-                    <th className="px-3 py-2.5 font-medium">Status</th>
-                    <th className="px-3 py-2.5 font-medium">Category</th>
-                    <th className="px-3 py-2.5 font-medium">Enrolled</th>
-                    <th className="px-3 py-2.5 font-medium">Completed</th>
-                    <th className="px-3 py-2.5 font-medium">Avg. Progress</th>
-                    <th className="px-3 py-2.5 font-medium">Certs</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">Course</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Instructor</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Status</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Category</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Enrolled</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Completed</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Avg. Progress</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 font-medium">Certs</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -370,21 +370,21 @@ export default function AdminCoursesPage() {
                         {course.instructor_name ? (
                           <div>
                             <p className="text-xs text-slate-300">{course.instructor_name}</p>
-                            <p className="text-[10px] text-slate-500">{course.instructor_email}</p>
+                            <p className="max-w-[170px] truncate text-[10px] text-slate-500">{course.instructor_email}</p>
                           </div>
                         ) : (
                           <span className="text-[11px] text-slate-600">Unassigned</span>
                         )}
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="whitespace-nowrap px-3 py-3">
                         <Badge tone={statusTone[course.status] ?? 'slate'}>{course.status}</Badge>
                       </td>
                       <td className="px-3 py-3 text-[11px] text-slate-400">{course.category || '—'}</td>
                       <td className="px-3 py-3 text-[11px] tabular-nums text-slate-300">{course.enrolled_count}</td>
                       <td className="px-3 py-3 text-[11px] tabular-nums text-slate-300">{course.completed_count}</td>
                       <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1 w-16 overflow-hidden rounded-full bg-white/10">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <div className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-white/10">
                             <div
                               className="h-full rounded-full bg-brand-400"
                               style={{ width: `${Math.min(100, Number(course.avg_progress))}%` }}
@@ -397,7 +397,7 @@ export default function AdminCoursesPage() {
                       </td>
                       <td className="px-3 py-3 text-[11px] tabular-nums text-slate-400">{course.certificate_count}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                           <Button as={Link} to={`/instructor/courses/${course.id}`} size="sm" variant="ghost">
                             <IconEdit size={13} />
                           </Button>

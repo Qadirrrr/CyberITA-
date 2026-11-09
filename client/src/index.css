@@ -40,7 +40,11 @@
 
   td,
   th {
-    overflow-wrap: anywhere;
+    /* break-word, not anywhere: with 'anywhere' a cell's min-content is a
+       single character, so auto table layout crushes columns to a few
+       pixels (headers/badges wrapping letter by letter) instead of
+       letting the table's scroll wrapper scroll. */
+    overflow-wrap: break-word;
   }
 
   img,
