@@ -302,7 +302,7 @@ export default function ChatPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">{isInstructor ? 'Messages' : 'Chat with your instructors'}</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {isInstructor
               ? 'Reply to student questions and keep course support in one place.'
               : 'Ask questions, share screenshots or upload documents. Your instructor replies in the same thread.'}
@@ -319,11 +319,11 @@ export default function ChatPage() {
         {/* Conversation list */}
         <aside
           className={cx(
-            'w-full shrink-0 flex-col border-r border-white/10 bg-night-900/40 lg:flex lg:w-[320px]',
+            'w-full shrink-0 flex-col border-r border-slate-200 bg-white lg:flex lg:w-[320px] dark:border-white/10 dark:bg-night-900/40',
             selectedId ? 'hidden lg:flex' : 'flex'
           )}
         >
-          <div className="shrink-0 border-b border-white/10 p-3">
+          <div className="shrink-0 border-b border-slate-200 p-3 dark:border-white/10">
             <div className="relative">
               <IconSearch size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
@@ -345,8 +345,8 @@ export default function ChatPage() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="px-4 py-10 text-center">
-                <IconChatBubble size={26} className="mx-auto text-slate-600" />
-                <p className="mt-3 text-sm font-medium text-slate-300">
+                <IconChatBubble size={26} className="mx-auto text-slate-400 dark:text-slate-600" />
+                <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">
                   {conversations.length === 0 ? 'No conversations yet' : 'No matches'}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -361,7 +361,7 @@ export default function ChatPage() {
                 )}
               </div>
             ) : (
-              <ul className="divide-y divide-white/5">
+              <ul className="divide-y divide-slate-100 dark:divide-white/5">
                 {filteredConversations.map((conversation) => {
                   const active = conversation.id === selectedId;
                   const preview = conversation.last_message
@@ -374,24 +374,24 @@ export default function ChatPage() {
                         onClick={() => selectConversation(conversation.id)}
                         className={cx(
                           'flex w-full items-start gap-3 px-3 py-3 text-left transition',
-                          active ? 'bg-brand-400/[0.08]' : 'hover:bg-white/[0.03]'
+                          active ? 'bg-brand-50 dark:bg-brand-400/[0.08]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'
                         )}
                       >
                         <Avatar name={conversation.peer?.full_name} src={conversation.peer?.avatar_url} size="sm" />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center justify-between gap-2">
-                            <span className={cx('truncate text-sm', active ? 'font-semibold text-white' : 'font-medium text-slate-200')}>
+                            <span className={cx('truncate text-sm', active ? 'font-semibold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200')}>
                               {conversation.peer?.full_name}
                             </span>
                             <span className="shrink-0 text-[10px] text-slate-500">
                               {conversation.last_message ? timeAgo(conversation.last_message.created_at) : ''}
                             </span>
                           </span>
-                          <span className="mt-0.5 block truncate text-[10px] text-brand-300/80">
+                          <span className="mt-0.5 block truncate text-[10px] text-brand-600 dark:text-brand-300/80">
                             {conversation.course_title || roleLabel(conversation.peer?.role)}
                           </span>
                           <span className="mt-0.5 flex items-center gap-2">
-                            <span className={cx('min-w-0 flex-1 truncate text-[11px]', conversation.unread ? 'text-slate-300' : 'text-slate-500')}>
+                            <span className={cx('min-w-0 flex-1 truncate text-[11px]', conversation.unread ? 'font-medium text-slate-700 dark:text-slate-300' : 'text-slate-500')}>
                               {preview}
                             </span>
                             {conversation.unread > 0 && (
@@ -414,14 +414,14 @@ export default function ChatPage() {
         <section className={cx('min-w-0 flex-1 flex-col', selectedId ? 'flex' : 'hidden lg:flex')}>
           {selectedId && peer ? (
             <>
-              <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-night-900/50 px-3 py-3 sm:px-4">
+              <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 sm:px-4 dark:border-white/10 dark:bg-night-900/50">
                 <IconButton label="Back to conversations" className="lg:hidden" onClick={() => selectConversation(null)}>
                   <IconArrowLeft size={17} />
                 </IconButton>
                 <Avatar name={peer.full_name} src={peer.avatar_url} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-white">{peer.full_name}</p>
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{peer.full_name}</p>
                     <Badge tone={peer.role === 'instructor' ? 'brand' : 'accent'} className="!px-2 !py-0 !text-[9px]">
                       {roleLabel(peer.role)}
                     </Badge>
@@ -438,17 +438,17 @@ export default function ChatPage() {
                 </a>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto bg-night-950/30 px-3 py-4 sm:px-5">
+              <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100/70 px-3 py-4 sm:px-5 dark:bg-night-950/30">
                 {loadingMessages ? (
                   <div className="flex h-full items-center justify-center">
                     <Spinner className="h-6 w-6 text-brand-400" />
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-400/10 text-brand-300">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-400/10 dark:text-brand-300">
                       <IconChatBubble size={22} />
                     </span>
-                    <p className="mt-3 text-sm font-semibold text-white">Start the conversation</p>
+                    <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">Start the conversation</p>
                     <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">
                       Ask about a lesson, lab assignment or practical report. You can attach PDFs, documents and screenshots.
                     </p>
@@ -465,11 +465,11 @@ export default function ChatPage() {
                         <div key={message.id}>
                           {showDay && (
                             <div className="my-4 flex items-center gap-3">
-                              <span className="h-px flex-1 bg-white/5" />
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-600">
+                              <span className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-600">
                                 {dayLabel(message.created_at)}
                               </span>
-                              <span className="h-px flex-1 bg-white/5" />
+                              <span className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
                             </div>
                           )}
                           <div className={cx('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
@@ -486,13 +486,13 @@ export default function ChatPage() {
                                 className={cx(
                                   'rounded-2xl border px-3.5 py-2.5 text-sm leading-6 shadow-sm',
                                   isOwn
-                                    ? 'rounded-br-md border-brand-400/30 bg-brand-400/15 text-brand-50'
-                                    : 'rounded-bl-md border-white/10 bg-night-800/90 text-slate-200'
+                                    ? 'rounded-br-md border-brand-600 bg-brand-600 text-white dark:border-brand-400/30 dark:bg-brand-400/15 dark:text-brand-50'
+                                    : 'rounded-bl-md border-slate-200 bg-white text-slate-800 dark:border-white/10 dark:bg-night-800/90 dark:text-slate-200'
                                 )}
                               >
                                 {message.body && <p className="whitespace-pre-wrap break-words">{message.body}</p>}
                                 {message.attachment_path && (
-                                  <div className={cx(message.body && 'mt-2.5', 'overflow-hidden rounded-xl border border-white/10 bg-night-950/50')}>
+                                  <div className={cx(message.body && 'mt-2.5', 'overflow-hidden rounded-xl border', isOwn ? 'border-white/25 bg-white/10' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-night-950/50')}>
                                     {isImage ? (
                                       <a href={message.attachment_path} target="_blank" rel="noreferrer" className="block">
                                         <img
@@ -507,25 +507,25 @@ export default function ChatPage() {
                                       target="_blank"
                                       rel="noreferrer"
                                       download={message.attachment_name}
-                                      className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-white/5"
+                                      className={cx('flex items-center gap-3 px-3 py-2.5 transition', isOwn ? 'hover:bg-white/10' : 'hover:bg-slate-100 dark:hover:bg-white/5')}
                                     >
-                                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300">
+                                      <span className={cx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', isOwn ? 'bg-white/15 text-white' : 'bg-slate-200/70 text-slate-500 dark:bg-white/5 dark:text-slate-300')}>
                                         <IconFileText size={15} />
                                       </span>
                                       <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-xs font-medium text-slate-200">
+                                        <span className={cx('block truncate text-xs font-medium', isOwn ? 'text-white' : 'text-slate-700 dark:text-slate-200')}>
                                           {message.attachment_name}
                                         </span>
-                                        <span className="block text-[10px] text-slate-500">
+                                        <span className={cx('block text-[10px]', isOwn ? 'text-brand-100/90' : 'text-slate-500')}>
                                           {formatFileSize(message.attachment_size)}
                                         </span>
                                       </span>
-                                      <IconDownload size={14} className="shrink-0 text-slate-500" />
+                                      <IconDownload size={14} className={cx('shrink-0', isOwn ? 'text-brand-100' : 'text-slate-400 dark:text-slate-500')} />
                                     </a>
                                   </div>
                                 )}
                               </div>
-                              <p className={cx('mt-1 px-1 text-[9px] text-slate-600', isOwn ? 'text-right' : '')}>
+                              <p className={cx('mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-600', isOwn ? 'text-right' : '')}>
                                 {formatDateTime(message.created_at)}
                                 {isOwn && <span className="ml-1.5">{message.read_at ? '· Read' : '· Sent'}</span>}
                               </p>
@@ -539,12 +539,12 @@ export default function ChatPage() {
                 )}
               </div>
 
-              <form onSubmit={sendMessage} className="shrink-0 border-t border-white/10 bg-night-900/50 p-3 sm:p-4">
+              <form onSubmit={sendMessage} className="shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4 dark:border-white/10 dark:bg-night-900/50">
                 {file && (
-                  <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
-                    <IconFileText size={14} className="shrink-0 text-brand-300" />
+                  <div className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.03]">
+                    <IconFileText size={14} className="shrink-0 text-brand-600 dark:text-brand-300" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs text-slate-200">{file.name}</p>
+                      <p className="truncate text-xs text-slate-700 dark:text-slate-200">{file.name}</p>
                       <p className="text-[10px] text-slate-500">{formatFileSize(file.size)}</p>
                     </div>
                     <IconButton label="Remove attachment" onClick={clearFile}>
@@ -563,7 +563,7 @@ export default function ChatPage() {
                   />
                   <IconButton
                     label="Attach a document"
-                    className="mb-0.5 h-10 w-10 shrink-0 rounded-xl border border-white/10 bg-white/[0.03]"
+                    className="mb-0.5 h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <IconPaperclip size={17} />
@@ -586,9 +586,6 @@ export default function ChatPage() {
                     <IconSend size={15} /> <span className="hidden sm:inline">Send</span>
                   </Button>
                 </div>
-                <p className="mt-1.5 text-[10px] text-slate-600">
-                  Attach PDF, Office, text, archive or image files up to 8 MB.
-                </p>
               </form>
             </>
           ) : (
