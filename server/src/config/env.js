@@ -36,7 +36,7 @@ export const env = {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-me',
     accessTtl: parseTtl(process.env.ACCESS_TOKEN_TTL, '12h'),
-    refreshTtl: parseTtl(process.env.REFRESH_TOKEN_TTL, '7d'),
+    refreshTtl: parseTtl(process.env.REFRESH_TOKEN_TTL, '24h'),
     accessTtlSeconds: parseTtl(process.env.ACCESS_TOKEN_TTL, '12h'),
     cookieSecure: String(process.env.COOKIE_SECURE || 'false').toLowerCase() === 'true',
   },

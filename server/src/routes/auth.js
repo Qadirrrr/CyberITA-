@@ -100,7 +100,7 @@ function setRefreshCookie(res, token, remember = true) {
   res.cookie(
     REFRESH_COOKIE,
     token,
-    cookieOptions({ path: '/api/auth', maxAge: 7 * 24 * 60 * 60 * 1000, remember })
+    cookieOptions({ path: '/api/auth', maxAge: 24 * 60 * 60 * 1000, remember })
   );
 }
 
@@ -118,7 +118,7 @@ function setSessionCookie(res, remember = true) {
     sameSite: 'lax',
     secure: env.auth.cookieSecure,
     path: '/',
-    ...(remember ? { maxAge: 7 * 24 * 60 * 60 * 1000 } : {}),
+    ...(remember ? { maxAge: 24 * 60 * 60 * 1000 } : {}),
   });
 }
 

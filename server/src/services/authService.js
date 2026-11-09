@@ -45,7 +45,9 @@ const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex'
  */
 export async function issueRefreshToken(user, userAgent) {
   const secret = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  // 24 hours of inactivity: a refresh token dies a day after it is
+  // issued, and every rotation (triggered by activity) restarts the clock.
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const { rows } = await query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent)
      VALUES ($1, $2, $3, $4) RETURNING id`,
