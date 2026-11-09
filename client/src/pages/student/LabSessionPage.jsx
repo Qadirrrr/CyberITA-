@@ -597,7 +597,7 @@ export default function LabSessionPage() {
         </div>
       </div>
 
-      {!running && session.ended_reason === 'completed' && (
+      {!isRealLab && !running && session.ended_reason === 'completed' && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <Alert tone="success" title="Lab completed — nice work">
             You finished this session with {endSummary}
@@ -607,7 +607,7 @@ export default function LabSessionPage() {
         </div>
       )}
 
-      {!running && session.ended_reason === 'expired' && (
+      {!isRealLab && !running && session.ended_reason === 'expired' && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <Alert tone="warning" title="Lab time is over">
             This session ended automatically when the lab timer reached zero. You had achieved {endSummary}
@@ -617,13 +617,137 @@ export default function LabSessionPage() {
         </div>
       )}
 
-      {!running && (session.ended_reason === 'stopped' || session.ended_reason === 'submitted') && (
+      {!isRealLab && !running && (session.ended_reason === 'stopped' || session.ended_reason === 'submitted') && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <Alert tone="info" title={session.ended_reason === 'submitted' ? 'Lab submitted' : 'Session ended'}>
             You ended this session with {endSummary}
             {timeUsedLabel ? <> in <span className="font-semibold">{timeUsedLabel}</span></> : ''}. Your progress is
             saved — restart any time to keep going.
           </Alert>
+        </div>
+      )}
+
+      {/* Exit report (real labs): the complete record of the ended session,
+          shown to the student before they submit it to the instructor. */}
+      {isRealLab && !running && !isPractice && (
+        <div className="shrink-0 px-3 pt-3 sm:px-4">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Lab report">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-white/10 dark:bg-night-900/60">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
+                  <IconFileText size={17} />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Lab Report</h2>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {data.lab?.title} · generated when this session ended
+                  </p>
+                </div>
+              </div>
+              <Badge tone={session.ended_reason === 'completed' ? 'emerald' : session.ended_reason === 'expired' ? 'amber' : session.ended_reason === 'submitted' ? 'brand' : 'slate'}>
+                {session.ended_reason === 'completed' ? 'Completed' : session.ended_reason === 'expired' ? 'Time expired' : session.ended_reason === 'submitted' ? 'Submitted' : 'Ended'}
+              </Badge>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-4 px-5 py-4 lg:grid-cols-4">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Student</dt>
+                <dd className="mt-1 truncate text-sm font-medium text-slate-800 dark:text-slate-100">{student?.name || 'Student'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Started</dt>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                  {session.started_at ? new Date(session.started_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Ended</dt>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                  {session.ended_at ? new Date(session.ended_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Time used</dt>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">{timeUsedLabel || '—'}</dd>
+              </div>
+            </dl>
+
+            <p className="px-5 pb-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              You ended this session with <span className="font-semibold text-slate-800 dark:text-slate-100">{endSummary}</span>
+              {timeUsedLabel ? <> in <span className="font-semibold text-slate-800 dark:text-slate-100">{timeUsedLabel}</span></> : ''}.
+              Review the report below — this is exactly what your instructor will receive when you submit.
+            </p>
+
+            {data.lab?.task_brief && (
+              <div className="px-5 pb-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Task</p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/30">
+                  <div className="markdown max-w-none text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    <Markdown>{data.lab.task_brief}</Markdown>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="px-5 pb-5">
+              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <IconCamera size={11} /> Screenshot evidence ({data.screenshots.length})
+                <span className="font-normal normal-case tracking-normal text-slate-400">
+                  · {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required
+                </span>
+              </p>
+              {data.screenshots.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
+                  No screenshots were attached in this session, so there is nothing to submit yet. Screenshots can
+                  still be added from the evidence panel on the left.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {data.screenshots.map((shot, index) => (
+                    <figure key={shot.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-night-900/30">
+                      <a href={shot.file_path} target="_blank" rel="noreferrer" title="Open full screenshot">
+                        <img src={shot.file_path} alt={shot.original_name || `Screenshot ${index + 1}`} className="h-24 w-full object-cover" />
+                      </a>
+                      <figcaption className="px-2.5 py-2">
+                        <p className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{shot.original_name || `Screenshot ${index + 1}`}</p>
+                        {shot.note && <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{shot.note}</p>}
+                        {shot.created_at && (
+                          <p className="mt-0.5 text-[10px] text-slate-400">
+                            {new Date(shot.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                          </p>
+                        )}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-white/10 dark:bg-night-900/60">
+              {data.submission ? (
+                <p className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                  {data.submission.status === 'approved' ? (
+                    <><IconCheckCircle size={15} className="text-emerald-500" /> This report was submitted and <span className="font-semibold">approved</span> by your instructor.</>
+                  ) : data.submission.status === 'changes_requested' ? (
+                    <><IconClock size={15} className="text-amber-500" /> Your instructor requested changes{data.submission.instructor_feedback ? <>: <span className="font-medium">{data.submission.instructor_feedback}</span></> : '.'} Update your evidence, then submit again.</>
+                  ) : (
+                    <><IconClock size={15} className="text-amber-500" /> This report is <span className="font-semibold">submitted</span> and waiting for instructor review.</>
+                  )}
+                </p>
+              ) : (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {progress.allRequiredCompleted
+                    ? 'Your evidence is complete. Submit this report to your instructor for review.'
+                    : `Attach ${Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more screenshot${Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length) === 1 ? '' : 's'} to unlock submission.`}
+                </p>
+              )}
+              {!data.submission || data.submission.status === 'changes_requested' ? (
+                <Button onClick={submitLabAssignment} loading={submitting} disabled={!progress.allRequiredCompleted} className="gap-1.5 bg-brand-600 text-white shadow-sm shadow-brand-500/20 hover:bg-brand-500">
+                  <IconSend size={13} /> {data.submission?.status === 'changes_requested' ? 'Resubmit report' : 'Submit report to instructor'}
+                </Button>
+              ) : null}
+            </div>
+          </section>
         </div>
       )}
 
