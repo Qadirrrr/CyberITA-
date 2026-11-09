@@ -143,9 +143,12 @@ export async function getSubmissionForSession(sessionId) {
 }
 
 /**
- * Creates (or re-opens a "changes requested") submission for a finished
- * session. The completion check is enforced server-side, never trusted from
- * the client.
+ * Creates a submission for a finished session, or re-opens the student's
+ * "changes requested" submission for the same lab. A re-opened submission
+ * moves to the session being submitted, so a student who redoes the work in
+ * a fresh session resubmits cleanly instead of leaving a duplicate behind.
+ * The guided-lab completion check is enforced server-side, never trusted
+ * from the client.
  */
 export async function submitLabSession({ session, lab, user, note = '', file = null }) {
   if (session.status === 'error') throw badRequest('This lab session failed and cannot be submitted.');
@@ -171,12 +174,27 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
     }
   }
 
-  const existing = await getSubmissionForSession(session.id);
+  let existing = await getSubmissionForSession(session.id);
   if (existing && existing.status !== 'changes_requested') {
     throw badRequest('This lab session has already been submitted to your instructor.');
   }
   if (existing && existing.user_id !== user.id) {
     throw badRequest('This lab session belongs to another student.');
+  }
+
+  if (!existing) {
+    // The student may have redone the work in a fresh session after the
+    // instructor requested changes on an earlier one. Take that submission
+    // over (it moves to this session in the update below) instead of
+    // creating a second submission for the same lab.
+    const { rows: redoRows } = await query(
+      `SELECT * FROM lab_submissions
+        WHERE lab_id = $1 AND user_id = $2 AND status = 'changes_requested'
+        ORDER BY submitted_at DESC
+        LIMIT 1`,
+      [lab.id, user.id]
+    );
+    existing = redoRows[0] || null;
   }
 
   const evidence = await buildEvidence({
@@ -198,6 +216,7 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
          attachment_mime = COALESCE($4, attachment_mime),
          attachment_size = CASE WHEN $2::varchar IS NULL THEN attachment_size ELSE $5::int END,
          evidence = $6,
+         session_id = $8,
          status = 'submitted',
          instructor_feedback = '',
          reviewed_by = NULL,
@@ -206,7 +225,7 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
          updated_at = now()
        WHERE id = $7
        RETURNING *`,
-      [note, file?.path || null, file?.name || null, file?.mime || null, file?.size || 0, JSON.stringify(evidence), existing.id]
+      [note, file?.path || null, file?.name || null, file?.mime || null, file?.size || 0, JSON.stringify(evidence), existing.id, session.id]
     );
     submission = rows[0];
     if (file && existing.attachment_path && existing.attachment_path !== file.path) {

@@ -203,6 +203,7 @@ export default function LabAssignmentsPage() {
                       </div>
                     )}
                     {item.submission_status === 'changes_requested' && item.instructor_feedback && <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-400/20 bg-rose-400/[0.05] px-2.5 py-2 text-[11px] leading-5 text-rose-200"><IconRefresh size={12} className="mt-0.5 shrink-0" />Changes requested: {item.instructor_feedback}</p>}
+                    {item.submission_status === 'changes_requested' && <p className="mt-1.5 text-[11px] leading-5 text-slate-400">To fix it: start the lab again and redo the work in the new session, or add more screenshots below, then resubmit. Your new submission replaces the previous one.</p>}
                     {item.submitted_at && <p className="mt-2 text-[11px] text-slate-500">Submitted {timeAgo(item.submitted_at)}</p>}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
