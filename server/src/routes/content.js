@@ -38,7 +38,7 @@ const packSchema = z
 
 router.post(
   '/generate',
-  requireRole('admin', 'instructor'),
+  requireRole('instructor'),
   validateBody(packSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;

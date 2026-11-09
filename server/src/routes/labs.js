@@ -679,7 +679,7 @@ const generateLabSchema = z.object({
 
 router.post(
   '/generate',
-  requireRole('admin', 'instructor'),
+  requireRole('instructor'),
   validateBody(generateLabSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
@@ -830,7 +830,7 @@ router.post(
 
 router.post(
   '/',
-  requireRole('admin', 'instructor'),
+  requireRole('instructor'),
   validateBody(labSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;

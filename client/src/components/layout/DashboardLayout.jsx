@@ -122,7 +122,6 @@ const adminNavGroups = [
     label: 'Courses & Content',
     items: [
       { to: '/admin/courses', label: 'Courses & Enrollment', icon: IconBookOpen },
-      { to: '/instructor/studio', label: 'Content Studio', icon: IconLayers },
       { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
       { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
        { to: '/instructor/lab-submissions', label: 'Lab Submission Review', icon: IconCheckCircle },

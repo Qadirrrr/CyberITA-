@@ -204,6 +204,7 @@ export default function ManageLabsPage() {
             Build guided labs with steps and automatic verification, or question-only real labs reviewed from screenshot evidence.
           </p>
         </div>
+        {user?.role === 'instructor' && (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
@@ -227,6 +228,7 @@ export default function ManageLabsPage() {
             <IconPlus size={14} /> New lab
           </Button>
         </div>
+        )}
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -274,6 +276,7 @@ export default function ManageLabsPage() {
           title="No labs found"
           message="Create a lab, then add steps with expected commands or output patterns."
           action={
+            user?.role === 'instructor' ? (
             <Button
               size="sm"
               onClick={() =>
@@ -287,6 +290,7 @@ export default function ManageLabsPage() {
             >
               <IconPlus size={13} /> New lab
             </Button>
+            ) : undefined
           }
         />
       ) : (

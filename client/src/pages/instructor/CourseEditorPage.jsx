@@ -797,6 +797,7 @@ export default function CourseEditorPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500">Hands-on labs with a real Linux terminal and auto-verified steps.</p>
+            {user?.role === 'instructor' && (
             <Button
               size="sm"
               variant="secondary"
@@ -806,6 +807,7 @@ export default function CourseEditorPage() {
             >
               <IconPlus size={13} /> New lab
             </Button>
+            )}
           </div>
           {(data.labs || []).length === 0 ? (
             <EmptyState icon={IconTerminal} title="No labs" message="Create a lab and add guided, auto-verified steps." />
