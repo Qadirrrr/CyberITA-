@@ -725,21 +725,6 @@ export default function LabTerminal({
         className="terminal-body flex-1 min-h-0 bg-[#0a0e14]"
         style={{ padding: '8px 4px' }}
       />
-
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/5 bg-[#0d1117] px-3 py-1.5 text-[11px] text-zinc-500">
-        <span className="truncate font-mono">
-          {identity.name ? `${identity.name}${identity.id ? ` · student #${identity.id}` : ''} · ` : ''}
-          {practice ? 'practice container' : 'isolated container'} · session #{sessionId}
-          {busy ? ' · running…' : ''}
-        </span>
-        <span className="hidden shrink-0 items-center gap-2 lg:flex">
-          <span className="flex items-center gap-1">
-            <span className={`h-1.5 w-1.5 rounded-full ${mode === 'ws' ? 'bg-emerald-400' : mode === 'rest' ? 'bg-amber-400' : 'bg-zinc-500'}`} />
-            <span>{mode === 'ws' ? 'live' : mode === 'rest' ? 'rest' : mode}</span>
-          </span>
-          <span>Ctrl+R search · Ctrl+A/E start/end · Ctrl+U/W edit line · Ctrl+L clear · Ctrl+Shift+C copy</span>
-        </span>
-      </div>
     </div>
   );
 }
