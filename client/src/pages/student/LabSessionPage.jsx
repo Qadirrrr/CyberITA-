@@ -647,19 +647,6 @@ export default function LabSessionPage() {
                 </div>
               </div>
             </div>
-
-            {/* Overall Progress Bar */}
-            <div className="mt-3">
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Overall Progress</span>
-                <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-300">{Math.round(progress.percent)}%</span>
-              </div>
-              <ProgressBar
-                value={progress.percent}
-                tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
-                size="sm"
-              />
-            </div>
           </div>
           )}
 
@@ -865,7 +852,7 @@ export default function LabSessionPage() {
                               </span>
                             )}
                           </div>
-                          <h3 className="mt-0.5 font-display text-[15px] font-semibold leading-snug text-slate-900 dark:text-white">
+                          <h3 className="mt-0.5 font-display text-sm font-semibold leading-snug text-slate-900 dark:text-white">
                             {step.title}
                           </h3>
                         </div>
@@ -880,52 +867,59 @@ export default function LabSessionPage() {
                         )}
                       </div>
 
-                      {/* Instructions and commands */}
-                      <div className="mt-3">
+                      {/* Instructions (the exact command lives inside the hint drawer) */}
+                      <div className="mt-2.5">
                         {parts.text ? (
-                          <div className="markdown max-w-none text-sm leading-6 text-slate-700 dark:text-slate-300">
+                          <div className="markdown max-w-none text-[13px] leading-5 text-slate-700 dark:text-slate-300">
                             <Markdown>{parts.text}</Markdown>
                           </div>
-                        ) : null}
-                        {!parts.text && parts.commands.length === 0 && (
-                          <p className="text-sm text-slate-500">No instructions for this step.</p>
+                        ) : parts.commands.length > 0 ? (
+                          <p className="text-[13px] leading-5 text-slate-500 dark:text-slate-400">
+                            Work this step out in the terminal. If you get stuck, open the hint below — it shows the exact command.
+                          </p>
+                        ) : (
+                          <p className="text-[13px] text-slate-500">No instructions for this step.</p>
                         )}
-                        {parts.commands.map((command) => (
-                          <div key={command} className="terminal-surface mt-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-                            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Command to run</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyCmd(command)}
-                                className="inline-flex items-center gap-1 text-xs text-emerald-300 transition hover:text-white"
-                              >
-                                <IconCopy size={12} /> {copiedCmd ? 'Copied' : 'Copy'}
-                              </button>
-                            </div>
-                            <pre className="overflow-x-auto px-3 py-2.5 font-mono text-sm leading-6 text-emerald-300">
-                              {command}
-                            </pre>
-                          </div>
-                        ))}
                       </div>
 
-                      {/* Hint drawer */}
-                      {step.hint && (
+                      {/* Hint drawer — also holds the exact command, revealed only on demand */}
+                      {(step.hint || parts.commands.length > 0) && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-400/25 dark:bg-amber-400/[0.04]">
                           <button
                             type="button"
                             onClick={() => toggleHint(step.id)}
-                            className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm font-medium text-amber-800 transition hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-400/[0.06]"
+                            className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[13px] font-medium text-amber-800 transition hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-400/[0.06]"
                           >
                             <span className="flex items-center gap-2">
                               <IconChevronDown size={13} className={`transition-transform duration-200 ${hintOpen ? 'rotate-180' : ''}`} />
                               <span>Need a hint?</span>
                             </span>
-                            <span className="text-xs uppercase tracking-wider opacity-75">{hintOpen ? 'Hide' : 'Show'}</span>
+                            <span className="text-[11px] uppercase tracking-wider opacity-75">{hintOpen ? 'Hide' : 'Show'}</span>
                           </button>
                           {hintOpen && (
-                            <div className="border-t border-amber-200 p-3 text-sm leading-6 text-amber-950 dark:border-amber-400/15 dark:text-amber-100/90">
-                              <Markdown>{step.hint}</Markdown>
+                            <div className="border-t border-amber-200 p-3 dark:border-amber-400/15">
+                              {step.hint && (
+                                <div className="text-[13px] leading-5 text-amber-950 dark:text-amber-100/90">
+                                  <Markdown>{step.hint}</Markdown>
+                                </div>
+                              )}
+                              {parts.commands.map((command) => (
+                                <div key={command} className="terminal-surface mt-2.5 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 first:mt-0">
+                                  <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Command to run</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyCmd(command)}
+                                      className="inline-flex items-center gap-1 text-xs text-emerald-300 transition hover:text-white"
+                                    >
+                                      <IconCopy size={12} /> {copiedCmd ? 'Copied' : 'Copy'}
+                                    </button>
+                                  </div>
+                                  <pre className="overflow-x-auto px-3 py-2 font-mono text-[13px] leading-5 text-emerald-300">
+                                    {command}
+                                  </pre>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -946,7 +940,7 @@ export default function LabSessionPage() {
                               <IconCopy size={11} /> {copiedCmd ? 'Copied!' : 'Copy'}
                             </button>
                           </div>
-                          <div className="mt-1.5 break-words rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-2 font-mono text-sm text-emerald-300">
+                          <div className="mt-1.5 break-words rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-2 font-mono text-[13px] text-emerald-300">
                             # {step.command_used}
                           </div>
                         </div>
@@ -975,7 +969,7 @@ export default function LabSessionPage() {
                           <IconCamera size={11} /> Step evidence ({shots.length})
                         </p>
                         {shots.length === 0 ? (
-                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
+                          <p className="text-[13px] leading-5 text-slate-600 dark:text-slate-400">
                             {isPractice
                               ? 'Screenshots stay with this session as your own notes. Practice labs are not graded.'
                               : 'Terminal screenshots attached here are automatically included in your lab report.'}
