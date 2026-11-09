@@ -48,15 +48,15 @@ export default function VerifyCertificatePage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden border-b border-white/5">
+      <section className="relative overflow-hidden border-b border-slate-200/80 bg-slate-50/60 dark:border-white/5 dark:bg-transparent">
         <div className="container-page relative py-12 lg:py-16">
           <Badge tone="brand" className="mb-4">
             <IconShield size={13} /> Public verification
           </Badge>
-          <h1 className="max-w-2xl text-balance font-display text-3xl font-semibold sm:text-4xl">
+          <h1 className="max-w-2xl text-balance font-display text-3xl font-semibold text-slate-900 dark:text-white sm:text-4xl">
             Verify a CyberITA+ certificate
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400">
             Employers and institutions can confirm a certificate using its serial number. Verification is public and
             does not require an account.
           </p>
@@ -97,38 +97,38 @@ export default function VerifyCertificatePage() {
           )}
 
           {result && (
-            <Card className="mt-6 overflow-hidden border-emerald-400/25">
-              <div className="flex items-center gap-3 border-b border-emerald-400/20 bg-emerald-400/[0.07] px-6 py-4">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+            <Card className="mt-6 overflow-hidden border-emerald-500/40 shadow-lg shadow-emerald-500/5">
+              <div className="flex items-center gap-3 border-b border-emerald-500/20 bg-emerald-50 px-6 py-4 dark:border-emerald-400/20 dark:bg-emerald-400/[0.07]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300">
                   <IconCheckCircle size={22} />
                 </span>
                 <div>
-                  <p className="font-display text-lg font-semibold text-white">Certificate is valid</p>
-                  <p className="text-xs text-emerald-300/80">Serial {result.serial} · Issued by CyberITA+</p>
+                  <p className="font-display text-lg font-semibold text-slate-900 dark:text-white">Certificate is valid</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300/80">Serial {result.serial} · Issued by CyberITA+</p>
                 </div>
               </div>
               <div className="space-y-5 p-6">
                 <div>
                   <p className="text-xs uppercase tracking-wider text-slate-500">Awarded to</p>
-                  <p className="mt-1 font-display text-xl font-semibold text-white">{result.student_name}</p>
+                  <p className="mt-1 font-display text-xl font-semibold text-slate-900 dark:text-white">{result.student_name}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wider text-slate-500">For successfully completing</p>
-                  <p className="mt-1 text-base font-medium text-slate-200">{result.course_title}</p>
+                  <p className="mt-1 text-base font-medium text-slate-800 dark:text-slate-200">{result.course_title}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Badge tone="brand">{level?.label || result.level}</Badge>
                     <Badge tone="slate">{result.duration_hours} hours</Badge>
                     <Badge tone="emerald">Final progress {result.final_progress}%</Badge>
                   </div>
                 </div>
-                <div className="grid gap-4 border-t border-white/10 pt-4 text-sm sm:grid-cols-2">
+                <div className="grid gap-4 border-t border-slate-200 pt-4 text-sm dark:border-white/10 sm:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-slate-500">Issue date</p>
-                    <p className="mt-1 text-slate-300">{formatDate(result.issued_at)}</p>
+                    <p className="mt-1 text-slate-700 dark:text-slate-300">{formatDate(result.issued_at)}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wider text-slate-500">Verification status</p>
-                    <p className="mt-1 inline-flex items-center gap-1.5 text-emerald-300">
+                    <p className="mt-1 inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                       <IconCheckCircle size={14} /> Authentic record
                     </p>
                   </div>
@@ -139,19 +139,19 @@ export default function VerifyCertificatePage() {
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <Card className="p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <IconAward size={17} className="text-brand-400" /> For learners
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                <IconAward size={17} className="text-brand-600 dark:text-brand-400" /> For learners
               </div>
-              <p className="mt-2 text-xs leading-6 text-slate-400">
+              <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-400">
                 Find your serial in <Link to="/student/certificates" className="link">Certificates</Link> and share the
                 verification link on your CV or LinkedIn.
               </p>
             </Card>
             <Card className="p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <IconXCircle size={17} className="text-rose-400" /> Not sure it's genuine?
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                <IconXCircle size={17} className="text-rose-500 dark:text-rose-400" /> Not sure it's genuine?
               </div>
-              <p className="mt-2 text-xs leading-6 text-slate-400">
+              <p className="mt-2 text-xs leading-6 text-slate-600 dark:text-slate-400">
                 If a serial does not verify, contact{' '}
                 <a href="mailto:security@cyberita.plus" className="link">
                   security@cyberita.plus
