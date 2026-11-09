@@ -55,6 +55,10 @@ export default function LabTerminal({
   const historyRef = useRef([]);
   const historyIndex = useRef(-1);
   const inputBufferRef = useRef('');
+  const cursorRef = useRef(0);
+  const killRef = useRef('');
+  const stashRef = useRef('');
+  const searchRef = useRef(null);
   const receivedChunkRef = useRef(false);
   const welcomeRef = useRef(welcome);
   const studentRef = useRef(student);
@@ -123,10 +127,156 @@ export default function LabTerminal({
       term.write(promptFor(identityRef.current, cwdRef.current));
     };
 
-    // custom key handling for copy/paste + history
+    // ---- readline-style line editor (real terminal shortcuts) ----
+    const renderLine = () => {
+      const t = termRef.current;
+      if (!t) return;
+      const buf = inputBufferRef.current;
+      const cur = cursorRef.current;
+      t.write('\r\x1b[K' + promptFor(identityRef.current, cwdRef.current) + buf);
+      if (cur < buf.length) t.write(`\x1b[${buf.length - cur}D`);
+    };
+
+    const wordLeftPos = (buf, cur) => {
+      let i = cur;
+      while (i > 0 && buf[i - 1] === ' ') i -= 1;
+      while (i > 0 && buf[i - 1] !== ' ') i -= 1;
+      return i;
+    };
+    const wordRightPos = (buf, cur) => {
+      let i = cur;
+      while (i < buf.length && buf[i] !== ' ') i += 1;
+      while (i < buf.length && buf[i] === ' ') i += 1;
+      return i;
+    };
+
+    const insertText = (text) => {
+      const clean = [...text].filter((c) => c >= ' ' && c !== '\x7f').join('');
+      if (!clean) return;
+      const buf = inputBufferRef.current;
+      const cur = cursorRef.current;
+      inputBufferRef.current = buf.slice(0, cur) + clean + buf.slice(cur);
+      cursorRef.current = cur + clean.length;
+      historyIndex.current = -1;
+      renderLine();
+    };
+
+    const deleteBeforeCursor = () => {
+      const buf = inputBufferRef.current;
+      const cur = cursorRef.current;
+      if (cur <= 0) return;
+      inputBufferRef.current = buf.slice(0, cur - 1) + buf.slice(cur);
+      cursorRef.current = cur - 1;
+      renderLine();
+    };
+
+    const deleteAtCursor = () => {
+      const buf = inputBufferRef.current;
+      const cur = cursorRef.current;
+      if (cur >= buf.length) return;
+      inputBufferRef.current = buf.slice(0, cur) + buf.slice(cur + 1);
+      renderLine();
+    };
+
+    const historyMove = (dir) => {
+      const hist = historyRef.current;
+      if (hist.length === 0) return;
+      if (dir > 0) {
+        if (historyIndex.current === -1) stashRef.current = inputBufferRef.current;
+        historyIndex.current = Math.min(hist.length - 1, historyIndex.current + 1);
+        inputBufferRef.current = hist[historyIndex.current] || '';
+      } else {
+        historyIndex.current = Math.max(-1, historyIndex.current - 1);
+        inputBufferRef.current = historyIndex.current === -1 ? stashRef.current : (hist[historyIndex.current] || '');
+      }
+      cursorRef.current = inputBufferRef.current.length;
+      renderLine();
+    };
+
+    // Ctrl+R reverse incremental history search
+    const renderSearch = () => {
+      const t = termRef.current;
+      const s = searchRef.current;
+      if (!t || !s) return;
+      t.write(`\r\x1b[K(reverse-i-search)\`${s.query}': ${s.match || ''}`);
+    };
+    const runSearch = (fromIndex) => {
+      const s = searchRef.current;
+      if (!s) return;
+      s.match = '';
+      s.matchIndex = -1;
+      const hist = historyRef.current;
+      for (let i = Math.max(0, fromIndex); i < hist.length; i += 1) {
+        if (hist[i].includes(s.query)) { s.match = hist[i]; s.matchIndex = i; break; }
+      }
+      renderSearch();
+    };
+    const startSearch = () => {
+      searchRef.current = { query: '', saved: inputBufferRef.current, match: '', matchIndex: -1 };
+      renderSearch();
+    };
+    const exitSearch = (useMatch) => {
+      const s = searchRef.current;
+      searchRef.current = null;
+      if (s && useMatch && s.match) inputBufferRef.current = s.match;
+      cursorRef.current = inputBufferRef.current.length;
+      renderLine();
+    };
+    const cancelSearch = () => {
+      const s = searchRef.current;
+      searchRef.current = null;
+      if (s) inputBufferRef.current = s.saved;
+      cursorRef.current = inputBufferRef.current.length;
+      renderLine();
+    };
+
+    const handleSearchKey = (ch) => {
+      const s = searchRef.current;
+      const t = termRef.current;
+      if (!s || !t) return;
+      if (ch === '\r' || ch === '\n') {
+        // Enter: accept the match and run it, like bash
+        const cmd = s.match || s.saved;
+        searchRef.current = null;
+        inputBufferRef.current = '';
+        cursorRef.current = 0;
+        historyIndex.current = -1;
+        t.write('\r\n');
+        if (cmd.trim()) submitCommand(cmd);
+        else t.write(promptFor(identityRef.current, cwdRef.current));
+      } else if (ch === '\x12') {
+        runSearch(s.matchIndex + 1); // Ctrl+R again: next older match
+      } else if (ch === '\x7f' || ch === '\b') {
+        s.query = s.query.slice(0, -1);
+        if (s.query) runSearch(0); else { s.match = ''; s.matchIndex = -1; renderSearch(); }
+      } else if (ch === '\x1b' || ch === '\x05') {
+        exitSearch(true); // Esc / Ctrl+E: keep the match, back to editing
+      } else if (ch === '\x07') {
+        cancelSearch(); // Ctrl+G: restore the original line
+      } else if (ch === '\x03') {
+        inputBufferRef.current = '';
+        cursorRef.current = 0;
+        searchRef.current = null;
+        t.write('^C\r\n' + promptFor(identityRef.current, cwdRef.current));
+      } else if (ch >= ' ') {
+        s.query += ch;
+        runSearch(0);
+      }
+    };
+
+    // custom key handling for copy/paste + clear
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
-      if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+      if (searchRef.current) return true;
+      if (e.ctrlKey && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        const sel = term.getSelection();
+        if (sel) {
+          navigator.clipboard?.writeText(sel).catch(() => {});
+          return false;
+        }
+        return true;
+      }
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         const sel = term.getSelection();
         if (sel) {
           navigator.clipboard?.writeText(sel).catch(() => {});
@@ -141,7 +291,9 @@ export default function LabTerminal({
       }
       if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
         term.clear();
-        term.write(promptFor(identityRef.current, cwdRef.current) + inputBufferRef.current);
+        const buf = inputBufferRef.current;
+        term.write(promptFor(identityRef.current, cwdRef.current) + buf);
+        if (cursorRef.current < buf.length) term.write(`\x1b[${buf.length - cursorRef.current}D`);
         return false;
       }
       return true;
@@ -149,57 +301,167 @@ export default function LabTerminal({
 
     const processInput = (data) => {
       if (busyRef.current) return;
-      const term = termRef.current;
-      if (!term) return;
-      for (let i = 0; i < data.length; i += 1) {
+      const t = termRef.current;
+      if (!t) return;
+      let i = 0;
+      while (i < data.length) {
         const ch = data[i];
+
+        if (searchRef.current) {
+          if (ch === '\x1b' && data[i + 1] === '[') {
+            // swallow CSI keys while searching (arrows etc.)
+            let j = i + 2;
+            while (j < data.length && !(data[j] >= '@' && data[j] <= '~')) j += 1;
+            i = j + 1;
+            continue;
+          }
+          handleSearchKey(ch);
+          i += 1;
+          continue;
+        }
+
+        if (ch === '\x1b') {
+          const next = data[i + 1];
+          if (next === '[') {
+            // CSI sequence: consume until a final byte (@ through ~)
+            let j = i + 2;
+            while (j < data.length && !(data[j] >= '@' && data[j] <= '~')) j += 1;
+            if (j >= data.length) break;
+            const final = data[j];
+            const params = data.slice(i + 2, j);
+            const buf = inputBufferRef.current;
+            const cur = cursorRef.current;
+            if (final === 'A') historyMove(1);
+            else if (final === 'B') historyMove(-1);
+            else if (final === 'C') {
+              if (params === '1;5' || params === '5') cursorRef.current = wordRightPos(buf, cur);
+              else cursorRef.current = Math.min(buf.length, cur + 1);
+              renderLine();
+            } else if (final === 'D') {
+              if (params === '1;5' || params === '5') cursorRef.current = wordLeftPos(buf, cur);
+              else cursorRef.current = Math.max(0, cur - 1);
+              renderLine();
+            } else if (final === 'H') { cursorRef.current = 0; renderLine(); }
+            else if (final === 'F') { cursorRef.current = buf.length; renderLine(); }
+            else if (final === '~') {
+              if (params === '1' || params === '7') { cursorRef.current = 0; renderLine(); }
+              else if (params === '4' || params === '8') { cursorRef.current = buf.length; renderLine(); }
+              else if (params === '3') deleteAtCursor();
+            }
+            i = j + 1;
+            continue;
+          }
+          if (next === 'O') {
+            // SS3 (application cursor keys)
+            const final = data[i + 2];
+            const buf = inputBufferRef.current;
+            const cur = cursorRef.current;
+            if (final === 'A') historyMove(1);
+            else if (final === 'B') historyMove(-1);
+            else if (final === 'C') { cursorRef.current = Math.min(buf.length, cur + 1); renderLine(); }
+            else if (final === 'D') { cursorRef.current = Math.max(0, cur - 1); renderLine(); }
+            else if (final === 'H') { cursorRef.current = 0; renderLine(); }
+            else if (final === 'F') { cursorRef.current = buf.length; renderLine(); }
+            i += 3;
+            continue;
+          }
+          if (next === 'b') { cursorRef.current = wordLeftPos(inputBufferRef.current, cursorRef.current); renderLine(); i += 2; continue; }
+          if (next === 'f') { cursorRef.current = wordRightPos(inputBufferRef.current, cursorRef.current); renderLine(); i += 2; continue; }
+          if (next === '\x7f') {
+            const buf = inputBufferRef.current;
+            const cur = cursorRef.current;
+            const start = wordLeftPos(buf, cur);
+            if (start < cur) {
+              killRef.current = buf.slice(start, cur);
+              inputBufferRef.current = buf.slice(0, start) + buf.slice(cur);
+              cursorRef.current = start;
+              renderLine();
+            }
+            i += 2;
+            continue;
+          }
+          i += 1; // lone Esc: ignore
+          continue;
+        }
+
         if (ch === '\r' || ch === '\n') {
           const cmd = inputBufferRef.current;
           inputBufferRef.current = '';
-          term.write('\r\n');
-          if (cmd.trim()) {
-            submitCommand(cmd);
-          } else {
-            term.write(promptFor(identityRef.current, cwdRef.current));
-          }
-        } else if (ch === '\x7f' || ch === '\b') {
-          if (inputBufferRef.current.length > 0) {
-            inputBufferRef.current = inputBufferRef.current.slice(0, -1);
-            term.write('\b \b');
-          }
-        } else if (ch === '\x03') {
-          if (inputBufferRef.current.length > 0) {
-            inputBufferRef.current = '';
-            term.write('^C\r\n' + promptFor(identityRef.current, cwdRef.current));
-          }
-        } else if (ch === '\x1b') {
-          // escape sequences
-          if (data[i + 1] === '[') {
-            const code = data[i + 2];
-            if (code === 'A') {
-              // arrow up
-              if (historyRef.current.length > 0) {
-                historyIndex.current = Math.min(historyRef.current.length - 1, historyIndex.current + 1);
-                const newVal = historyRef.current[historyIndex.current] || '';
-                // replace current line
-                term.write('\r\x1b[K' + promptFor(identityRef.current, cwdRef.current) + newVal);
-                inputBufferRef.current = newVal;
-              }
-              i += 2;
-            } else if (code === 'B') {
-              historyIndex.current = Math.max(-1, historyIndex.current - 1);
-              const newVal = historyIndex.current === -1 ? '' : (historyRef.current[historyIndex.current] || '');
-              term.write('\r\x1b[K' + promptFor(identityRef.current, cwdRef.current) + newVal);
-              inputBufferRef.current = newVal;
-              i += 2;
-            }
-          }
-        } else if (ch < ' ' ) {
-          // ignore other control chars
-        } else {
-          inputBufferRef.current += ch;
-          term.write(ch);
+          cursorRef.current = 0;
+          historyIndex.current = -1;
+          stashRef.current = '';
+          t.write('\r\n');
+          if (cmd.trim()) submitCommand(cmd);
+          else t.write(promptFor(identityRef.current, cwdRef.current));
+          i += 1;
+          continue;
         }
+
+        const buf = inputBufferRef.current;
+        const cur = cursorRef.current;
+        switch (ch) {
+          case '\x7f':
+          case '\b':
+            deleteBeforeCursor();
+            break;
+          case '\x01': // Ctrl+A: start of line
+            cursorRef.current = 0;
+            renderLine();
+            break;
+          case '\x05': // Ctrl+E: end of line
+            cursorRef.current = buf.length;
+            renderLine();
+            break;
+          case '\x15': { // Ctrl+U: kill everything before the cursor
+            if (cur > 0) {
+              killRef.current = buf.slice(0, cur);
+              inputBufferRef.current = buf.slice(cur);
+              cursorRef.current = 0;
+              renderLine();
+            }
+            break;
+          }
+          case '\x0b': // Ctrl+K: kill everything after the cursor
+            if (cur < buf.length) {
+              killRef.current = buf.slice(cur);
+              inputBufferRef.current = buf.slice(0, cur);
+              renderLine();
+            }
+            break;
+          case '\x17': { // Ctrl+W: delete the word before the cursor
+            const start = wordLeftPos(buf, cur);
+            if (start < cur) {
+              killRef.current = buf.slice(start, cur);
+              inputBufferRef.current = buf.slice(0, start) + buf.slice(cur);
+              cursorRef.current = start;
+              renderLine();
+            }
+            break;
+          }
+          case '\x19': // Ctrl+Y: yank the last killed text
+            if (killRef.current) insertText(killRef.current);
+            break;
+          case '\x03': // Ctrl+C: cancel the current line
+            inputBufferRef.current = '';
+            cursorRef.current = 0;
+            historyIndex.current = -1;
+            t.write('^C\r\n' + promptFor(identityRef.current, cwdRef.current));
+            break;
+          case '\x04': // Ctrl+D: delete char at cursor (EOF on a real shell)
+            deleteAtCursor();
+            break;
+          case '\x12': // Ctrl+R: reverse history search
+            startSearch();
+            break;
+          case '\x0c': // Ctrl+L fallback (normally handled by the key handler)
+            t.clear();
+            renderLine();
+            break;
+          default:
+            if (ch >= ' ') insertText(ch);
+            break;
+        }
+        i += 1;
       }
     };
 
@@ -208,6 +470,9 @@ export default function LabTerminal({
       if (!term) return;
       historyRef.current = [cmd, ...historyRef.current.filter((x) => x !== cmd)].slice(0, 100);
       historyIndex.current = -1;
+      inputBufferRef.current = '';
+      cursorRef.current = 0;
+      stashRef.current = '';
 
       if (cmd.trim() === 'clear' || cmd.trim() === 'cls') {
         term.clear();
@@ -416,7 +681,9 @@ export default function LabTerminal({
     const term = termRef.current;
     if (term) {
       term.clear();
-      term.write(promptFor(identityRef.current, cwdRef.current) + inputBufferRef.current);
+      const buf = inputBufferRef.current;
+      term.write(promptFor(identityRef.current, cwdRef.current) + buf);
+      if (cursorRef.current < buf.length) term.write(`\x1b[${buf.length - cursorRef.current}D`);
     }
   }, []);
 
@@ -465,12 +732,12 @@ export default function LabTerminal({
           {practice ? 'practice container' : 'isolated container'} · session #{sessionId}
           {busy ? ' · running…' : ''}
         </span>
-        <span className="hidden shrink-0 items-center gap-2 sm:flex">
+        <span className="hidden shrink-0 items-center gap-2 lg:flex">
           <span className="flex items-center gap-1">
             <span className={`h-1.5 w-1.5 rounded-full ${mode === 'ws' ? 'bg-emerald-400' : mode === 'rest' ? 'bg-amber-400' : 'bg-zinc-500'}`} />
             <span>{mode === 'ws' ? 'live' : mode === 'rest' ? 'rest' : mode}</span>
           </span>
-          <span>Ctrl+Shift+C copy · Ctrl+V paste · Ctrl+L clear</span>
+          <span>Ctrl+R search · Ctrl+A/E start/end · Ctrl+U/W edit line · Ctrl+L clear · Ctrl+Shift+C copy</span>
         </span>
       </div>
     </div>
