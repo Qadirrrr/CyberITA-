@@ -328,6 +328,27 @@ router.get(
         rows[0] ||
         null;
       myProgress = await getUserLabProgress(req.user.id, lab);
+      // Per-step ticks for the detail page: mark the steps this student
+      // completed in their best session — the same session the progress
+      // percentage above is based on, so the ticks and the % always agree.
+      const { rows: bestRows } = await query(
+        `SELECT s.id FROM lab_sessions s
+          WHERE s.lab_id = $1 AND s.user_id = $2
+          ORDER BY (SELECT COUNT(*)::int FROM lab_step_progress p
+                      JOIN lab_steps st ON st.id = p.step_id
+                     WHERE p.session_id = s.id AND st.is_optional = FALSE) DESC,
+                   s.id DESC
+          LIMIT 1`,
+        [lab.id, req.user.id]
+      );
+      if (bestRows[0]) {
+        const { rows: doneRows } = await query(
+          `SELECT step_id FROM lab_step_progress WHERE session_id = $1`,
+          [bestRows[0].id]
+        );
+        const done = new Set(doneRows.map((row) => row.step_id));
+        for (const step of steps) step.my_completed = done.has(step.id);
+      }
     }
     const { rows: stepCounts } = await query(
       `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE is_optional = FALSE)::int AS required

@@ -8,6 +8,7 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconCamera,
+  IconCheck,
   IconCheckCircle,
   IconClock,
   IconExternalLink,
@@ -265,11 +266,27 @@ export default function LabDetailPage() {
                 <ol className="mt-3 space-y-2.5">
                   {steps.map((step, index) => (
                     <li key={step.id} className="flex gap-2.5 text-sm leading-5 text-slate-600 dark:text-slate-300">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 font-mono text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-white/5 dark:text-slate-300 dark:ring-white/10">
-                        {index + 1}
-                      </span>
-                      <span className={step.is_optional ? 'text-slate-500 dark:text-slate-400' : ''}>
-                        {step.title}
+                      {step.my_completed ? (
+                        <span
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white dark:bg-emerald-400 dark:text-night-950"
+                          title="You completed this step"
+                        >
+                          <IconCheck size={11} strokeWidth={3} />
+                        </span>
+                      ) : (
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 font-mono text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-white/5 dark:text-slate-300 dark:ring-white/10">
+                          {index + 1}
+                        </span>
+                      )}
+                      <span className={step.is_optional && !step.my_completed ? 'text-slate-500 dark:text-slate-400' : ''}>
+                        <span className={step.my_completed ? 'font-medium text-slate-800 dark:text-slate-100' : ''}>
+                          {step.title}
+                        </span>
+                        {step.my_completed && (
+                          <span className="ml-1.5 rounded bg-emerald-50 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+                            Done
+                          </span>
+                        )}
                         {step.is_optional && <span className="ml-1.5 rounded bg-slate-100 px-1 py-px text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:bg-white/5 dark:text-slate-400">optional</span>}
                       </span>
                     </li>
@@ -278,6 +295,9 @@ export default function LabDetailPage() {
                 </ol>
                 <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500 dark:border-white/5 dark:text-slate-400">
                   Steps marked <span className="font-medium text-brand-600 dark:text-brand-300">verified</span> complete automatically when you run the right command.
+                  {myProgress?.started && (
+                    <> Steps with a <span className="font-medium text-emerald-600 dark:text-emerald-300">green tick</span> are the ones you completed in your best session so far.</>
+                  )}
                 </p>
               </>
             )}
