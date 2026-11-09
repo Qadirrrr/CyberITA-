@@ -55,11 +55,22 @@ export async function assertLabManager(user, lab) {
 }
 
 /**
- * Read access to a lab. Published labs are part of the public catalog, drafts
- * are only visible to the instructor who owns them and to admins.
+ * Read access to a lab. Drafts are only visible to the instructor who owns
+ * them and to admins. Published practice and standalone labs are open to
+ * every learner, but a published course lab is only visible to staff and
+ * to students enrolled in that course.
  */
 export async function canReadLab(user, lab) {
-  if (lab?.status === 'published') return true;
+  if (lab?.status === 'published') {
+    if (!lab.course_id || lab.is_practice) return true;
+    if (!user) return false;
+    if (user.role !== 'student') return true;
+    const { rows } = await query(
+      `SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2 AND status <> 'dropped'`,
+      [user.id, lab.course_id]
+    );
+    if (rows[0]) return true;
+  }
   return canManageLab(user, lab);
 }
 

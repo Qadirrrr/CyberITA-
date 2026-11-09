@@ -258,6 +258,19 @@ router.get(
                     params.push(req.user.id);
                     where.push(`EXISTS (SELECT 1 FROM lab_sessions s WHERE s.lab_id = l.id AND s.user_id = $${params.length})`);
                 }
+                // Learners only see labs they may actually use: practice and
+                // standalone labs stay open to everyone, but a course's labs
+                // are listed only for students enrolled in that course.
+                if (!staffView) {
+                    if (req.user) {
+                        params.push(req.user.id);
+                        where.push(
+                            `(l.is_practice = TRUE OR l.course_id IS NULL OR EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = l.course_id AND e.user_id = $${params.length} AND e.status <> 'dropped'))`
+                        );
+                    } else {
+                        where.push(`(l.is_practice = TRUE OR l.course_id IS NULL)`);
+                    }
+                }
 
                 const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
                 const { rows: countRows } = await query(
