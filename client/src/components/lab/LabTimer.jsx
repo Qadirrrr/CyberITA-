@@ -73,7 +73,7 @@ export default function LabTimer({
     return (
       <span
         className={`inline-flex items-center gap-1.5 rounded-full border font-medium ${TONES.muted} ${
-          large ? 'px-4 py-2 text-sm' : 'px-2.5 py-1 text-xs'
+          large ? 'px-3.5 py-2 text-sm' : 'px-2.5 py-1 text-xs'
         }`}
       >
         <IconClock size={large ? 17 : 13} /> No time limit
@@ -87,7 +87,7 @@ export default function LabTimer({
       <span
         className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${
           expired ? TONES.danger : TONES.muted
-        } ${large ? 'px-4 py-2 text-sm' : 'px-2.5 py-1 text-xs font-medium'}`}
+        } ${large ? 'px-3.5 py-2 text-sm' : 'px-2.5 py-1 text-xs font-medium'}`}
         title={expired ? 'The lab time limit was reached' : 'This session has ended'}
       >
         <IconClock size={large ? 17 : 13} /> {expired ? "Time's up" : 'Session ended'}
@@ -101,25 +101,19 @@ export default function LabTimer({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border font-semibold shadow-sm ${tone} ${
-        large ? 'gap-2.5 px-4 py-2 text-sm' : 'gap-2 px-3 py-1.5 text-xs'
+      className={`inline-flex items-center rounded-full border font-medium ${tone} ${
+        large ? 'gap-2 px-3.5 py-2 text-sm shadow-sm' : 'gap-2 px-3 py-1.5 text-xs font-semibold'
       } ${urgent ? 'animate-pulse' : ''}`}
       title={limitMinutes > 0 ? `This lab ends after ${limitMinutes} minutes` : 'Time remaining in this session'}
       role="timer"
       aria-live="off"
     >
-      <IconClock size={large ? 20 : 14} />
-      <span className={large ? 'flex flex-col leading-none' : 'contents'}>
-        <span
-          className={`font-semibold uppercase tracking-wider opacity-75 ${
-            large ? 'text-[10px]' : 'hidden text-[10px] font-medium sm:inline'
-          }`}
-        >
-          Time left
-        </span>
-        <span className={`font-mono tabular-nums ${large ? 'mt-0.5 text-xl font-bold leading-none' : 'text-sm'}`}>
-          {formatDuration(remaining ?? 0)}
-        </span>
+      <IconClock size={large ? 16 : 14} />
+      <span className={`uppercase tracking-wider opacity-70 ${large ? 'text-[11px]' : 'hidden text-[10px] sm:inline'}`}>
+        Time left
+      </span>
+      <span className={`font-mono tabular-nums ${large ? 'text-base font-semibold leading-none' : 'text-sm'}`}>
+        {formatDuration(remaining ?? 0)}
       </span>
     </span>
   );
