@@ -324,6 +324,16 @@ export default function DashboardLayout() {
     }
   };
 
+  // Shared category heading for every dashboard sidebar: small caps label
+  // with a hairline rule, identical for student, instructor, admin and
+  // moderator so all sidebars read as one system.
+  const renderGroupHeading = (label, className = '') => (
+    <div className={cx('flex items-center gap-2 px-2 pb-2', className)}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">{label}</span>
+      <span className="h-px flex-1 bg-slate-200/80 dark:bg-white/5" />
+    </div>
+  );
+
   const renderNavItem = (item, mini = false) => {
     const IconComponent = item.icon;
     let badgeCount = 0;
@@ -349,6 +359,17 @@ export default function DashboardLayout() {
       badgeTone = 'brand';
     }
 
+    const badgeDot = (tone) =>
+      tone === 'amber' ? 'bg-amber-400' : tone === 'emerald' ? 'bg-emerald-400' : tone === 'rose' ? 'bg-rose-500' : 'bg-brand-400';
+    const badgePill = (tone) =>
+      tone === 'amber'
+        ? 'bg-amber-400 text-night-950 shadow-amber-400/30'
+        : tone === 'emerald'
+          ? 'bg-emerald-400 text-night-950 shadow-emerald-400/30'
+          : tone === 'rose'
+            ? 'bg-rose-500 text-white shadow-rose-500/30'
+            : 'bg-brand-400 text-night-950 shadow-brand-400/30';
+
     return (
       <NavLink
         key={item.to}
@@ -364,56 +385,60 @@ export default function DashboardLayout() {
         }}
         className={({ isActive }) =>
           cx(
-            'group relative flex items-center rounded-xl text-xs font-medium transition-all duration-150',
-            mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-2',
+            'group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150',
+            mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-[9px]',
             isActive
               ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
           )
         }
       >
-        <IconComponent size={16} className="shrink-0" />
-        {!mini && <span className="min-w-0 flex-1 truncate text-xs">{item.label}</span>}
-        {badgeCount > 0 &&
-          (mini ? (
-            <span
-              className={cx(
-                'absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full',
-                badgeTone === 'amber'
-                  ? 'bg-amber-400'
-                  : badgeTone === 'emerald'
-                    ? 'bg-emerald-400'
-                    : badgeTone === 'rose'
-                      ? 'bg-rose-500'
-                      : 'bg-brand-400'
-              )}
-            />
-          ) : (
-            <span
-              className={cx(
-                'flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold shadow-sm',
-                badgeTone === 'amber'
-                  ? 'bg-amber-400 text-night-950 shadow-amber-400/30'
-                  : badgeTone === 'emerald'
-                    ? 'bg-emerald-400 text-night-950 shadow-emerald-400/30'
-                    : badgeTone === 'rose'
-                      ? 'bg-rose-500 text-white shadow-rose-500/30'
-                      : 'bg-brand-400 text-night-950 shadow-brand-400/30'
-              )}
-            >
-              {badgeCount > 9 ? '9+' : badgeCount}
+        {({ isActive }) => (
+          <>
+            {isActive && (
+              <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 dark:bg-brand-400" />
+            )}
+            <span className={cx('flex shrink-0', isActive ? 'text-brand-600 dark:text-brand-300' : 'text-slate-400 dark:text-slate-500')}>
+              <IconComponent size={17} />
             </span>
-          ))}
+            {!mini && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+            {badgeCount > 0 &&
+              (mini ? (
+                <span className={cx('absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full', badgeDot(badgeTone))} />
+              ) : (
+                <span
+                  className={cx(
+                    'flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold shadow-sm',
+                    badgePill(badgeTone)
+                  )}
+                >
+                  {badgeCount > 9 ? '9+' : badgeCount}
+                </span>
+              ))}
+          </>
+        )}
       </NavLink>
     );
   };
+
+  // One grouped-nav renderer for instructor, admin and moderator sidebars.
+  const renderNavGroups = (groups, mini = false) => (
+    <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
+      {groups.map((group, index) => (
+        <div key={group.label} className={cx(mini && index > 0 && 'mt-2 border-t border-slate-200 pt-2 dark:border-white/5')}>
+          {!mini && renderGroupHeading(group.label, index > 0 ? 'mt-5' : '')}
+          <nav className="space-y-0.5">{(group?.items || []).map((item) => renderNavItem(item, mini))}</nav>
+        </div>
+      ))}
+    </div>
+  );
 
   const renderSidebar = (mini = false) => (
     <div className="flex h-full flex-col">
       {/* Header */}
       <div
         className={cx(
-          'flex h-16 items-center border-b border-white/5',
+          'flex h-16 items-center border-b border-slate-200/80 dark:border-white/5',
           mini ? 'justify-center px-2' : 'justify-between px-4'
         )}
       >
@@ -445,17 +470,15 @@ export default function DashboardLayout() {
         /* ── STUDENT SIDEBAR LAYOUT ── */
         <>
           <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
-            {!mini && (
-              <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">Learning</p>
-            )}
+            {!mini && renderGroupHeading('Learning')}
             <nav className={cx('space-y-0.5', mini && 'space-y-1')}>
               {studentNavPrimary.map((item) => renderNavItem(item, mini))}
             </nav>
 
             {mini ? (
-              <div className="my-3 h-px bg-white/5" />
+              <div className="my-3 h-px bg-slate-200 dark:bg-white/5" />
             ) : (
-              <p className="mt-5 px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">Progress</p>
+              renderGroupHeading('Progress', 'mt-5')
             )}
             <nav className={cx('space-y-0.5', mini && 'space-y-1')}>
               {studentNavProgress.map((item) => renderNavItem(item, mini))}
@@ -464,7 +487,7 @@ export default function DashboardLayout() {
 
           <div
             ref={profileRef}
-            className={cx('shrink-0 border-t border-white/5 py-3', mini ? 'relative px-2' : 'px-3')}
+            className={cx('shrink-0 border-t border-slate-200/80 py-3 dark:border-white/5', mini ? 'relative px-2' : 'px-3')}
           >
             {profileOpen && (
               <div
@@ -526,61 +549,11 @@ export default function DashboardLayout() {
       ) : (
         /* ── INSTRUCTOR / ADMIN SIDEBAR LAYOUT ── */
         <>
-          <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
-            {user?.role === 'admin' ? (
-              /* Grouped admin nav */
-              adminNavGroups.map((group, index) => (
-                <div
-                  key={group.label}
-                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
-                >
-                  {!mini && (
-                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                      {group.label}
-                    </p>
-                  )}
-                  <nav className="space-y-0.5">
-                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
-                  </nav>
-                </div>
-              ))
-            ) : isModerator ? (
-              /* Grouped moderator nav */
-              moderatorNavGroups(user?.role).map((group, index) => (
-                <div
-                  key={group.label}
-                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
-                >
-                  {!mini && (
-                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                      {group.label}
-                    </p>
-                  )}
-                  <nav className="space-y-0.5">
-                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
-                  </nav>
-                </div>
-              ))
-            ) : (
-              /* Grouped instructor nav */
-              instructorNavGroups.map((group, index) => (
-                <div
-                  key={group.label}
-                  className={cx(mini ? (index > 0 ? 'mt-2 border-t border-white/5 pt-2' : '') : 'mb-1')}
-                >
-                  {!mini && (
-                    <p className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                      {group.label}
-                    </p>
-                  )}
-                  <nav className="space-y-0.5">
-                    {(group?.items || []).map((item) => renderNavItem(item, mini))}
-                  </nav>
-                </div>
-              ))
-            )}
-          </div>
-          <div className={cx('mt-auto border-t border-white/5', mini ? 'p-2' : 'p-3')}>
+          {renderNavGroups(
+            user?.role === 'admin' ? adminNavGroups : isModerator ? moderatorNavGroups(user?.role) : instructorNavGroups,
+            mini
+          )}
+          <div className={cx('mt-auto border-t border-slate-200/80 dark:border-white/5', mini ? 'p-2' : 'p-3')}>
             <SidebarProfile compact={mini} />
           </div>
         </>
