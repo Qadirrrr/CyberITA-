@@ -45,6 +45,7 @@ const CourseEditorPage = lazy(() => import('./pages/instructor/CourseEditorPage'
 const ManageLabsPage = lazy(() => import('./pages/instructor/ManageLabsPage'));
 const LabEditorPage = lazy(() => import('./pages/instructor/LabEditorPage'));
 const LabSubmissionsPage = lazy(() => import('./pages/instructor/LabSubmissionsPage'));
+const DeadlineTrackerPage = lazy(() => import('./pages/instructor/DeadlineTrackerPage'));
 const ReportsReviewPage = lazy(() => import('./pages/instructor/ReportsReviewPage'));
 const ReportReviewDetailPage = lazy(() => import('./pages/instructor/ReportReviewDetailPage'));
 const BlogManagePage = lazy(() => import('./pages/instructor/BlogManagePage'));
@@ -132,6 +133,7 @@ export default function App() {
             <Route path="instructor/studio" element={<ContentStudioPage />} />
             <Route path="instructor/labs/:id" element={<LabEditorPage />} />
             <Route path="instructor/lab-submissions" element={<LabSubmissionsPage />} />
+            <Route path="instructor/deadline-tracker" element={<DeadlineTrackerPage />} />
             <Route path="instructor/announcements" element={<InstructorAnnouncementsPage />} />
             <Route path="instructor/reports" element={<ReportsReviewPage />} />
             <Route path="instructor/reports/:id" element={<ReportReviewDetailPage />} />

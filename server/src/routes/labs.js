@@ -212,6 +212,181 @@ router.get(
     })
 );
 
+// ---------- deadline tracker ----------
+
+// Who reviews this lab: the course instructor, or for a standalone lab the
+// instructor who created it. Mirrors resolveInstructorId in the submissions
+// service (kept local so this route file stays self-contained).
+async function labReviewerId(lab) {
+    if (lab.course_id) {
+        const { rows } = await query('SELECT instructor_id FROM courses WHERE id = $1', [lab.course_id]);
+        return rows[0]?.instructor_id ?? null;
+    }
+    if (!lab.created_by) return null;
+    const { rows } = await query('SELECT id, role FROM users WHERE id = $1', [lab.created_by]);
+    return rows[0]?.role === 'instructor' ? rows[0].id : null;
+}
+
+// Every student who should do this lab (the course roster, or for standalone
+// labs everyone who has touched it), with their best progress and latest
+// submission state. Shared by the tracker view and the reminder sender so
+// both always agree on who is still pending.
+async function getLabRoster(lab) {
+    const { rows } = await query(
+        `SELECT u.id, u.full_name, u.email,
+                sub.status AS submission_status, sub.submitted_at,
+                COALESCE(sess.session_count, 0)::int AS session_count,
+                COALESCE(sess.best_evidence, 0)::int AS best_evidence,
+                COALESCE(sess.best_steps, 0)::int AS best_steps,
+                sess.last_session_at
+           FROM users u
+           LEFT JOIN LATERAL (
+             SELECT ls.status, ls.submitted_at FROM lab_submissions ls
+              WHERE ls.lab_id = $1 AND ls.user_id = u.id
+              ORDER BY ls.submitted_at DESC LIMIT 1
+           ) sub ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT COUNT(*)::int AS session_count,
+                    COALESCE(MAX(x.evidence_count), 0) AS best_evidence,
+                    COALESCE(MAX(x.completed_steps), 0) AS best_steps,
+                    MAX(x.started_at) AS last_session_at
+               FROM (
+                 SELECT s.started_at,
+                        (SELECT COUNT(*)::int FROM screenshots sc WHERE sc.session_id = s.id) AS evidence_count,
+                        (SELECT COUNT(*)::int FROM lab_step_progress p
+                           JOIN lab_steps st ON st.id = p.step_id
+                          WHERE p.session_id = s.id AND st.is_optional = FALSE) AS completed_steps
+                   FROM lab_sessions s
+                  WHERE s.lab_id = $1 AND s.user_id = u.id
+               ) x
+           ) sess ON TRUE
+          WHERE u.role = 'student'
+            AND u.id IN (
+              SELECT e.user_id FROM enrollments e
+               WHERE e.course_id = $2 AND e.status <> 'dropped'
+              UNION
+              SELECT s.user_id FROM lab_sessions s
+               WHERE s.lab_id = $1 AND $2::bigint IS NULL
+              UNION
+              SELECT ls.user_id FROM lab_submissions ls
+               WHERE ls.lab_id = $1 AND $2::bigint IS NULL
+            )
+          ORDER BY u.full_name`,
+        [lab.id, lab.course_id]
+    );
+    return rows.map((row) => ({
+        ...row,
+        status: row.submission_status
+            ? row.submission_status
+            : Number(row.session_count) > 0
+              ? 'in_progress'
+              : 'not_started',
+    }));
+}
+
+router.get(
+    '/deadline-tracker',
+    requireAuth,
+    requireRole('instructor', 'admin'),
+    asyncHandler(async (req, res) => {
+        const isAdmin = req.user.role === 'admin';
+        const { rows: labs } = await query(
+            `SELECT l.id, l.title, l.lab_mode, l.min_evidence, l.due_at, l.course_id,
+                    c.title AS course_title,
+                    (SELECT COUNT(*)::int FROM lab_steps st WHERE st.lab_id = l.id AND st.is_optional = FALSE) AS required_steps
+               FROM labs l
+               LEFT JOIN courses c ON c.id = l.course_id
+              WHERE l.status = 'published' AND l.is_practice = FALSE
+                AND ($1 OR EXISTS (SELECT 1 FROM courses c2 WHERE c2.id = l.course_id AND c2.instructor_id = $2)
+                     OR (l.course_id IS NULL AND l.created_by = $2))
+              ORDER BY (l.due_at IS NULL), l.due_at ASC, l.id DESC`,
+            [isAdmin, req.user.id]
+        );
+        const result = [];
+        for (const lab of labs) {
+            const roster = await getLabRoster(lab);
+            const isReal = lab.lab_mode === 'real';
+            const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
+            const requiredSteps = Number(lab.required_steps) || 0;
+            const students = roster.map((row) => {
+                const done = isReal ? Number(row.best_evidence) : Number(row.best_steps);
+                const target = isReal ? minEvidence : requiredSteps;
+                return {
+                    id: row.id,
+                    name: row.full_name,
+                    email: row.email,
+                    status: row.status,
+                    percent: target > 0 ? Math.min(100, Math.round((done / target) * 100)) : 0,
+                    progress_label: isReal ? `${done}/${target} screenshots` : `${done}/${target} steps`,
+                    submitted_at: row.submitted_at,
+                    last_activity_at: row.last_session_at || row.submitted_at,
+                };
+            });
+            const counts = { total: students.length, not_started: 0, in_progress: 0, submitted: 0, changes_requested: 0, approved: 0 };
+            for (const student of students) counts[student.status] = (counts[student.status] || 0) + 1;
+            result.push({
+                id: lab.id,
+                title: lab.title,
+                lab_mode: lab.lab_mode,
+                course_title: lab.course_title,
+                due_at: lab.due_at,
+                is_overdue: Boolean(lab.due_at && new Date(lab.due_at) < new Date()),
+                counts,
+                students,
+            });
+        }
+        res.json({ labs: result });
+    })
+);
+
+router.post(
+    '/:id/remind',
+    requireAuth,
+    requireRole('instructor', 'admin'),
+    asyncHandler(async (req, res) => {
+        const lab = await getLabOr404(req.params.id, { staff: true });
+        if (req.user.role !== 'admin' && (await labReviewerId(lab)) !== req.user.id) {
+            throw forbidden('Only the instructor of this lab can send reminders.');
+        }
+        const roster = await getLabRoster(lab);
+        const pending = roster.filter((row) => ['not_started', 'in_progress', 'changes_requested'].includes(row.status));
+        const requested = Array.isArray(req.body?.userIds)
+            ? req.body.userIds.map(Number).filter(Number.isInteger)
+            : null;
+        const targets = requested ? pending.filter((row) => requested.includes(row.id)) : pending;
+        if (!targets.length) return res.json({ sent: 0 });
+
+        const dueText = lab.due_at
+            ? ` Deadline: ${new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lab.due_at))}.`
+            : '';
+        const groups = [
+            {
+                rows: targets.filter((row) => row.status === 'changes_requested'),
+                title: `Changes requested: ${lab.title}`,
+                body: `Your instructor requested changes on your "${lab.title}" submission.${dueText} Fix the work and resubmit it for review.`,
+            },
+            {
+                rows: targets.filter((row) => row.status !== 'changes_requested'),
+                title: `Reminder: ${lab.title} is still pending`,
+                body: `Your lab "${lab.title}" has not been submitted yet.${dueText} Complete it and submit your work for instructor review.`,
+            },
+        ];
+        let sent = 0;
+        for (const group of groups) {
+            if (!group.rows.length) continue;
+            await notify(null, {
+                userIds: group.rows.map((row) => row.id),
+                type: 'lab',
+                title: group.title,
+                body: group.body,
+                link: '/student/lab-assignments',
+            });
+            sent += group.rows.length;
+        }
+        res.json({ sent });
+    })
+);
+
 // ---------- catalog (students + staff) ----------
 
 router.get(

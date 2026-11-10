@@ -85,6 +85,7 @@ const instructorNavGroups = [
     label: 'Evaluation & Reviews',
     items: [
       { to: '/instructor/lab-submissions', label: 'Lab submissions', icon: IconTerminal, badge: 'labSubmissions' },
+      { to: '/instructor/deadline-tracker', label: 'Deadline tracker', icon: IconClock },
       { to: '/instructor/reports', label: 'Practical reports', icon: IconFileText },
     ],
   },
@@ -125,6 +126,7 @@ const adminNavGroups = [
       { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
       { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
        { to: '/instructor/lab-submissions', label: 'Lab Submission Review', icon: IconCheckCircle },
+       { to: '/instructor/deadline-tracker', label: 'Deadline Tracker', icon: IconClock },
       { to: '/instructor/blog', label: 'Blog Publication', icon: IconBookOpen },
     ],
   },
