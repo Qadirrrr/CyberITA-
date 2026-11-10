@@ -385,7 +385,7 @@ export default function DashboardLayout() {
         }}
         className={({ isActive }) =>
           cx(
-            'group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150',
+            'group relative flex items-center rounded-xl text-xs font-medium transition-all duration-150',
             mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-[9px]',
             isActive
               ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
@@ -567,7 +567,7 @@ export default function DashboardLayout() {
       <aside
         className={cx(
           'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-slate-200/80 bg-white/95 transition-[width] duration-300 dark:border-white/5 dark:bg-night-900/70 lg:block',
-          sidebarCollapsed ? 'w-[76px]' : 'w-[224px]'
+          sidebarCollapsed ? 'w-[76px]' : 'w-[256px]'
         )}
       >
         {renderSidebar(sidebarCollapsed)}
@@ -590,7 +590,7 @@ export default function DashboardLayout() {
       <div
         className={cx(
           'flex min-h-screen min-w-0 flex-1 flex-col bg-slate-100 transition-[padding] duration-300 dark:bg-transparent',
-          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[224px]'
+          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[256px]'
         )}
       >
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/5 dark:bg-night-950/80">
