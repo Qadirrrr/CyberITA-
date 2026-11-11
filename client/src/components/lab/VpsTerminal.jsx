@@ -136,6 +136,8 @@ export default function VpsTerminal({ sessionId, className = '' }) {
         try { message = JSON.parse(event.data); } catch { return; }
         if (message.type === 'data') {
           term.write(String(message.data || ''));
+        } else if (message.type === 'notice') {
+          term.writeln(`\r\n\x1b[33m${String(message.message || '')}\x1b[0m`);
         } else if (message.type === 'ready') {
           setState('ready');
           term.options.disableStdin = false;
