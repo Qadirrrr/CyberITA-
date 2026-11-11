@@ -72,7 +72,7 @@ router.get(
       [req.user.id]
     );
     const labAssignments = rows.map((row) => {
-      const isReal = row.lab_mode === 'real';
+      const isReal = row.lab_mode === 'real' || row.lab_mode === 'vps';
       const requiredSteps = Number(row.required_step_count) || 0;
       const completedSteps = Number(row.completed_steps) || 0;
       const evidenceCount = Number(row.evidence_count) || 0;

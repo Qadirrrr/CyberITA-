@@ -61,6 +61,16 @@ export const env = {
       provisionTimeoutMs: parsePositiveNumber(process.env.LAB_DOCKER_PROVISION_TIMEOUT_MS, 180000),
       maxOutputBytes: parsePositiveNumber(process.env.LAB_DOCKER_MAX_OUTPUT_BYTES, 64 * 1024),
     },
+    // Real VPS labs (lab_mode = 'vps') are provisioned through the
+    // VPS-Reselling internal labs gateway. Both values must be set on the
+    // server for vps labs to start; the secret must match the gateway's
+    // INTERNAL_LABS_SECRET on the VPS-Reselling backend.
+    vpsGateway: {
+      url: (process.env.LAB_GATEWAY_URL || '').replace(/\/$/, ''),
+      secret: process.env.INTERNAL_LABS_SECRET || '',
+      pollIntervalMs: parsePositiveNumber(process.env.LAB_GATEWAY_POLL_INTERVAL_MS, 5000),
+      provisionTimeoutMs: parsePositiveNumber(process.env.LAB_GATEWAY_PROVISION_TIMEOUT_MS, 10 * 60 * 1000),
+    },
   },
   upload: {
     maxMb: Number(process.env.MAX_UPLOAD_MB || 8),

@@ -18,7 +18,8 @@ export const DIFFICULTIES = {
   advanced: { label: 'Advanced', tone: 'rose' },
 };
 
-/** How a lab is delivered: guided steps, or a question-only assessment. */
+/** How a lab is delivered: guided steps, a question-only assessment, or a
+ *  question-only assessment on a dedicated cloud server (Real VPS). */
 export const LAB_MODES = {
   practice: {
     label: 'Guided practice',
@@ -32,7 +33,22 @@ export const LAB_MODES = {
     tone: 'rose',
     description: 'Question-only task with screenshot evidence and instructor review.',
   },
+  vps: {
+    label: 'Real VPS',
+    short: 'Real VPS',
+    tone: 'accent',
+    description: 'Question-only task on a dedicated cloud server, with screenshot evidence and instructor review.',
+  },
 };
+
+/** Fixed VPS gateway profiles an instructor can pick for a Real VPS lab. */
+export const VPS_LAB_PROFILES = [
+  { key: 'ubuntu-basic', label: 'Ubuntu Basic (AWS t3.micro)' },
+  { key: 'debian-admin', label: 'Debian Admin (AWS t3.micro)' },
+  { key: 'network-firewall', label: 'Network and Firewall (AWS t3.micro)' },
+  { key: 'server-hardening', label: 'Server Hardening (AWS t3.micro)' },
+  { key: 'penetration-testing', label: 'Penetration Testing (AWS t3.small)' },
+];
 
 /**
  * Canonical course categories shown in the course editor dropdown.

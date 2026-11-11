@@ -30,7 +30,7 @@ import {
   IconXCircle,
   IconZap,
 } from '../../components/icons';
-import { REPORT_STATUS } from '../../lib/constants';
+import { REPORT_STATUS, VPS_LAB_PROFILES } from '../../lib/constants';
 
 function splitInstruction(instruction) {
   const source = String(instruction || '');
@@ -71,7 +71,11 @@ export default function LabSessionPage() {
   };
   const [copiedCmd, setCopiedCmd] = useState(false);
 
-  const isRealLab = data?.lab?.lab_mode === 'real';
+  const isVpsLab = data?.lab?.lab_mode === 'vps';
+  // Real VPS labs reuse the whole real-lab treatment (task brief, evidence
+  // upload, lab report, submission). Only the working environment differs,
+  // and that is handled where the terminal would render.
+  const isRealLab = data?.lab?.lab_mode === 'real' || isVpsLab;
 
   const fileRef = useRef(null);
   const pendingStep = useRef(null);
@@ -109,6 +113,15 @@ export default function LabSessionPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // While a Real VPS server is being prepared, refresh the session state
+  // every 5 seconds so the page flips to ready on its own.
+  const vpsProvisioning = isVpsLab && data?.session?.status === 'provisioning';
+  useEffect(() => {
+    if (!vpsProvisioning) return undefined;
+    const timer = setInterval(() => load({ silent: true }), 5000);
+    return () => clearInterval(timer);
+  }, [vpsProvisioning, load]);
 
   // Keep the current step in view inside the scrolling steps list.
   useEffect(() => {
@@ -270,8 +283,10 @@ export default function LabSessionPage() {
       title: isPractice ? 'End practice session?' : 'Stop this lab session?',
       message: isPractice
         ? 'Its container will be destroyed and you can start a fresh one any time.'
-        : isRealLab
-          ? 'This terminal will close. Your screenshots and progress are saved. Your complete lab report will appear on this page, ready to submit to your instructor.'
+        : isVpsLab
+          ? 'Your lab server will be shut down and destroyed. Your screenshots and progress are saved. Your complete lab report will appear on this page, ready to submit to your instructor.'
+          : isRealLab
+            ? 'This terminal will close. Your screenshots and progress are saved. Your complete lab report will appear on this page, ready to submit to your instructor.'
           : 'You can start a new one later, but this terminal will close. Your verified steps and progress are saved.',
       confirmLabel: isPractice ? 'End session' : 'Stop session',
       cancelLabel: 'Keep working',
@@ -521,16 +536,18 @@ export default function LabSessionPage() {
               <h1 className="truncate font-display text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white" title={data.lab?.title || 'Hands-on Lab'}>
                 {data.lab?.title || 'Hands-on Lab'}
               </h1>
-              <Badge tone={running ? 'emerald' : 'slate'} dot={running ? 'animate-pulse' : true}>
-                {running ? 'Live session' : session.ended_reason === 'completed' ? 'Completed' : session.ended_reason === 'expired' ? 'Time expired' : 'Ended'}
+              <Badge tone={running ? 'emerald' : session.status === 'provisioning' ? 'amber' : 'slate'} dot={running ? 'animate-pulse' : true}>
+                {running ? 'Live session' : session.status === 'provisioning' ? 'Preparing server' : session.ended_reason === 'completed' ? 'Completed' : session.ended_reason === 'expired' ? 'Time expired' : 'Ended'}
               </Badge>
             </div>
             <p className="hidden truncate text-xs text-slate-500 sm:block">
-              {isContainerless
-                ? 'Legacy simulated terminal'
-                : session.lab_server_name
-                  ? `${session.lab_server_name} · isolated Linux container`
-                  : 'Isolated Linux container'}
+              {isVpsLab
+                ? 'Dedicated cloud server · Real VPS lab'
+                : isContainerless
+                  ? 'Legacy simulated terminal'
+                  : session.lab_server_name
+                    ? `${session.lab_server_name} · isolated Linux container`
+                    : 'Isolated Linux container'}
             </p>
           </div>
         </div>
@@ -588,7 +605,7 @@ export default function LabSessionPage() {
             <IconRefresh size={13} />
           </Button>
 
-          {running ? (
+          {session.status === 'provisioning' ? null : running ? (
             progress.allRequiredCompleted ? (
               <Button
                 size="xs"
@@ -699,7 +716,7 @@ export default function LabSessionPage() {
 
       {/* Exit report (real labs): just the task question and the student's
           own screenshots, shown before they submit to the instructor. */}
-      {isRealLab && !running && !isPractice && (
+      {isRealLab && !running && !isPractice && !(isVpsLab && (session.status === 'provisioning' || session.status === 'error')) && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Lab report">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-white/10 dark:bg-night-900/60">
@@ -826,7 +843,7 @@ export default function LabSessionPage() {
               <>
                 <span className="inline-flex min-w-0 items-center gap-1.5">
                   <IconServer size={12} className="shrink-0 text-cyan-700 dark:text-brand-400" />
-                  <span className="truncate">Ubuntu 22.04 LTS (x86_64)</span>
+                  <span className="truncate">{isVpsLab ? 'Dedicated cloud server' : 'Ubuntu 22.04 LTS (x86_64)'}</span>
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 text-emerald-700 dark:text-emerald-300">
                   <IconShield size={11} /> Root Privileges
@@ -843,7 +860,7 @@ export default function LabSessionPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-rose-800 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-300">
-                        Real lab
+                        {isVpsLab ? 'Real VPS lab' : 'Real lab'}
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">Question-only assessment</span>
                     </div>
@@ -1199,18 +1216,91 @@ export default function LabSessionPage() {
           )}
         </div>
 
-        {/* Right Column: Interactive Lab Terminal */}
+        {/* Right Column: Interactive Lab Terminal. Real VPS labs never render
+            the Docker terminal; they show the dedicated server panel instead. */}
         <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
-          <LabTerminal
-            sessionId={Number(session.id)}
-            status={session.status}
-            initialHistory={session.history || []}
-            welcome={data.lab?.terminal_welcome || ''}
-            student={student}
-            practice={isContainerless}
-            className="h-full w-full"
-            onProgress={handleProgress}
-          />
+          {isVpsLab ? (
+            <section className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
+              {session.status === 'provisioning' ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                  <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-white">Your real server is being prepared</h2>
+                  <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    A dedicated cloud server is being created for this lab. This usually takes 2 to 5 minutes.
+                    Your lab timer has not started yet; it starts when your server is ready. This page refreshes
+                    automatically, so you can stay here.
+                  </p>
+                  <Badge tone="amber" dot="animate-pulse">Provisioning</Badge>
+                </div>
+              ) : session.status === 'error' ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-300">
+                    <IconXCircle size={20} />
+                  </span>
+                  <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-white">Server could not be prepared</h2>
+                  <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    We could not create your lab server this time.
+                    {data.vps?.error ? <> Reason: <span className="font-medium text-slate-800 dark:text-slate-200">{data.vps.error}</span></> : null}
+                  </p>
+                  <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    Please contact your instructor so they can check the lab setup.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="flex items-center gap-2 font-display text-base font-semibold text-slate-900 dark:text-white">
+                      <IconServer size={16} className="text-cyan-700 dark:text-brand-400" /> Your server
+                    </h2>
+                    {running ? (
+                      <Badge tone="emerald" dot="animate-pulse">Ready</Badge>
+                    ) : (
+                      <Badge tone="slate">Ended</Badge>
+                    )}
+                  </div>
+                  {running ? (
+                    <>
+                      <dl className="mt-5 space-y-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
+                          <dt className="text-slate-500 dark:text-slate-400">Public IP</dt>
+                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.vps?.publicIp || 'Assigned at start'}</dd>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
+                          <dt className="text-slate-500 dark:text-slate-400">SSH user</dt>
+                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.vps?.sshUser || 'student'}</dd>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
+                          <dt className="text-slate-500 dark:text-slate-400">Profile</dt>
+                          <dd className="text-[13px] font-medium text-slate-900 dark:text-white">
+                            {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.vps?.profile))?.label || 'Ubuntu Basic (AWS t3.micro)'}
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                        Browser terminal for VPS labs arrives in the next update. Your task and evidence upload work as usual.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                      This lab server has ended and was destroyed. Your screenshots and task evidence stay saved
+                      on this page, ready to submit to your instructor.
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+          ) : (
+            <LabTerminal
+              sessionId={Number(session.id)}
+              status={session.status}
+              initialHistory={session.history || []}
+              welcome={data.lab?.terminal_welcome || ''}
+              student={student}
+              practice={isContainerless}
+              className="h-full w-full"
+              onProgress={handleProgress}
+            />
+          )}
         </div>
       </main>
     </div>

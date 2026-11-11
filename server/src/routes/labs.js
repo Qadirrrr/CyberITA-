@@ -69,7 +69,7 @@ async function notifyLabPublished(lab) {
     title: isOpenLab ? `New practice lab: ${lab.title}` : `New lab assignment: ${lab.title}`,
     body: isOpenLab
       ? `A new practice lab "${lab.title}" is ready for hands-on practice.`
-      : `${lab.lab_mode === 'real' ? 'A new question-only lab' : 'A new hands-on lab'} "${lab.title}" is available in your course.${dueText} Complete it and submit your work for instructor review.`,
+      : `${lab.lab_mode === 'vps' ? 'A new real-server lab' : lab.lab_mode === 'real' ? 'A new question-only lab' : 'A new hands-on lab'} "${lab.title}" is available in your course.${dueText} Complete it and submit your work for instructor review.`,
     link: isOpenLab ? `/labs/${lab.id}` : '/student/lab-assignments',
   });
 }
@@ -147,7 +147,12 @@ const stepSchema = z.object({
     position: z.coerce.number().int().min(0).optional(),
 });
 
-const LAB_MODES = ['practice', 'real'];
+const LAB_MODES = ['practice', 'real', 'vps'];
+const VPS_PROFILES = ['ubuntu-basic', 'debian-admin', 'network-firewall', 'server-hardening', 'penetration-testing'];
+const normalizeLabMode = (value, fallback = 'practice') => (LAB_MODES.includes(value) ? value : fallback);
+// Real and Real VPS labs share the graded, question-only assessment
+// semantics: a task brief, screenshot evidence, no steps, never open-to-all.
+const isAssessmentMode = (mode) => mode === 'real' || mode === 'vps';
 
 const labSchema = z.object({
     title: z.string().trim().min(3).max(200),
@@ -165,6 +170,7 @@ const labSchema = z.object({
     initialCwd: z.string().trim().max(300).default('/home/student'),
     initialFiles: z.record(z.any()).default({}),
     labMode: z.enum(LAB_MODES).default('practice'),
+    vpsProfile: z.enum(VPS_PROFILES).default('ubuntu-basic'),
     taskBrief: z.string().trim().max(20000).default(''),
     minEvidence: z.coerce.number().int().min(0).max(20).default(1),
     isPractice: z.boolean().default(false),
@@ -305,7 +311,7 @@ router.get(
         const result = [];
         for (const lab of labs) {
             const roster = await getLabRoster(lab);
-            const isReal = lab.lab_mode === 'real';
+            const isReal = isAssessmentMode(lab.lab_mode);
             const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
             const requiredSteps = Number(lab.required_steps) || 0;
             const students = roster.map((row) => {
@@ -503,7 +509,7 @@ router.get(
       paginatedParams
     );
     const labs = rows.map((row) => {
-      const isReal = row.lab_mode === 'real';
+      const isReal = isAssessmentMode(row.lab_mode);
       const requiredSteps = Number(row.required_step_count) || 0;
       const completedSteps = Number(row.my_completed_steps) || 0;
       const evidenceCount = Number(row.my_evidence_count) || 0;
@@ -607,9 +613,10 @@ router.post(
     const lab = await getLabOr404(req.params.id, { staff: isStaff(req.user) });
     await assertLabReadable(req.user, lab);
     await assertLabParticipation(lab, req.user);
-    // Guided labs need at least one step. Real labs are question-only, so they
-    // start with zero steps and collect screenshot evidence instead.
-    if (lab.lab_mode !== 'real') {
+    // Guided labs need at least one step. Real and Real VPS labs are
+    // question-only, so they start with zero steps and collect screenshot
+    // evidence instead.
+    if (!isAssessmentMode(lab.lab_mode)) {
       const stepCount = await query('SELECT COUNT(*)::int AS n FROM lab_steps WHERE lab_id = $1', [lab.id]);
       if (stepCount.rows[0].n === 0) throw badRequest('This lab has no steps configured yet.');
     }
@@ -645,6 +652,7 @@ router.get(
         lab_mode: lab.lab_mode || 'practice',
         task_brief: lab.task_brief || '',
         min_evidence: lab.min_evidence ?? 1,
+        vps_profile: lab.vps_profile || 'ubuntu-basic',
         time_limit_minutes: lab.time_limit_minutes ?? 0,
         course_id: lab.course_id,
         due_at: lab.due_at,
@@ -858,8 +866,8 @@ router.post(
   validateBody(generateLabSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
-    const labMode = b.labMode === 'real' ? 'real' : 'practice';
-    if (labMode === 'real' && b.isPractice) {
+    const labMode = normalizeLabMode(b.labMode);
+    if (isAssessmentMode(labMode) && b.isPractice) {
       throw badRequest('A real lab is graded, so it cannot be open to all learners.');
     }
     // Open-to-all labs are not tied to a course. Real labs may still belong to
@@ -889,7 +897,9 @@ router.post(
       difficulty: b.difficulty,
       stepCount: b.stepCount,
       isPractice: isOpenLab,
-      labMode,
+      // The generator only knows guided vs question-only; a vps lab is
+      // generated as a question-only task and stored with mode 'vps'.
+      labMode: isAssessmentMode(labMode) ? 'real' : 'practice',
       minEvidence: b.minEvidence,
     });
 
@@ -906,8 +916,8 @@ router.post(
         `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
            submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
            initial_cwd, status, created_by, is_practice, lab_mode, task_brief, min_evidence,
-           time_limit_minutes)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
+           time_limit_minutes, vps_profile)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id`,
         [
           slug,
           generated.title,
@@ -927,8 +937,9 @@ router.post(
           isOpenLab,
           labMode,
           generated.taskBrief || '',
-          labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
+          isAssessmentMode(labMode) ? Math.max(1, b.minEvidence ?? 1) : 1,
           Math.max(0, Number(b.timeLimitMinutes) || 0),
+          b.vpsProfile || 'ubuntu-basic',
         ]
       );
       const id = rows[0].id;
@@ -988,8 +999,8 @@ router.post(
         await notify(null, {
           userIds: enrolled.map((row) => row.user_id),
           type: 'lab',
-          title: labMode === 'real' ? `New real lab: ${generated.title}` : `New lab: ${generated.title}`,
-          body: labMode === 'real'
+          title: labMode === 'vps' ? `New Real VPS lab: ${generated.title}` : labMode === 'real' ? `New real lab: ${generated.title}` : `New lab: ${generated.title}`,
+          body: isAssessmentMode(labMode)
             ? `A new question-only lab "${generated.title}" is available. Upload screenshot evidence when you finish.`
             : `A new hands-on lab "${generated.title}" is available in your course.`,
           link: `/labs/${labId}`,
@@ -1009,12 +1020,14 @@ router.post(
   validateBody(labSchema),
   asyncHandler(async (req, res) => {
     const b = req.body;
-    const labMode = b.labMode === 'real' ? 'real' : 'practice';
-    if (labMode === 'real' && b.isPractice) {
+    const labMode = normalizeLabMode(b.labMode);
+    if (isAssessmentMode(labMode) && b.isPractice) {
       throw badRequest('A real lab is graded, so it cannot be open to all learners.');
     }
-    if (labMode === 'real' && !b.taskBrief?.trim()) {
-      throw badRequest('Add the task brief (the question learners must solve) for a real lab.');
+    if (isAssessmentMode(labMode) && !b.taskBrief?.trim()) {
+      throw badRequest(labMode === 'vps'
+        ? 'Add the task brief (the question learners must solve) for a Real VPS lab.'
+        : 'Add the task brief (the question learners must solve) for a real lab.');
     }
     // Open-to-all labs are not tied to a course.
     const isOpenLab = labMode === 'practice' && Boolean(b.isPractice);
@@ -1042,15 +1055,15 @@ router.post(
       `INSERT INTO labs (slug, title, course_id, lesson_id, summary, description, objectives,
          submission_requirements, difficulty, estimated_minutes, terminal_welcome, initial_files,
          initial_cwd, container_image, network_enabled, status, created_by, is_practice, due_at,
-         lab_mode, task_brief, min_evidence, time_limit_minutes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) RETURNING *`,
+         lab_mode, task_brief, min_evidence, time_limit_minutes, vps_profile)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *`,
       [slug, b.title, labCourseId, labLessonId, b.summary, b.description,
        b.objectives, b.submissionRequirements, b.difficulty, b.estimatedMinutes, b.terminalWelcome,
        JSON.stringify(b.initialFiles), b.initialCwd, b.containerImage || null,
        'networkEnabled' in b ? Boolean(b.networkEnabled) : true, b.status, req.user.id, isOpenLab,
        labCourseId ? b.dueAt ?? null : null, labMode, b.taskBrief || '',
-       labMode === 'real' ? Math.max(1, b.minEvidence ?? 1) : 1,
-       Math.max(0, Number(b.timeLimitMinutes) || 0)]
+       isAssessmentMode(labMode) ? Math.max(1, b.minEvidence ?? 1) : 1,
+       Math.max(0, Number(b.timeLimitMinutes) || 0), b.vpsProfile || 'ubuntu-basic']
     );
     await notifyLabPublished(rows[0]);
     res.status(201).json({ lab: rows[0] });
@@ -1066,18 +1079,20 @@ router.put(
     await assertLabManager(req.user, lab);
     const b = req.body;
     const nextMode = 'labMode' in b
-      ? (b.labMode === 'real' ? 'real' : 'practice')
-      : (lab.lab_mode === 'real' ? 'real' : 'practice');
-    if (nextMode === 'real' && b.isPractice === true) {
+      ? normalizeLabMode(b.labMode)
+      : normalizeLabMode(lab.lab_mode);
+    if (isAssessmentMode(nextMode) && b.isPractice === true) {
       throw badRequest('A real lab is graded, so it cannot be open to all learners.');
     }
     // Real labs are always graded. Open-to-all guided labs are not tied to a course.
-    const nextIsPractice = nextMode === 'real'
+    const nextIsPractice = isAssessmentMode(nextMode)
       ? false
       : ('isPractice' in b ? Boolean(b.isPractice) : Boolean(lab.is_practice));
     const nextTaskBrief = 'taskBrief' in b ? b.taskBrief : (lab.task_brief || '');
-    if (nextMode === 'real' && !String(nextTaskBrief || '').trim()) {
-      throw badRequest('Add the task brief (the question learners must solve) for a real lab.');
+    if (isAssessmentMode(nextMode) && !String(nextTaskBrief || '').trim()) {
+      throw badRequest(nextMode === 'vps'
+        ? 'Add the task brief (the question learners must solve) for a Real VPS lab.'
+        : 'Add the task brief (the question learners must solve) for a real lab.');
     }
     const nextCourseId = nextIsPractice ? null : 'courseId' in b ? b.courseId ?? null : lab.course_id;
     const nextLessonId = nextIsPractice ? null : 'lessonId' in b ? b.lessonId ?? null : lab.lesson_id;
@@ -1119,7 +1134,8 @@ router.put(
          lab_mode = $23,
          task_brief = CASE WHEN $24::boolean THEN $25 ELSE task_brief END,
          min_evidence = COALESCE($26, min_evidence),
-         time_limit_minutes = COALESCE($27, time_limit_minutes)
+         time_limit_minutes = COALESCE($27, time_limit_minutes),
+         vps_profile = COALESCE($28, vps_profile)
        WHERE id = $17 RETURNING *`,
       [
         b.title ?? null, b.summary ?? null, b.description ?? null, b.difficulty ?? null,
@@ -1132,10 +1148,11 @@ router.put(
         'dueAt' in b, nextIsPractice ? null : b.dueAt ?? null,
         nextMode,
         'taskBrief' in b, nextTaskBrief || '',
-        nextMode === 'real'
+        isAssessmentMode(nextMode)
           ? Math.max(1, Number('minEvidence' in b ? b.minEvidence : lab.min_evidence ?? 1))
           : ('minEvidence' in b ? Number(b.minEvidence) : null),
         'timeLimitMinutes' in b ? Math.max(0, Number(b.timeLimitMinutes) || 0) : null,
+        'vpsProfile' in b ? b.vpsProfile : null,
       ]
     );
     if (lab.status !== 'published' && rows[0].status === 'published') {
@@ -1193,8 +1210,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const lab = await getLab(req.params.id, { staff: true });
     await assertLabManager(req.user, lab);
-    if (lab.lab_mode === 'real') {
-      throw badRequest('Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
+    if (isAssessmentMode(lab.lab_mode)) {
+      throw badRequest(lab.lab_mode === 'vps'
+        ? 'Real VPS labs are question-only and do not use steps. Switch the lab to practice mode first.'
+        : 'Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
     }
     const b = req.body;
     let position = b.position;
@@ -1226,8 +1245,10 @@ router.put(
     const step = rows[0];
     if (!step) throw notFound('Step not found.');
     await assertLabManager(req.user, { course_id: step.course_id, created_by: step.created_by });
-    if (step.lab_mode === 'real') {
-      throw badRequest('Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
+    if (isAssessmentMode(step.lab_mode)) {
+      throw badRequest(step.lab_mode === 'vps'
+        ? 'Real VPS labs are question-only and do not use steps. Switch the lab to practice mode first.'
+        : 'Real labs are question-only and do not use steps. Switch the lab to practice mode first.');
     }
     const b = req.body;
     const { rows: updated } = await query(

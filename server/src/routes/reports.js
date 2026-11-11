@@ -194,6 +194,9 @@ router.post(
         if (practiceRows[0]?.lab_mode === 'real') {
             throw badRequest('Real labs are reviewed from submitted screenshot evidence, so no practical report is generated.');
         }
+        if (practiceRows[0]?.lab_mode === 'vps') {
+            throw badRequest('Real VPS labs are reviewed from submitted screenshot evidence, so no practical report is generated.');
+        }
         const { rows: existing } = await query('SELECT id, status FROM reports WHERE session_id = $1', [session.id]);
         if (existing[0]) throw badRequest('A report already exists for this lab session.');
 

@@ -83,7 +83,7 @@ async function buildEvidence(session) {
     ? (await query('SELECT id, name, location FROM lab_servers WHERE id = $1', [session.lab_server_id])).rows[0] || null
     : null;
 
-  const mode = session.lab_mode === 'real' ? 'real' : 'practice';
+  const mode = session.lab_mode === 'vps' ? 'vps' : session.lab_mode === 'real' ? 'real' : 'practice';
   const minEvidence = Math.max(0, Number(session.min_evidence ?? 1));
   const evidenceCount = shotRows.length;
 
@@ -103,7 +103,7 @@ async function buildEvidence(session) {
     progress: {
       completed_required: completedRequired,
       required_total: required.length,
-      all_required_completed: mode === 'real'
+      all_required_completed: mode !== 'practice'
         ? evidenceCount >= minEvidence
         : completedRequired === required.length,
       evidence_count: evidenceCount,
@@ -157,7 +157,7 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
     throw badRequest('Practice labs are open-ended: there is nothing to submit for review.');
   }
 
-  if (lab.lab_mode === 'real') {
+  if (lab.lab_mode === 'real' || lab.lab_mode === 'vps') {
     // Real labs are graded on evidence, not on guided steps. Students submit
     // however much they completed: any number of screenshots may be sent, and
     // the evidence snapshot records evidence_count against min_evidence so the

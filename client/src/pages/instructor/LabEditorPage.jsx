@@ -27,7 +27,7 @@ import {
   IconTrash,
 } from '../../components/icons';
 import PasteStepsModal from '../../components/lab/PasteStepsModal';
-import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
+import { DIFFICULTIES, LAB_MODES, VPS_LAB_PROFILES } from '../../lib/constants';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 const verificationTone = { command: 'brand', output: 'accent', manual: 'amber' };
@@ -77,7 +77,8 @@ export default function LabEditorPage() {
         initialCwd: response.lab.initial_cwd || '/home/student',
         containerImage: response.lab.container_image || '',
         networkEnabled: Boolean(response.lab.network_enabled),
-        labMode: response.lab.lab_mode === 'real' ? 'real' : 'practice',
+        labMode: response.lab.lab_mode === 'vps' ? 'vps' : response.lab.lab_mode === 'real' ? 'real' : 'practice',
+        vpsProfile: response.lab.vps_profile || 'ubuntu-basic',
         taskBrief: response.lab.task_brief || '',
         minEvidence: response.lab.min_evidence ?? 1,
         isPractice: Boolean(response.lab.is_practice),
@@ -112,9 +113,10 @@ export default function LabEditorPage() {
     containerImage: form.containerImage.trim() || null,
     networkEnabled: Boolean(form.networkEnabled),
     labMode: form.labMode,
+    vpsProfile: form.vpsProfile || 'ubuntu-basic',
     taskBrief: form.taskBrief,
     minEvidence: Number(form.minEvidence) || 1,
-    isPractice: form.labMode === 'real' ? false : Boolean(form.isPractice),
+    isPractice: form.labMode === 'practice' ? Boolean(form.isPractice) : false,
     status: form.status,
     ...overrides,
   });
@@ -255,7 +257,9 @@ export default function LabEditorPage() {
 
   const { lab, stats } = data;
   const isRealMode = form.labMode === 'real';
-  const canPublish = isRealMode ? form.taskBrief.trim().length >= 10 : steps.length > 0;
+  const isVpsMode = form.labMode === 'vps';
+  const isAssessmentMode = isRealMode || isVpsMode;
+  const canPublish = isAssessmentMode ? form.taskBrief.trim().length >= 10 : steps.length > 0;
 
   return (
     <div className="space-y-5">
@@ -304,9 +308,11 @@ export default function LabEditorPage() {
       </div>
 
       {!canPublish && (
-        isRealMode ? (
+        isAssessmentMode ? (
           <Alert tone="warning" title="Add the task brief">
-            A real lab is a question-only assessment. Write the task learners must solve before publishing it.
+            {isVpsMode
+              ? 'A Real VPS lab is a question-only assessment on a dedicated cloud server. Write the task learners must solve before publishing it.'
+              : 'A real lab is a question-only assessment. Write the task learners must solve before publishing it.'}
           </Alert>
         ) : (
           <Alert tone="warning" title="Add at least one step">
@@ -315,9 +321,9 @@ export default function LabEditorPage() {
         )
       )}
 
-      {isRealMode && steps.length > 0 && (
+      {isAssessmentMode && steps.length > 0 && (
         <Alert tone="info" title="Guided steps are hidden">
-          This lab still has {steps.length} step{steps.length === 1 ? '' : 's'} from guided mode. Real labs hide all steps
+          This lab still has {steps.length} step{steps.length === 1 ? '' : 's'} from guided mode. Assessment labs hide all steps
           and hints from learners; switch back to guided practice to edit them.
         </Alert>
       )}
@@ -332,9 +338,9 @@ export default function LabEditorPage() {
           <p className="mt-1 font-display text-2xl font-semibold text-white">{stats?.learners ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">{isRealMode ? 'Delivery' : 'Steps completed'}</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">{isAssessmentMode ? 'Delivery' : 'Steps completed'}</p>
           <p className="mt-1 font-display text-2xl font-semibold text-white">
-            {isRealMode ? 'Question' : stats?.steps_completed ?? 0}
+            {isAssessmentMode ? 'Question' : stats?.steps_completed ?? 0}
           </p>
         </Card>
       </div>
@@ -349,24 +355,25 @@ export default function LabEditorPage() {
               onChange={(event) => setForm((current) => ({
                 ...current,
                 labMode: event.target.value,
-                isPractice: event.target.value === 'real' ? false : current.isPractice,
+                isPractice: event.target.value === 'practice' ? current.isPractice : false,
               }))}
               hint={LAB_MODES[form.labMode]?.description}
             >
               <option value="practice">Guided practice: steps, hints and automatic verification</option>
               <option value="real">Real assessment: question only, screenshot evidence</option>
+              <option value="vps">Real VPS Lab: dedicated cloud server, screenshot evidence</option>
             </Select>
           </div>
           <Input label="Title" value={form.title} onChange={update('title')} required />
           <Textarea label="Summary" rows={2} value={form.summary} onChange={update('summary')} />
           <Textarea
-            label={isRealMode ? 'Context / scenario (optional)' : 'Description (markdown)'}
+            label={isAssessmentMode ? 'Context / scenario (optional)' : 'Description (markdown)'}
             rows={5}
             value={form.description}
             onChange={update('description')}
-            hint={isRealMode ? 'Extra background shown on the lab page. The question itself lives in the task brief below.' : undefined}
+            hint={isAssessmentMode ? 'Extra background shown on the lab page. The question itself lives in the task brief below.' : undefined}
           />
-          {isRealMode && (
+          {isAssessmentMode && (
             <>
               <Textarea
                 label="Task brief / question"
@@ -387,6 +394,18 @@ export default function LabEditorPage() {
                   onChange={update('minEvidence')}
                   hint="Submission is blocked until the learner attaches this many screenshots."
                 />
+                {isVpsMode && (
+                  <Select
+                    label="VPS profile"
+                    value={form.vpsProfile || 'ubuntu-basic'}
+                    onChange={update('vpsProfile')}
+                    hint="The fixed server profile this lab is provisioned with. Learners cannot change it."
+                  >
+                    {VPS_LAB_PROFILES.map((profile) => (
+                      <option key={profile.key} value={profile.key}>{profile.label}</option>
+                    ))}
+                  </Select>
+                )}
                 <Textarea
                   label="Submission requirements"
                   rows={4}
@@ -398,7 +417,7 @@ export default function LabEditorPage() {
               </div>
             </>
           )}
-          {!isRealMode && (
+          {!isAssessmentMode && (
             <div className="grid gap-4 sm:grid-cols-2">
               <Textarea
                 label="Learning objectives"
@@ -474,7 +493,7 @@ export default function LabEditorPage() {
               />
             </div>
           </div>
-          {!isRealMode && (
+          {!isAssessmentMode && (
             <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
               <Checkbox
                 label="Open to all learners (no enrollment, not graded)"
@@ -493,7 +512,7 @@ export default function LabEditorPage() {
         </form>
       </Card>
 
-      {!isRealMode ? (
+      {!isAssessmentMode ? (
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
             <div>
@@ -562,15 +581,19 @@ export default function LabEditorPage() {
             <div>
               <h2 className="font-display text-base font-semibold">Question-only assessment</h2>
               <p className="mt-1 max-w-2xl text-[11px] leading-5 text-slate-500">
-                Real labs hide steps, hints and progress from learners. They read the task brief, solve the challenge in
-                the terminal and upload screenshot evidence. You review the evidence from the lab submissions queue.
+                {isVpsMode
+                  ? 'Real VPS labs hide steps, hints and progress from learners. They read the task brief, solve the challenge on their own dedicated cloud server and upload screenshot evidence. You review the evidence from the lab submissions queue.'
+                  : 'Real labs hide steps, hints and progress from learners. They read the task brief, solve the challenge in the terminal and upload screenshot evidence. You review the evidence from the lab submissions queue.'}
               </p>
             </div>
-            <Badge tone="rose">Real</Badge>
+            <Badge tone={isVpsMode ? 'accent' : 'rose'}>{isVpsMode ? 'Real VPS' : 'Real'}</Badge>
           </div>
           <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs leading-6 text-slate-400">
             <p><span className="font-medium text-slate-200">Task brief:</span> {form.taskBrief.trim() ? 'ready' : 'not written yet'}</p>
             <p><span className="font-medium text-slate-200">Minimum evidence:</span> {Math.max(1, Number(form.minEvidence) || 1)} screenshot{(Math.max(1, Number(form.minEvidence) || 1)) === 1 ? '' : 's'}</p>
+            {isVpsMode && (
+              <p><span className="font-medium text-slate-200">VPS profile:</span> {VPS_LAB_PROFILES.find((profile) => profile.key === form.vpsProfile)?.label || 'Ubuntu Basic (AWS t3.micro)'}</p>
+            )}
             {steps.length > 0 && (
               <p className="text-amber-300/80">{steps.length} guided step{steps.length === 1 ? '' : 's'} are stored but hidden from learners.</p>
             )}

@@ -41,7 +41,7 @@ export default function LabSubmissionDetail({
   const screenshots = Array.isArray(evidence.screenshots) ? evidence.screenshots : [];
   const server = evidence.lab_server;
   const progress = evidence.progress || {};
-  const isRealLab = evidence.lab_mode === 'real';
+  const isRealLab = evidence.lab_mode === 'real' || evidence.lab_mode === 'vps';
   const minEvidence = Math.max(1, Number(evidence.min_evidence) || 1);
 
   const submitReview = (nextStatus) => {
@@ -60,7 +60,7 @@ export default function LabSubmissionDetail({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-display text-lg font-semibold text-white">{submission.lab_title}</h3>
             <Badge tone={status.tone}>{status.label}</Badge>
-            <Badge tone={isRealLab ? 'rose' : 'sky'}>{isRealLab ? 'Real lab' : 'Guided practice'}</Badge>
+            <Badge tone={evidence.lab_mode === 'vps' ? 'accent' : isRealLab ? 'rose' : 'sky'}>{evidence.lab_mode === 'vps' ? 'Real VPS lab' : isRealLab ? 'Real lab' : 'Guided practice'}</Badge>
             {adminMode && submission.admin_acknowledged && <Badge tone="brand">Acknowledged</Badge>}
           </div>
           <p className="mt-1 text-xs text-slate-400">

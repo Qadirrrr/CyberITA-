@@ -1,5 +1,6 @@
 import { DockerLabProvider } from '../docker/dockerProvider.js';
 import { PracticeLabProvider } from '../practice/practiceProvider.js';
+import { VpsLabProvider } from '../vps/vpsProvider.js';
 import env from '../../config/env.js';
 
 const registry = new Map();
@@ -18,6 +19,10 @@ registerProvider(DockerLabProvider);
 // before the real-terminal change still need it to serve their terminal and to
 // be stopped/deprovisioned.
 registerProvider(PracticeLabProvider);
+// Real VPS labs: selected only for labs with lab_mode = 'vps' (see
+// getProviderForLab below). Sessions are provisioned asynchronously by
+// labService through the VPS-Reselling gateway.
+registerProvider(VpsLabProvider);
 
 /** Returns the active provider instance (LAB_PROVIDER env, default "docker"). */
 export function getProvider(name = env.labs.provider) {
@@ -32,9 +37,12 @@ export function getProvider(name = env.labs.provider) {
  * Every lab, guided practice, open-to-all practice and real assessment, runs
  * in the configured real-lab provider (`LAB_PROVIDER`, "docker" in production
  * and "mock" in automated tests). `labs.is_practice` now only controls access
- * and grading; it must never switch a lab to the simulated shell.
+ * and grading; it must never switch a lab to the simulated shell. The one
+ * exception is `lab_mode = 'vps'`: those labs run on a dedicated cloud server
+ * and always use the vps provider.
  */
 export function getProviderForLab(lab, { fallback = env.labs.provider } = {}) {
+  if (lab && lab.lab_mode === 'vps') return getProvider('vps');
   return getProvider(fallback);
 }
 

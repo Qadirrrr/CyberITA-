@@ -73,11 +73,13 @@ export default function LabDetailPage() {
         navigate(sessionUrl);
       } else {
         toast.success(
-          data?.lab?.lab_mode === 'real'
-            ? 'Real lab opened in a new tab. Read the task brief and collect your evidence.'
-            : data?.lab?.is_practice
-              ? 'Practice lab container opened in a new tab.'
-              : 'Guided lab started in a new tab.'
+          data?.lab?.lab_mode === 'vps'
+            ? 'Real VPS lab opened in a new tab. Your server may take a few minutes to prepare.'
+            : data?.lab?.lab_mode === 'real'
+              ? 'Real lab opened in a new tab. Read the task brief and collect your evidence.'
+              : data?.lab?.is_practice
+                ? 'Practice lab container opened in a new tab.'
+                : 'Guided lab started in a new tab.'
         );
         try {
           const res = await api.get(`/labs/${id}`);
@@ -119,7 +121,8 @@ export default function LabDetailPage() {
   const running = mySession?.status === 'running';
   const tone = DIFFICULTIES[lab.difficulty]?.tone || 'brand';
   const isPractice = Boolean(lab.is_practice);
-  const isReal = lab.lab_mode === 'real';
+  const isVps = lab.lab_mode === 'vps';
+  const isReal = lab.lab_mode === 'real' || isVps;
   const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
   // Every lab - including open-to-all practice labs - needs a running Docker
   // provider, so availability is required for all of them.
@@ -184,7 +187,7 @@ export default function LabDetailPage() {
                   <IconClock size={11} /> {lab.time_limit_minutes} min limit
                 </Badge>
               )}
-              <Badge tone={isReal ? 'rose' : 'sky'}>{isReal ? 'Real lab' : 'Guided practice'}</Badge>
+              <Badge tone={isVps ? 'accent' : isReal ? 'rose' : 'sky'}>{isVps ? 'Real VPS lab' : isReal ? 'Real lab' : 'Guided practice'}</Badge>
               {isReal ? (
                 <Badge tone="slate"><IconCamera size={11} /> {minEvidence}+ screenshots</Badge>
               ) : (
@@ -203,11 +206,13 @@ export default function LabDetailPage() {
                 </Link>
               ) : (
                 <span>
-                  {isReal
-                    ? 'Real assessment · question-only'
-                    : lab.is_practice
-                      ? 'Guided practice · open to every learner'
-                      : 'Guided lab'}
+                  {isVps
+                    ? 'Real VPS lab · dedicated cloud server'
+                    : isReal
+                      ? 'Real assessment · question-only'
+                      : lab.is_practice
+                        ? 'Guided practice · open to every learner'
+                        : 'Guided lab'}
                 </span>
               )}
               <span>{sessions.length} session{sessions.length === 1 ? '' : 's'} started</span>
@@ -230,15 +235,17 @@ export default function LabDetailPage() {
                 loading={starting}
                 size="lg"
                 disabled={!infrastructureReady}
-                title={!infrastructureReady ? offlineReason : isReal ? 'Open the real lab' : isPractice ? 'Open the practice lab' : 'Launch guided lab'}
+                title={!infrastructureReady ? offlineReason : isVps ? 'Open the Real VPS lab' : isReal ? 'Open the real lab' : isPractice ? 'Open the practice lab' : 'Launch guided lab'}
               >
                 <IconTerminal size={17} />
-                {isReal ? 'Start real lab' : isPractice ? 'Start practice lab' : 'Start guided lab'}
+                {isVps ? 'Start Real VPS lab' : isReal ? 'Start real lab' : isPractice ? 'Start practice lab' : 'Start guided lab'}
               </Button>
             )}
             <p className="max-w-[240px] text-xs leading-5 text-slate-500 dark:text-slate-400 lg:text-right">
               {isReal
-                ? `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
+                ? isVps
+                  ? `Read the task brief, complete it on your dedicated cloud server and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review. The server takes a few minutes to prepare, and your timer starts when it is ready.`
+                  : `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
                 : isPractice
                   ? 'Runs in a real isolated Linux container. Not graded. Start as many sessions as you like.'
                   : 'Finish the required steps, then submit this lab assignment for instructor review.'}

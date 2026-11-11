@@ -197,7 +197,7 @@ export default function DeadlineTrackerPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">{lab.title}</h2>
-                    <Badge tone={lab.lab_mode === 'real' ? 'rose' : 'brand'}>{lab.lab_mode === 'real' ? 'Real lab' : 'Guided lab'}</Badge>
+                    <Badge tone={lab.lab_mode === 'vps' ? 'accent' : lab.lab_mode === 'real' ? 'rose' : 'brand'}>{lab.lab_mode === 'vps' ? 'Real VPS lab' : lab.lab_mode === 'real' ? 'Real lab' : 'Guided lab'}</Badge>
                     {lab.course_title && <Badge tone="slate">{lab.course_title}</Badge>}
                     {lab.is_overdue && <Badge tone="rose">Overdue</Badge>}
                   </div>

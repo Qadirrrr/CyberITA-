@@ -2,7 +2,8 @@ import { query, withTransaction } from '../config/db.js';
 import env from '../config/env.js';
 import logger from '../config/logger.js';
 import { getProvider, getProviderForLab } from '../labs/providers/index.js';
-import { normalizeCommand, matchesPattern } from '../utils/helpers.js';
+import { normalizeCommand, matchesPattern, slugify } from '../utils/helpers.js';
+import { provisionLabSession, getLabSessionStatus, terminateLabSession } from '../labs/vps/vpsGateway.js';
 import { notFound, forbidden, badRequest } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import { recomputeCourseProgress } from '../routes/enrollment.js';
@@ -35,7 +36,7 @@ export async function getLabSteps(labId, { includeAnswers = false } = {}) {
 async function loadSession(sessionId) {
   const { rows } = await query(
     `SELECT s.*, l.terminal_welcome, l.initial_cwd, l.lesson_id, l.course_id, l.is_practice,
-            l.lab_mode, l.task_brief, l.min_evidence,
+            l.lab_mode, l.task_brief, l.min_evidence, l.vps_profile,
             l.created_by, l.status AS lab_status, l.title AS lab_title,
             srv.name AS lab_server_name,
             u.full_name AS student_name
@@ -58,6 +59,9 @@ export async function getSessionOr404(sessionId, user) {
 
 /** Provisions (or reuses) a lab session for a user. */
 export async function startSession(user, lab) {
+  // Real VPS labs provision asynchronously through the gateway (a cloud
+  // server takes minutes to boot), so they have their own session-first flow.
+  if (lab.lab_mode === 'vps') return startVpsSession(user, lab);
   // Every lab runs in a real container, including open-to-all practice labs.
   // `is_practice` only controls access and grading, never the provider.
   const provider = getProviderForLab(lab);
@@ -150,6 +154,167 @@ export async function startSession(user, lab) {
   return { session: fullSession || session, reused: false, welcome: descriptor.welcome };
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function parseFsState(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
+async function updateVpsFsState(sessionId, patch) {
+  const { rows } = await query('SELECT fs_state FROM lab_sessions WHERE id = $1', [sessionId]);
+  const state = parseFsState(rows[0]?.fs_state);
+  state.vps = { ...(state.vps || {}), ...patch };
+  await query('UPDATE lab_sessions SET fs_state = $2 WHERE id = $1', [sessionId, JSON.stringify(state)]);
+  return state;
+}
+
+async function markVpsSessionError(session, gatewaySessionId, message) {
+  await updateVpsFsState(session.id, { error: message }).catch(() => {});
+  await query(
+    `UPDATE lab_sessions SET status = 'error' WHERE id = $1 AND status = 'provisioning'`,
+    [session.id]
+  ).catch(() => {});
+  if (gatewaySessionId) await terminateLabSession(gatewaySessionId).catch(() => {});
+}
+
+/**
+ * Background half of a VPS lab start: asks the gateway to provision a real
+ * server, then polls until it is active. The lab timer (expires_at) is set
+ * only when the server is ready, so provisioning time never eats into the
+ * student's lab time. Any failure lands the session in 'error' with the
+ * reason stored in fs_state.vps.error for the session page.
+ */
+async function launchVpsProvisioning(session, lab, user, sessionMinutes) {
+  const profileKey = lab.vps_profile || 'ubuntu-basic';
+  let gatewaySessionId = null;
+  try {
+    const result = await provisionLabSession({
+      cyberitaSessionId: session.id,
+      studentId: user.id,
+      studentEmail: user.email,
+      labId: lab.id,
+      labSlug: lab.slug || slugify(lab.title),
+      profileKey,
+      durationMinutes: sessionMinutes,
+    });
+    gatewaySessionId = result?.sessionId || null;
+    if (!gatewaySessionId) throw new Error('Lab gateway did not return a session id.');
+    await query('UPDATE lab_sessions SET instance_id = $2 WHERE id = $1', [session.id, gatewaySessionId]);
+    await updateVpsFsState(session.id, { gatewaySessionId });
+
+    const deadline = Date.now() + env.labs.vpsGateway.provisionTimeoutMs;
+    for (;;) {
+      if (Date.now() > deadline) {
+        throw new Error('Timed out waiting for the lab server to become ready.');
+      }
+      await sleep(env.labs.vpsGateway.pollIntervalMs);
+      // If the session left 'provisioning' meanwhile (the student stopped
+      // it, or staff ended it), stop babysitting it and clean up the server.
+      const { rows: current } = await query('SELECT status FROM lab_sessions WHERE id = $1', [session.id]);
+      if (!current[0] || current[0].status !== 'provisioning') {
+        await terminateLabSession(gatewaySessionId).catch(() => {});
+        return;
+      }
+      const statusData = await getLabSessionStatus(gatewaySessionId);
+      const gatewaySession = statusData?.session || {};
+      if (gatewaySession.status === 'active' && gatewaySession.publicIp) {
+        await updateVpsFsState(session.id, {
+          publicIp: gatewaySession.publicIp,
+          sshUser: gatewaySession.sshUser || 'student',
+        });
+        const expiresAt = new Date(Date.now() + sessionMinutes * 60 * 1000);
+        const { rows: updated } = await query(
+          `UPDATE lab_sessions SET status = 'running', started_at = now(), expires_at = $2
+           WHERE id = $1 AND status = 'provisioning' RETURNING *`,
+          [session.id, expiresAt]
+        );
+        if (updated[0]) {
+          await withTransaction((client) =>
+            notify(client, {
+              userIds: [user.id],
+              type: 'lab',
+              title: `Lab server ready: ${lab.title}`,
+              body: 'Your lab server is ready.',
+              link: `/labs/${lab.id}`,
+            })
+          ).catch(() => {});
+        }
+        return;
+      }
+      if (gatewaySession.status === 'error') {
+        throw new Error(gatewaySession.error || 'The lab server could not be prepared.');
+      }
+    }
+  } catch (error) {
+    logger.warn('VPS lab provisioning failed', { sessionId: session.id, error: error.message });
+    await markVpsSessionError(session, gatewaySessionId, error.message);
+  }
+}
+
+/**
+ * Starts a Real VPS lab session. Session-first and asynchronous: the row is
+ * created in 'provisioning' state with no expiry, the student watches a
+ * "server being prepared" page, and the background launcher flips the
+ * session to 'running' (and starts its timer) once the server is active.
+ */
+export async function startVpsSession(user, lab) {
+  const { rows: existing } = await query(
+    `SELECT * FROM lab_sessions
+     WHERE user_id = $1 AND lab_id = $2 AND provider = 'vps'
+       AND status IN ('provisioning', 'running')
+       AND (expires_at IS NULL OR expires_at > now())
+     ORDER BY id DESC LIMIT 1`,
+    [user.id, lab.id]
+  );
+  if (existing[0]) {
+    const fullExisting = await loadSession(existing[0].id);
+    return { session: fullExisting || existing[0], reused: true };
+  }
+
+  const labLimitMinutes = Math.max(0, Number(lab.time_limit_minutes) || 0);
+  const sessionMinutes = labLimitMinutes > 0 ? labLimitMinutes : env.labs.sessionTtlMinutes;
+  const profileKey = lab.vps_profile || 'ubuntu-basic';
+
+  const { rows } = await query(
+    `INSERT INTO lab_sessions
+       (lab_id, user_id, provider, instance_id, status, fs_state, cwd, expires_at)
+     VALUES ($1, $2, 'vps', NULL, 'provisioning', $3, '/home/student', NULL)
+     RETURNING *`,
+    [lab.id, user.id, JSON.stringify({ vps: { profile: profileKey } })]
+  );
+  const session = rows[0];
+
+  await withTransaction(async (client) => {
+    await recordActivity(client, {
+      userId: user.id,
+      action: 'lab.started',
+      entityType: 'lab',
+      entityId: lab.id,
+      metadata: { title: lab.title, practice: false, provider: 'vps', profile: profileKey },
+    });
+    await notify(client, {
+      userIds: [user.id],
+      type: 'lab',
+      title: `Lab started: ${lab.title}`,
+      body: 'Your real lab server is being prepared. This usually takes a few minutes.',
+      link: `/labs/${lab.id}`,
+    });
+  });
+
+  launchVpsProvisioning(session, lab, user, sessionMinutes).catch((error) =>
+    logger.warn('VPS lab provisioning launcher failed', { sessionId: session.id, error: error.message })
+  );
+
+  const fullSession = await loadSession(session.id);
+  return { session: fullSession || session, reused: false };
+}
+
 export async function stopSession(session, user, { reason = 'stopped' } = {}) {
   if (session.status === 'stopped') return session;
   const provider = getProvider(session.provider);
@@ -234,8 +399,8 @@ async function markStepCompleted({ session, step, command, output, client }) {
 
 /** Checks pending steps against the executed command/output. */
 export async function verifyStepsAfterCommand({ session, command, output }) {
-  // Real labs are unguided assessments: there are no steps to verify.
-  if (session.lab_mode === 'real') return { completedSteps: [], completion: null };
+  // Real and Real VPS labs are unguided assessments: no steps to verify.
+  if (session.lab_mode === 'real' || session.lab_mode === 'vps') return { completedSteps: [], completion: null };
 
   const pending = await getIncompleteSteps(session.id);
   const completed = [];
@@ -265,7 +430,7 @@ export async function verifyStepsAfterCommand({ session, command, output }) {
 
 /** Marks a manual step as complete (self-reported, recorded in history). */
 export async function completeManualStep(session, step, user) {
-  if (session.lab_mode === 'real') {
+  if (session.lab_mode === 'real' || session.lab_mode === 'vps') {
     throw badRequest('Real labs are unguided assessments: complete the task and upload screenshot evidence.');
   }
   if (step.verification !== 'manual') {
@@ -288,7 +453,7 @@ export async function completeManualStep(session, step, user) {
 
 /** Evaluates overall lab completion, notifies the learner and syncs lesson progress. */
 export async function checkLabCompletion(session) {
-  if (session.lab_mode === 'real') return { labCompleted: false };
+  if (session.lab_mode === 'real' || session.lab_mode === 'vps') return { labCompleted: false };
   const { rows: remaining } = await query(
     `SELECT COUNT(*)::int AS remaining FROM lab_steps s
      WHERE s.lab_id = $1 AND s.is_optional = FALSE
@@ -500,13 +665,15 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
   );
   const { rows: labRows } = await query(
     `SELECT id, title, submission_requirements, is_practice, lab_mode, task_brief, min_evidence,
-            time_limit_minutes
+            time_limit_minutes, vps_profile
      FROM labs WHERE id = $1`,
     [session.lab_id]
   );
   const lab = labRows[0] || null;
-  const labMode = lab?.lab_mode === 'real' ? 'real' : 'practice';
-  const isRealLab = labMode === 'real';
+  const labMode = lab?.lab_mode === 'vps' ? 'vps' : lab?.lab_mode === 'real' ? 'real' : 'practice';
+  // VPS labs share the real-lab treatment here: no steps, progress counts
+  // screenshot evidence instead of verified steps.
+  const isRealLab = labMode === 'real' || labMode === 'vps';
 
   const stepViews = steps.map((step) => {
     const progress = progressByStep.get(step.id) || null;
@@ -567,6 +734,7 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
       ended_reason: session.ended_reason || null,
       lab_server_id: session.lab_server_id || null,
       lab_server_name: session.lab_server_name || null,
+      vps: fsState.vps || null,
       student_id: student.id,
       student_name: student.name,
       shell_user: student.shell_user,
@@ -591,7 +759,7 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
  */
 export async function getUserLabProgress(userId, lab) {
   const labId = typeof lab === 'object' ? lab.id : lab;
-  const labMode = typeof lab === 'object' && lab.lab_mode === 'real' ? 'real' : 'practice';
+  const labMode = typeof lab === 'object' && (lab.lab_mode === 'real' || lab.lab_mode === 'vps') ? 'real' : 'practice';
   const minEvidence = Math.max(1, Number(typeof lab === 'object' ? lab.min_evidence : 1) || 1);
 
   const { rows } = await query(

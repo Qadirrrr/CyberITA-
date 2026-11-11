@@ -350,7 +350,7 @@ export default function LabsPage() {
           {filtered.map((lab) => {
             const tone = difficultyTone[lab.difficulty] || 'brand';
             const isPractice = Boolean(lab.is_practice);
-            const isReal = lab.lab_mode === 'real';
+            const isReal = lab.lab_mode === 'real' || lab.lab_mode === 'vps';
             return (
               <Card key={lab.id} className="card-hover group flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">

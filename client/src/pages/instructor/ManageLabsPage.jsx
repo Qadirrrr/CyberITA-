@@ -28,6 +28,8 @@ import { DIFFICULTIES, LAB_MODES } from '../../lib/constants';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 const statusTone = { published: 'emerald', draft: 'amber' };
+// Real and Real VPS labs share the question-only assessment treatment.
+const isAssessment = (mode) => mode === 'real' || mode === 'vps';
 
 export default function ManageLabsPage() {
   const [confirmNode, askConfirm] = useConfirm();
@@ -98,7 +100,7 @@ export default function ManageLabsPage() {
 
   const createLab = async (event) => {
     event.preventDefault();
-    const isReal = modal.labMode === 'real';
+    const isReal = isAssessment(modal.labMode);
     if (isReal && modal.taskBrief.trim().length < 10) {
       toast.error('Write the task brief (the question learners must solve) first.');
       return;
@@ -122,7 +124,9 @@ export default function ManageLabsPage() {
       });
       toast.success(
         isReal
-          ? 'Real lab created. Review the task brief and publish it when ready.'
+          ? modal.labMode === 'vps'
+            ? 'Real VPS lab created. Review the task brief and publish it when ready.'
+            : 'Real lab created. Review the task brief and publish it when ready.'
           : 'Lab created. Add its steps now.'
       );
       navigate(`/instructor/labs/${data.lab.id}`);
@@ -150,7 +154,7 @@ export default function ManageLabsPage() {
 
   const runAutoGenerate = async (event) => {
     event.preventDefault();
-    const isReal = autoModal.labMode === 'real';
+    const isReal = isAssessment(autoModal.labMode);
     if (!autoModal.title.trim()) {
       toast.error('Give the lab a title.');
       return;
@@ -184,7 +188,9 @@ export default function ManageLabsPage() {
       );
       toast.success(
         isReal
-          ? 'Real lab generated with a task brief. Review it and publish when ready.'
+          ? autoModal.labMode === 'vps'
+            ? 'Real VPS lab generated with a task brief. Review it and publish when ready.'
+            : 'Real lab generated with a task brief. Review it and publish when ready.'
           : `Lab generated with ${data.steps?.length || 0} verified steps. Review the steps and publish.`
       );
       navigate(`/instructor/labs/${data.lab.id}`);
@@ -245,7 +251,7 @@ export default function ManageLabsPage() {
               {item}
             </button>
           ))}
-          {['all', 'practice', 'real'].map((item) => (
+          {['all', 'practice', 'real', 'vps'].map((item) => (
             <button
               key={item}
               type="button"
@@ -316,7 +322,7 @@ export default function ManageLabsPage() {
                   <Badge tone={DIFFICULTIES[lab.difficulty]?.tone || 'slate'}>{DIFFICULTIES[lab.difficulty]?.label || lab.difficulty}</Badge>
                 </div>
                 <p className="mt-1 line-clamp-1 text-[11px] text-slate-600 dark:text-slate-400">
-                  {lab.lab_mode === 'real'
+                  {isAssessment(lab.lab_mode)
                     ? `Question-only · ${lab.min_evidence || 1}+ screenshot${(lab.min_evidence || 1) === 1 ? '' : 's'}`
                     : `${lab.is_practice ? 'Open to all learners' : lab.course_title || 'Standalone lab'} · ${lab.step_count} steps`}
                   {' · '}{lab.estimated_minutes} min
@@ -369,22 +375,23 @@ export default function ManageLabsPage() {
               onChange={(event) => setModal((current) => ({
                 ...current,
                 labMode: event.target.value,
-                isPractice: event.target.value === 'real' ? false : current.isPractice,
+                isPractice: event.target.value === 'practice' ? current.isPractice : false,
               }))}
               hint={LAB_MODES[modal.labMode]?.description}
             >
               <option value="practice">Guided practice: steps, hints and automatic verification</option>
               <option value="real">Real assessment: question only, screenshot evidence</option>
+              <option value="vps">Real VPS Lab: dedicated cloud server, screenshot evidence</option>
             </Select>
             <Input label="Lab title" value={modal.title} onChange={(event) => setModal((current) => ({ ...current, title: event.target.value }))} required />
             <Textarea label="Summary" rows={2} value={modal.summary} onChange={(event) => setModal((current) => ({ ...current, summary: event.target.value }))} />
             <Textarea
-              label={modal.labMode === 'real' ? 'Context / scenario (optional)' : 'Description (markdown)'}
+              label={isAssessment(modal.labMode) ? 'Context / scenario (optional)' : 'Description (markdown)'}
               rows={4}
               value={modal.description}
               onChange={(event) => setModal((current) => ({ ...current, description: event.target.value }))}
             />
-            {modal.labMode === 'real' && (
+            {isAssessment(modal.labMode) && (
               <>
                 <Textarea
                   label="Task brief / question"
@@ -430,23 +437,23 @@ export default function ManageLabsPage() {
               onChange={(event) => setModal((current) => ({ ...current, timeLimitMinutes: event.target.value }))}
               hint="How long learners get once they start. 0 means no custom limit. The lab ends automatically when the timer reaches zero."
             />
-            {modal.labMode !== 'real' && (
+            {!isAssessment(modal.labMode) && (
               <Input label="Due date (optional)" type="datetime-local" value={modal.dueAt || ''} disabled={modal.isPractice} onChange={(event) => setModal((current) => ({ ...current, dueAt: event.target.value }))} />
             )}
             <Select
               label="Course"
-              value={modal.isPractice && modal.labMode !== 'real' ? '' : modal.courseId}
-              disabled={Boolean(modal.isPractice) && modal.labMode !== 'real'}
+              value={modal.isPractice && !isAssessment(modal.labMode) ? '' : modal.courseId}
+              disabled={Boolean(modal.isPractice) && !isAssessment(modal.labMode)}
               onChange={(event) => setModal((current) => ({ ...current, courseId: event.target.value }))}
             >
               <option value="">
-                {modal.isPractice && modal.labMode !== 'real' ? 'Open labs are not attached to a course' : 'Standalone lab'}
+                {modal.isPractice && !isAssessment(modal.labMode) ? 'Open labs are not attached to a course' : 'Standalone lab'}
               </option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>{course.title}</option>
               ))}
             </Select>
-            {modal.labMode !== 'real' && (
+            {!isAssessment(modal.labMode) && (
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
                 <Checkbox
                   label="Open to all learners (no enrollment, not graded)"
@@ -482,12 +489,13 @@ export default function ManageLabsPage() {
               onChange={(event) => setAutoModal((current) => ({
                 ...current,
                 labMode: event.target.value,
-                labPractice: event.target.value === 'real' ? false : current.labPractice,
+                labPractice: event.target.value === 'practice' ? current.labPractice : false,
               }))}
               hint={LAB_MODES[autoModal.labMode]?.description}
             >
               <option value="practice">Guided practice: steps, hints and automatic verification</option>
               <option value="real">Real assessment: question only, screenshot evidence</option>
+              <option value="vps">Real VPS Lab: dedicated cloud server, screenshot evidence</option>
             </Select>
             <Input
               label="Lab title / topic"
@@ -498,11 +506,11 @@ export default function ManageLabsPage() {
               autoFocus
             />
             <Textarea
-              label={autoModal.labMode === 'real' ? 'Task / question' : 'Details and scope'}
+              label={isAssessment(autoModal.labMode) ? 'Task / question' : 'Details and scope'}
               rows={4}
               value={autoModal.details}
               onChange={(event) => setAutoModal((current) => ({ ...current, details: event.target.value }))}
-              placeholder={autoModal.labMode === 'real'
+              placeholder={isAssessment(autoModal.labMode)
                 ? 'Describe the question learners must answer and the evidence they should capture. No steps or hints are generated.'
                 : 'What should the learner practise? Mention tools, scenario and expected outcome. Keywords select the command blueprint.'}
             />
@@ -512,7 +520,7 @@ export default function ManageLabsPage() {
                   <option key={key} value={key}>{value.label}</option>
                 ))}
               </Select>
-              {autoModal.labMode === 'real' ? (
+              {isAssessment(autoModal.labMode) ? (
                 <Input
                   label="Minimum screenshots"
                   type="number"
@@ -547,18 +555,18 @@ export default function ManageLabsPage() {
             />
             <Select
               label="Course"
-              value={autoModal.labPractice && autoModal.labMode !== 'real' ? '' : autoModal.courseId}
-              disabled={Boolean(autoModal.labPractice) && autoModal.labMode !== 'real'}
+              value={autoModal.labPractice && !isAssessment(autoModal.labMode) ? '' : autoModal.courseId}
+              disabled={Boolean(autoModal.labPractice) && !isAssessment(autoModal.labMode)}
               onChange={(event) => setAutoModal((current) => ({ ...current, courseId: event.target.value }))}
             >
               <option value="">
-                {autoModal.labPractice && autoModal.labMode !== 'real' ? 'Open labs are not attached to a course' : 'Standalone lab'}
+                {autoModal.labPractice && !isAssessment(autoModal.labMode) ? 'Open labs are not attached to a course' : 'Standalone lab'}
               </option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>{course.title}</option>
               ))}
             </Select>
-            {autoModal.labMode !== 'real' && (
+            {!isAssessment(autoModal.labMode) && (
               <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
                 <Checkbox
                   label="Open to all learners (no enrollment, not graded)"
