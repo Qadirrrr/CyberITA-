@@ -28,6 +28,7 @@ import {
 import { submitLabSession } from '../services/labSubmissions.js';
 import { generateLab } from '../services/labGenerator.js';
 import { getProvider } from '../labs/providers/index.js';
+import { createLabTerminalTicket } from '../labs/vps/vpsGateway.js';
 import {
     assertLabManager,
     assertLabReadable,
@@ -681,6 +682,34 @@ router.post(
       clear: result.clear,
       completedSteps: result.completedSteps,
       completion: result.completion,
+    });
+  })
+);
+
+// Browser terminal ticket for Real VPS labs: the CyberITA server mints a
+// 120-second gateway ticket server-to-server (shared secret stays here),
+// and the browser connects to the gateway WebSocket with only that ticket.
+router.post(
+  '/sessions/:sessionId/vps-ticket',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const session = await getSessionOr404(req.params.sessionId, req.user);
+    if (session.user_id !== req.user.id) throw forbidden('Only the session owner can use its terminal.');
+    const lab = await getLab(session.lab_id, { staff: true });
+    if ((lab.lab_mode || 'practice') !== 'vps') throw badRequest('This lab does not run on a real VPS.');
+    if (session.status !== 'running') throw badRequest('The lab server is not running yet.');
+    if (!env.labs.vpsGateway.wsUrl) {
+      throw badRequest('The VPS terminal is not configured on this server.');
+    }
+    const gatewaySessionId = session.instance_id;
+    if (!gatewaySessionId) throw badRequest('The lab server is not ready yet.');
+    const ticket = await createLabTerminalTicket(gatewaySessionId, req.user.id);
+    res.json({
+      ticket: ticket.ticket,
+      expiresInSeconds: ticket.expiresInSeconds,
+      serverIp: ticket.serverIp,
+      sshUser: ticket.sshUser,
+      wsUrl: env.labs.vpsGateway.wsUrl,
     });
   })
 );

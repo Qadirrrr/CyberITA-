@@ -67,6 +67,11 @@ export const env = {
     // INTERNAL_LABS_SECRET on the VPS-Reselling backend.
     vpsGateway: {
       url: (process.env.LAB_GATEWAY_URL || '').replace(/\/$/, ''),
+      // Public WebSocket base of the VPS-Reselling site (no trailing slash),
+      // used by the browser terminal: wss connections go to
+      // <wsUrl>/api/lab-terminal?ticket=... The ticket itself is minted
+      // server-to-server with the shared secret, never in the browser.
+      wsUrl: (process.env.LAB_GATEWAY_WS_URL || '').replace(/\/$/, ''),
       secret: process.env.INTERNAL_LABS_SECRET || '',
       pollIntervalMs: parsePositiveNumber(process.env.LAB_GATEWAY_POLL_INTERVAL_MS, 5000),
       provisionTimeoutMs: parsePositiveNumber(process.env.LAB_GATEWAY_PROVISION_TIMEOUT_MS, 10 * 60 * 1000),

@@ -68,10 +68,25 @@ export function terminateLabSession(gatewaySessionId) {
   return gatewayFetch(`/internal/labs/sessions/${encodeURIComponent(gatewaySessionId)}`, { method: 'DELETE' });
 }
 
+/**
+ * Mints a short-lived (120s) browser terminal ticket for a gateway lab
+ * session. The ticket is a scoped JWT signed by the gateway; the student's
+ * browser presents it to the gateway's /api/lab-terminal WebSocket and
+ * never sees the shared secret or the session's SSH key.
+ * Returns { ticket, expiresInSeconds, serverIp, sshUser }.
+ */
+export function createLabTerminalTicket(gatewaySessionId, studentId) {
+  return gatewayFetch(`/internal/labs/sessions/${encodeURIComponent(gatewaySessionId)}/ticket`, {
+    method: 'POST',
+    body: { studentId },
+  });
+}
+
 export default {
   isVpsGatewayConfigured,
   getGatewayHealth,
   provisionLabSession,
   getLabSessionStatus,
   terminateLabSession,
+  createLabTerminalTicket,
 };

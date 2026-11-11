@@ -4,6 +4,7 @@ import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
+import VpsTerminal from '../../components/lab/VpsTerminal';
 import LabTimer from '../../components/lab/LabTimer';
 import { Alert, Badge, Button, Modal, ProgressBar } from '../../components/ui';
 import {
@@ -1240,7 +1241,7 @@ export default function LabSessionPage() {
                   <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-white">Server could not be prepared</h2>
                   <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
                     We could not create your lab server this time.
-                    {data.vps?.error ? <> Reason: <span className="font-medium text-slate-800 dark:text-slate-200">{data.vps.error}</span></> : null}
+                    {data.session.vps?.error ? <> Reason: <span className="font-medium text-slate-800 dark:text-slate-200">{data.session.vps.error}</span></> : null}
                   </p>
                   <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
                     Please contact your instructor so they can check the lab setup.
@@ -1263,22 +1264,22 @@ export default function LabSessionPage() {
                       <dl className="mt-5 space-y-3 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
                           <dt className="text-slate-500 dark:text-slate-400">Public IP</dt>
-                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.vps?.publicIp || 'Assigned at start'}</dd>
+                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.session.vps?.publicIp || 'Assigned at start'}</dd>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
                           <dt className="text-slate-500 dark:text-slate-400">SSH user</dt>
-                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.vps?.sshUser || 'student'}</dd>
+                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.session.vps?.sshUser || 'student'}</dd>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
                           <dt className="text-slate-500 dark:text-slate-400">Profile</dt>
                           <dd className="text-[13px] font-medium text-slate-900 dark:text-white">
-                            {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.vps?.profile))?.label || 'Ubuntu Basic (AWS t3.micro)'}
+                            {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.session.vps?.profile))?.label || 'Ubuntu Basic (AWS t3.micro)'}
                           </dd>
                         </div>
                       </dl>
-                      <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                        Browser terminal for VPS labs arrives in the next update. Your task and evidence upload work as usual.
-                      </p>
+                      <div className="mt-5 flex min-h-[260px] flex-1 flex-col">
+                        <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                      </div>
                     </>
                   ) : (
                     <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
