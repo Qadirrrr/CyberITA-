@@ -60,7 +60,6 @@ const BroadcastPage = lazy(() => import('./pages/admin/BroadcastPage'));
 const AdminLabsPage = lazy(() => import('./pages/admin/AdminLabsPage'));
 const LiveLabServersPage = lazy(() => import('./pages/admin/LiveLabServersPage'));
 const AdminAuditLogsPage = lazy(() => import('./pages/admin/AdminAuditLogsPage'));
-const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
 const AdminContentPage = lazy(() => import('./pages/admin/AdminContentPage'));
 const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
@@ -167,7 +166,6 @@ export default function App() {
             <Route path="admin/content" element={<AdminContentPage />} />
             <Route path="admin/system" element={<AdminSystemPage />} />
             <Route path="admin/logs" element={<AdminAuditLogsPage />} />
-            <Route path="admin/settings" element={<AdminSettingsPage />} />
             <Route path="admin/messages" element={<MessagesPage />} />
             <Route path="admin/broadcast" element={<BroadcastPage />} />
           </Route>

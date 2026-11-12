@@ -225,7 +225,7 @@ export default function LabServerAdminPanel() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 font-display text-base font-semibold text-white">
-              <IconServer size={16} className="text-brand-300" /> Lab servers
+              <IconServer size={16} className="text-brand-300" /> Lab hosts
             </h2>
             <p className="mt-1 text-[11px] text-slate-500">
               Docker hosts that run student containers. Leave the host empty to use the API server's own daemon

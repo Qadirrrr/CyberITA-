@@ -54,7 +54,7 @@ export default function ReportsReviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Submission review</h1>
+        <h1 className="font-display text-2xl font-semibold">Student Reports</h1>
         <p className="mt-1 text-sm text-slate-400">
           Grade step evidence, screenshots and solution articles from your labs, then turn standout work into
           instructor-authored articles.

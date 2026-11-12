@@ -30,7 +30,6 @@ import {
 } from '../../components/icons';
 import { formatDateTime, timeAgo } from '../../lib/format';
 import LabServerAdminPanel from '../../components/admin/LabServerAdminPanel';
-import LabSubmissionsRecordPanel from '../../components/admin/LabSubmissionsRecordPanel';
 import DockerContainerMonitorPanel from '../../components/admin/DockerContainerMonitorPanel';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -57,7 +56,7 @@ export default function AdminLabsPage() {
   const [verifyResult, setVerifyResult] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const [tab, setTab] = useState(urlTab || 'containers');
+  const [tab, setTab] = useState(['containers', 'sessions', 'servers'].includes(urlTab) ? urlTab : 'containers');
 
   const handleTabChange = (nextTab) => {
     setTab(nextTab);
@@ -153,7 +152,7 @@ export default function AdminLabsPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-white">Lab Infrastructure & Sessions</h1>
           <p className="mt-1 text-xs text-slate-400">
-            Monitor real-time isolated container sessions, Docker daemon status, and resource usage.
+            Monitor Docker lab containers, lab host machines and all lab sessions, including real VPS labs.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,8 +179,7 @@ export default function AdminLabsPage() {
         tabs={[
           { id: 'containers', label: 'Live Docker Containers' },
           { id: 'sessions', label: 'Sessions & health' },
-          { id: 'servers', label: 'Servers & assignment' },
-          { id: 'submissions', label: 'Submission record' },
+          { id: 'servers', label: 'Lab Hosts' },
         ]}
         value={tab}
         onChange={handleTabChange}
@@ -189,7 +187,6 @@ export default function AdminLabsPage() {
 
       {tab === 'containers' && <DockerContainerMonitorPanel />}
       {tab === 'servers' && <LabServerAdminPanel />}
-      {tab === 'submissions' && <LabSubmissionsRecordPanel />}
 
       {tab === 'sessions' && (
         <>
@@ -218,7 +215,7 @@ export default function AdminLabsPage() {
           value={health?.infrastructure?.sessionStats?.running ?? 0}
           tone="emerald"
           icon={IconPlay}
-          hint="Active containers"
+          hint="Active lab sessions"
           onClick={() => handleTabChange('containers')}
         />
 
@@ -253,8 +250,8 @@ export default function AdminLabsPage() {
       </div>
 
       {!dockerAvailable && (
-        <Alert tone="amber" title="Real Lab Infrastructure Notice">
-          Docker is not currently active on this host, so labs cannot start. Start Docker Desktop (or the Docker daemon) and labs will run again automatically without restarting the app.
+        <Alert tone="amber" title="Docker Lab Infrastructure Notice">
+          Docker is not currently active on this host, so Docker based labs cannot start. Start Docker Desktop (or the Docker daemon) and they will run again automatically without restarting the app. Real VPS labs do not use Docker and are not affected.
           {health?.infrastructure?.docker?.reason && (
             <p className="mt-2 break-words font-mono text-[11px] leading-5 opacity-80">
               {health.infrastructure.docker.reason}

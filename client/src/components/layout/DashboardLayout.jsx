@@ -19,6 +19,8 @@ import {
   IconFileText,
   IconLayout,
   IconLayers,
+  IconLock,
+  IconEdit,
   IconLogOut,
   IconMail,
   IconMenu,
@@ -125,10 +127,10 @@ const adminNavGroups = [
     items: [
       { to: '/admin/courses', label: 'Courses & Enrollment', icon: IconBookOpen },
       { to: '/admin/content', label: 'Content & Publication', icon: IconFileText },
-      { to: '/instructor/reports', label: 'Student Reports', icon: IconFileText },
+      { to: '/instructor/reports', label: 'Student Reports', icon: IconAward },
        { to: '/instructor/lab-submissions', label: 'Lab Submission Review', icon: IconCheckCircle },
        { to: '/instructor/deadline-tracker', label: 'Deadline Tracker', icon: IconClock },
-      { to: '/instructor/blog', label: 'Blog Publication', icon: IconBookOpen },
+      { to: '/instructor/blog', label: 'Blog Publication', icon: IconEdit },
     ],
   },
   {
@@ -136,7 +138,7 @@ const adminNavGroups = [
     items: [
       { to: '/admin/labs', label: 'Lab Infrastructure', icon: IconTerminal },
       { to: '/admin/live-lab-servers', label: 'Live Lab Servers', icon: IconServer },
-      { to: '/instructor/labs', label: 'All Labs', icon: IconTerminal },
+      { to: '/instructor/labs', label: 'All Labs', icon: IconLayers },
     ],
   },
   {
@@ -150,8 +152,7 @@ const adminNavGroups = [
     label: 'System',
     items: [
       { to: '/admin/system', label: 'System & Analytics', icon: IconBarChart },
-      { to: '/admin/logs', label: 'Audit & Security Logs', icon: IconBarChart },
-      { to: '/admin/settings', label: 'Platform Settings', icon: IconSettings },
+      { to: '/admin/logs', label: 'Audit & Security Logs', icon: IconLock },
     ],
   },
 ];
