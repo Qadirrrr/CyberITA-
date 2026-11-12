@@ -60,6 +60,7 @@ export default function LabSessionPage() {
   const [starting, setStarting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [copiedIp, setCopiedIp] = useState(false);
   // In-app confirmation popup (replaces the browser's window.confirm, which
   // shows the raw server IP and looks nothing like the product).
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -371,6 +372,16 @@ export default function LabSessionPage() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const copyServerIp = async () => {
+    const ip = data?.session?.vps?.publicIp;
+    if (!ip) return;
+    try {
+      await navigator.clipboard.writeText(ip);
+      setCopiedIp(true);
+      setTimeout(() => setCopiedIp(false), 1600);
+    } catch { /* clipboard unavailable in this browser */ }
   };
 
   const submitLabAssignment = async () => {
@@ -856,7 +867,7 @@ export default function LabSessionPage() {
           {/* Steps: one scrolling list, step after step */}
           <div className="flex-1 min-h-0 space-y-3.5 overflow-y-auto p-4 select-text">
             {isRealLab ? (
-              <div className="space-y-3.5">
+              <div className="flex min-h-full flex-col gap-3.5">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/40">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -958,20 +969,21 @@ export default function LabSessionPage() {
                     </p>
                   </div>
                 ) : (
-                  <Button
-                    onClick={submitLabAssignment}
-                    loading={submitting}
-                    className="w-full gap-1.5"
-                  >
-                    <IconSend size={13} /> Submit lab for review
-                  </Button>
-                )}
-
-                {!progress.allRequiredCompleted && !data.submission && (
-                  <p className="text-center text-[11px] leading-5 text-slate-500">
-                    You can submit now with {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'}, or attach {Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more
-                    to reach the required {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)}.
-                  </p>
+                  <div className="mt-auto space-y-2 pt-1">
+                    <Button
+                      onClick={submitLabAssignment}
+                      loading={submitting}
+                      className="w-full gap-1.5"
+                    >
+                      <IconSend size={13} /> Submit lab for review
+                    </Button>
+                    {!progress.allRequiredCompleted && (
+                      <p className="text-center text-[11px] leading-5 text-slate-500">
+                        You can submit now with {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'}, or attach {Math.max(0, (progress.minEvidence || data.lab?.min_evidence || 1) - data.screenshots.length)} more
+                        to reach the required {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)}.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             ) : steps.length ? (
@@ -1261,23 +1273,35 @@ export default function LabSessionPage() {
                   </div>
                   {running ? (
                     <>
-                      <dl className="mt-5 space-y-3 text-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
-                          <dt className="text-slate-500 dark:text-slate-400">Public IP</dt>
-                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.session.vps?.publicIp || 'Assigned at start'}</dd>
+                      <dl className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm dark:divide-white/[0.06] dark:border-white/10 dark:bg-night-900/40">
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                          <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Public IP</dt>
+                          <dd className="flex items-center gap-1">
+                            <span className="font-mono text-[13px] font-semibold text-slate-900 dark:text-white">{data.session.vps?.publicIp || 'Assigned at start'}</span>
+                            {data.session.vps?.publicIp ? (
+                              <button
+                                type="button"
+                                onClick={copyServerIp}
+                                title={copiedIp ? 'Copied' : 'Copy IP address'}
+                                className={`rounded-md p-1 transition ${copiedIp ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-white/[0.06] dark:hover:text-slate-300'}`}
+                              >
+                                {copiedIp ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                              </button>
+                            ) : null}
+                          </dd>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
-                          <dt className="text-slate-500 dark:text-slate-400">SSH user</dt>
-                          <dd className="font-mono text-[13px] font-medium text-slate-900 dark:text-white">{data.session.vps?.sshUser || 'student'}</dd>
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                          <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">SSH user</dt>
+                          <dd className="font-mono text-[13px] font-semibold text-slate-900 dark:text-white">{data.session.vps?.sshUser || 'student'}</dd>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/40">
-                          <dt className="text-slate-500 dark:text-slate-400">Profile</dt>
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                          <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Profile</dt>
                           <dd className="text-[13px] font-medium text-slate-900 dark:text-white">
                             {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.session.vps?.profile))?.label || 'Ubuntu Basic (AWS t3.micro)'}
                           </dd>
                         </div>
                       </dl>
-                      <div className="mt-5 flex min-h-[260px] flex-1 flex-col">
+                      <div className="mt-4 flex min-h-[320px] flex-1 flex-col">
                         <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
                       </div>
                     </>

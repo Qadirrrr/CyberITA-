@@ -18,6 +18,7 @@ export default function VpsTerminal({ sessionId, className = '' }) {
   const [state, setState] = useState('connecting'); // connecting | ready | error | ended
   const [errorText, setErrorText] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [serverAddr, setServerAddr] = useState('');
 
   const containerRef = useRef(null);
   const termRef = useRef(null);
@@ -122,6 +123,9 @@ export default function VpsTerminal({ sessionId, className = '' }) {
         return;
       }
       if (cancelled) return;
+      if (ticketData.serverIp) {
+        setServerAddr(`${ticketData.sshUser || 'student'}@${ticketData.serverIp}`);
+      }
 
       const wsBase = String(ticketData.wsUrl || '').replace(/\/$/, '');
       const ws = new WebSocket(`${wsBase}/api/lab-terminal?ticket=${encodeURIComponent(ticketData.ticket)}`);
@@ -191,8 +195,14 @@ export default function VpsTerminal({ sessionId, className = '' }) {
           : 'Connection failed';
 
   return (
-    <div className={`flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+    <div className={`vps-term-scroll flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
+      <style>{`
+        .vps-term-scroll .xterm-viewport::-webkit-scrollbar { width: 8px; }
+        .vps-term-scroll .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+        .vps-term-scroll .xterm-viewport::-webkit-scrollbar-thumb { background: #26303d; border-radius: 8px; }
+        .vps-term-scroll .xterm-viewport::-webkit-scrollbar-thumb:hover { background: #33415580; }
+      `}</style>
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-3 py-2">
         <span className="flex items-center gap-2 text-xs font-medium text-slate-300">
           <IconTerminal size={14} className="text-cyan-300" />
           Server terminal
@@ -209,20 +219,25 @@ export default function VpsTerminal({ sessionId, className = '' }) {
             {statusLabel}
           </span>
         </span>
-        {(state === 'error' || state === 'ended') && (
-          <button
-            type="button"
-            onClick={reconnect}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
-          >
-            <IconRefresh size={13} /> Reconnect
-          </button>
-        )}
+        <span className="flex items-center gap-2.5">
+          {serverAddr ? (
+            <span className="hidden font-mono text-[11px] text-slate-400 sm:block">{serverAddr}</span>
+          ) : null}
+          {(state === 'error' || state === 'ended') && (
+            <button
+              type="button"
+              onClick={reconnect}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+            >
+              <IconRefresh size={13} /> Reconnect
+            </button>
+          )}
+        </span>
       </div>
       {state === 'error' && errorText ? (
         <p className="border-b border-white/10 bg-rose-500/10 px-3 py-2 text-xs leading-5 text-rose-200">{errorText}</p>
       ) : null}
-      <div ref={containerRef} className="min-h-0 flex-1 px-2 py-1.5" />
+      <div ref={containerRef} className="min-h-0 flex-1 px-3 py-2" />
     </div>
   );
 }
