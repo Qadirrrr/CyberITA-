@@ -1312,7 +1312,7 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex min-h-[320px] flex-1 flex-col`}>
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex max-h-[92%] min-h-[300px] flex-1 flex-col`}>
                         <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
                       </div>
                     </>
