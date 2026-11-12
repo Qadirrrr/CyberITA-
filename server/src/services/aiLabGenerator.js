@@ -31,9 +31,13 @@ export class AiLabError extends Error {
 
 const DEFAULT_MODELS = {
   openai: 'gpt-4o-mini',
-  // gemini-2.0-flash was retired by Google (the API now answers 404
-  // "no longer available" and points at this model instead).
-  gemini: 'gemini-3.8-flash',
+  // gemini-2.0-flash was retired by Google, and its recommended
+  // successor gemini-3.8-flash never answered a generateContent call
+  // from the production host (60s timeouts, while the models list
+  // answered in 0.2s and this lite model in about 4s, both verified
+  // live on 2026-11-12). The lite model is fast, cheap and more than
+  // capable of writing lab step JSON.
+  gemini: 'gemini-3.5-flash-lite',
 };
 
 const POINTS_PER_STEP = 10;
@@ -234,13 +238,13 @@ async function callGemini({ system, user }) {
           // A full lab JSON is a few thousand tokens; leave ample room
           // so the response is never truncated mid-object.
           maxOutputTokens: 8192,
-          // Gemini 3.x models think before answering, which makes a
-          // plain generation call slow (a trivial test request was seen
-          // hanging on the production host). Lab authoring does not
-          // need deep reasoning: keep thinking LOW on 3.x models so
-          // responses stay fast. Older models use a different field
-          // and simply omit this.
-          ...(aiModel().startsWith('gemini-3') ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
+          // Full-size Gemini 3.x models think before answering, which
+          // makes a plain generation call slow. Lab authoring does not
+          // need deep reasoning: keep thinking LOW on those models so
+          // responses stay fast. The lite models (the default) do not
+          // take this field, and older models use a different one, so
+          // both simply omit it.
+          ...(aiModel().startsWith('gemini-3') && !aiModel().includes('lite') ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
         },
       }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
