@@ -474,6 +474,11 @@ export default function LabSessionPage() {
   const isContainerless = Boolean(session.containerless);
   const isPractice = Boolean(data.lab?.is_practice || isContainerless);
   const running = session.status === 'running';
+  // Once a real or VPS lab ends, the exit report is the whole page: the
+  // workspace columns retire and only the task, the student's evidence
+  // and the submission state remain.
+  const showExitReport = isRealLab && !running && !isPractice && !(isVpsLab && (session.status === 'provisioning' || session.status === 'error'));
+  const reportEditable = !data.submission || data.submission.status === 'changes_requested';
   const reportStatus = report ? REPORT_STATUS[report.status] : null;
   const completedCount = steps.filter((step) => step.completed).length;
 
@@ -722,11 +727,12 @@ export default function LabSessionPage() {
         </div>
       )}
 
-      {/* Exit report (real labs): just the task question and the student's
-          own screenshots, shown before they submit to the instructor. */}
-      {isRealLab && !running && !isPractice && !(isVpsLab && (session.status === 'provisioning' || session.status === 'error')) && (
-        <div className="shrink-0 px-3 pt-3 sm:px-4">
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Lab report">
+      {/* Exit report (real labs): once the session ends this report is the
+          whole page. Only the task, the student's screenshots and the
+          submission state, nothing else. */}
+      {showExitReport && (
+        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+          <section className="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Lab report">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-white/10 dark:bg-night-900/60">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
@@ -756,24 +762,40 @@ export default function LabSessionPage() {
             )}
 
             <div className="px-5 pb-5">
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                <IconCamera size={11} /> Screenshot evidence ({data.screenshots.length})
-                <span className="font-normal normal-case tracking-normal text-slate-400">
-                  · {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required
-                </span>
-              </p>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <IconCamera size={11} /> Screenshot evidence ({data.screenshots.length})
+                  <span className="font-normal normal-case tracking-normal text-slate-400">
+                    · {Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required
+                  </span>
+                </p>
+                {reportEditable && (
+                  <Button size="sm" variant="secondary" onClick={() => openUpload(null)} loading={uploading} className="gap-1.5">
+                    <IconCamera size={13} /> Add screenshot
+                  </Button>
+                )}
+              </div>
               {data.screenshots.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
-                  No screenshots were attached in this session. You can still submit the report, but your instructor will see no screenshot evidence. Screenshots can
-                  still be added from the evidence panel on the left.
+                  No screenshots attached yet. Add the screenshots that prove your work, or submit as is and your instructor will see a partial submission.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {data.screenshots.map((shot, index) => (
-                    <figure key={shot.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-night-900/30">
+                    <figure key={shot.id} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-night-900/30">
                       <a href={shot.file_path} target="_blank" rel="noreferrer" title="Open full screenshot">
                         <img src={shot.file_path} alt={shot.original_name || `Screenshot ${index + 1}`} className="h-24 w-full object-cover" />
                       </a>
+                      {reportEditable && (
+                        <button
+                          type="button"
+                          onClick={() => deleteScreenshot(shot.id)}
+                          className="absolute right-1 top-1 rounded-md bg-night-950/80 p-1 text-slate-300 opacity-0 transition hover:text-rose-300 group-hover:opacity-100"
+                          aria-label="Delete screenshot"
+                        >
+                          <IconTrash size={11} />
+                        </button>
+                      )}
                       <figcaption className="px-2.5 py-2">
                         <p className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{shot.original_name || `Screenshot ${index + 1}`}</p>
                         {shot.note && <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{shot.note}</p>}
@@ -781,6 +803,16 @@ export default function LabSessionPage() {
                     </figure>
                   ))}
                 </div>
+              )}
+              {reportEditable && (
+                <button
+                  type="button"
+                  onClick={() => openUpload(null)}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white py-2.5 text-xs text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/[0.02] dark:text-slate-400 dark:hover:border-brand-400/50 dark:hover:bg-brand-400/[0.06] dark:hover:text-brand-300"
+                  title="Press Ctrl+V anywhere in this lab to paste a screenshot, or click to browse"
+                >
+                  <IconClipboard size={12} /> Paste screenshot (Ctrl+V) or click to browse
+                </button>
               )}
             </div>
 
@@ -798,11 +830,11 @@ export default function LabSessionPage() {
               ) : (
                 <p className="text-sm text-slate-600 dark:text-slate-300">
                   {progress.allRequiredCompleted
-                    ? 'Your evidence is complete. Submit this report to your instructor for review.'
-                    : `You have attached ${data.screenshots.length} of ${Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required screenshots. You can submit this report as it is, or attach more screenshots from the panel on the left first.`}
+                    ? 'Your evidence is complete. Ready to submit for review.'
+                    : `${data.screenshots.length} of ${Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} required screenshots attached. You can submit now, or add more screenshots first.`}
                 </p>
               )}
-              {!data.submission || data.submission.status === 'changes_requested' ? (
+              {reportEditable ? (
                 <Button onClick={submitLabAssignment} loading={submitting} className="gap-1.5 bg-brand-600 text-white shadow-sm shadow-brand-500/20 hover:bg-brand-500">
                   <IconSend size={13} /> {data.submission?.status === 'changes_requested' ? 'Resubmit report' : 'Submit report to instructor'}
                 </Button>
@@ -812,7 +844,9 @@ export default function LabSessionPage() {
         </div>
       )}
 
-      {/* Body: Instructions on LEFT, Terminal on RIGHT */}
+      {/* Body: Instructions on LEFT, Terminal on RIGHT. Hidden once the
+          exit report takes over the page. */}
+      {!showExitReport && (
       <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] 2xl:grid-cols-[460px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
         <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
@@ -1339,6 +1373,7 @@ export default function LabSessionPage() {
           )}
         </div>
       </main>
+      )}
     </div>
   );
 }
