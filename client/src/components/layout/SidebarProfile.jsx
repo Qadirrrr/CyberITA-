@@ -81,18 +81,18 @@ export default function SidebarProfile({ compact = false }) {
         title={compact ? user.full_name : undefined}
         className={
           compact
-            ? 'flex w-full items-center justify-center rounded-xl border border-slate-200/80 bg-slate-100/70 p-1.5 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/15 dark:hover:bg-white/[0.06]'
-            : 'flex w-full items-center gap-2.5 rounded-xl border border-slate-200/80 bg-slate-100/70 p-2 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/15 dark:hover:bg-white/[0.06]'
+            ? 'flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/10 p-1.5 text-left transition hover:border-white/25 hover:bg-white/15'
+            : 'flex w-full items-center gap-2.5 rounded-xl border border-white/15 bg-white/10 p-2 text-left transition hover:border-white/25 hover:bg-white/15'
         }
       >
         <Avatar name={user.full_name} src={user.avatar_url} size="sm" />
         {!compact && (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold text-slate-800 dark:text-slate-200">{user.full_name}</span>
-              <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">{ROLES[user.role] || user.role}</span>
+              <span className="block truncate text-xs font-semibold text-white">{user.full_name}</span>
+              <span className="mt-0.5 block truncate text-xs text-brand-100/70">{ROLES[user.role] || user.role}</span>
             </span>
-            <IconChevronDown size={14} className={`shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+            <IconChevronDown size={14} className={`shrink-0 text-brand-100/70 transition ${open ? 'rotate-180' : ''}`} />
           </>
         )}
       </button>
