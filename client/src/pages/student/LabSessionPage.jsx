@@ -813,7 +813,7 @@ export default function LabSessionPage() {
       )}
 
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
-      <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] lg:overflow-hidden content-start lg:content-stretch">
+      <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] 2xl:grid-cols-[460px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
         <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
           {/* Header Stepper and Progress (guided labs only) */}
