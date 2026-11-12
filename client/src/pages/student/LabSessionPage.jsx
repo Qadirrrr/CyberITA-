@@ -1234,7 +1234,7 @@ export default function LabSessionPage() {
             the Docker terminal; they show the dedicated server panel instead. */}
         <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
           {isVpsLab ? (
-            <section className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
+            <section className="flex h-full w-full flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
               {session.status === 'provisioning' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -1261,7 +1261,7 @@ export default function LabSessionPage() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col p-6">
+                <div className="flex flex-col p-6">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="flex items-center gap-2 font-display text-base font-semibold text-slate-900 dark:text-white">
                       <IconServer size={16} className="text-cyan-700 dark:text-brand-400" /> Your server
@@ -1317,8 +1317,8 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex min-h-[320px] flex-1 flex-col`}>
-                        <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} shrink-0`}>
+                        <VpsTerminal sessionId={Number(session.id)} className="h-[420px] sm:h-[480px]" />
                       </div>
                     </>
                   ) : (
