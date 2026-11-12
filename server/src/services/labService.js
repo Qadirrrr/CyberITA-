@@ -672,6 +672,29 @@ export async function getSessionOverview(session, { includeAnswers = false } = {
     [session.lab_id]
   );
   const lab = labRows[0] || null;
+
+  // Self-heal the VPS server name: sessions whose server went active
+  // before the name was recorded (or while the gateway deploy lagged)
+  // have no fs_state.vps.serverName. Ask the gateway once, store what it
+  // reports, and the panel shows the real server name from then on.
+  if (
+    session.provider === 'vps'
+    && (session.status === 'running' || session.status === 'provisioning')
+    && session.instance_id
+    && !fsState.vps?.serverName
+  ) {
+    try {
+      const statusData = await getLabSessionStatus(session.instance_id);
+      const gatewayName = statusData?.session?.serverName || null;
+      if (gatewayName) {
+        const nextState = await updateVpsFsState(session.id, { serverName: gatewayName });
+        if (nextState?.vps) fsState.vps = nextState.vps;
+      }
+    } catch {
+      // Gateway unreachable: the panel falls back to the student name.
+    }
+  }
+
   const labMode = lab?.lab_mode === 'vps' ? 'vps' : lab?.lab_mode === 'real' ? 'real' : 'practice';
   // VPS labs share the real-lab treatment here: no steps, progress counts
   // screenshot evidence instead of verified steps.

@@ -290,10 +290,12 @@ router.get(
         const servers = await Promise.all(rows.map(async(row) => {
             const vps = parseSessionFsState(row.fs_state).vps || {};
             let instanceId = null;
+            let gatewayServerName = null;
             if (row.instance_id) {
                 try {
                     const status = await getLabSessionStatus(row.instance_id);
                     instanceId = status?.session?.providerServerId || null;
+                    gatewayServerName = status?.session?.serverName || null;
                 } catch {
                     // Gateway unreachable: render without the instance id.
                 }
@@ -305,7 +307,7 @@ router.get(
                 labTitle: row.lab_title,
                 profile: vps.profile || row.vps_profile || 'ubuntu-basic',
                 status: row.status,
-                serverName: vps.serverName || null,
+                serverName: vps.serverName || gatewayServerName,
                 publicIp: vps.publicIp || null,
                 sshUser: vps.sshUser || 'student',
                 gatewaySessionId: row.instance_id || null,

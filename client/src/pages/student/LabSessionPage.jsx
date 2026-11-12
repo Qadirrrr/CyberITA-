@@ -1320,7 +1320,7 @@ export default function LabSessionPage() {
                       <dl className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm dark:divide-white/[0.06] dark:border-white/10 dark:bg-night-900/40">
                         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
                           <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Server name</dt>
-                          <dd className="font-mono text-[13px] font-semibold text-slate-900 dark:text-white">{data.session.vps?.serverName || 'Assigned at start'}</dd>
+                          <dd className="font-mono text-[13px] font-semibold text-slate-900 dark:text-white">{data.session.vps?.serverName || data.session.student_name || 'Assigned at start'}</dd>
                         </div>
                         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
                           <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Public IP</dt>
