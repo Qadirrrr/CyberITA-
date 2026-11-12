@@ -278,7 +278,7 @@ router.get(
     asyncHandler(async(req, res) => {
         const { rows } = await query(
             `SELECT s.id, s.status, s.created_at, s.started_at, s.expires_at, s.instance_id, s.fs_state,
-                    u.name AS student_name, u.email AS student_email,
+                    u.full_name AS student_name, u.email AS student_email,
                     l.title AS lab_title, l.vps_profile
              FROM lab_sessions s
              JOIN users u ON u.id = s.user_id

@@ -126,12 +126,14 @@ export default function LiveLabServersPage() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
-      ) : servers.length === 0 && !error ? (
-        <EmptyState
-          icon={IconServer}
-          title="No live lab servers"
-          message="No student is running a VPS lab right now. Servers appear here as soon as a student starts one, and leave the list when the lab ends."
-        />
+      ) : servers.length === 0 ? (
+        error ? null : (
+          <EmptyState
+            icon={IconServer}
+            title="No live lab servers"
+            message="No student is running a VPS lab right now. Servers appear here as soon as a student starts one, and leave the list when the lab ends."
+          />
+        )
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-night-950/90">
           <div className="overflow-x-auto">
