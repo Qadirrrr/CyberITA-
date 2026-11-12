@@ -305,6 +305,7 @@ router.get(
                 labTitle: row.lab_title,
                 profile: vps.profile || row.vps_profile || 'ubuntu-basic',
                 status: row.status,
+                serverName: vps.serverName || null,
                 publicIp: vps.publicIp || null,
                 sshUser: vps.sshUser || 'student',
                 gatewaySessionId: row.instance_id || null,

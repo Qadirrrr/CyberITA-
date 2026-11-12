@@ -197,6 +197,7 @@ async function launchVpsProvisioning(session, lab, user, sessionMinutes) {
     const result = await provisionLabSession({
       cyberitaSessionId: session.id,
       studentId: user.id,
+      studentName: user.full_name || user.name || '',
       studentEmail: user.email,
       labId: lab.id,
       labSlug: lab.slug || slugify(lab.title),
@@ -227,6 +228,7 @@ async function launchVpsProvisioning(session, lab, user, sessionMinutes) {
         await updateVpsFsState(session.id, {
           publicIp: gatewaySession.publicIp,
           sshUser: gatewaySession.sshUser || 'student',
+          serverName: gatewaySession.serverName || null,
         });
         const expiresAt = new Date(Date.now() + sessionMinutes * 60 * 1000);
         const { rows: updated } = await query(

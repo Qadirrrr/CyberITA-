@@ -184,7 +184,10 @@ export default function LiveLabServersPage() {
                           <span className="text-xs text-slate-400">Assigning...</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">{server.instanceId || '-'}</td>
+                      <td className="px-4 py-3">
+                        {server.serverName ? <p className="font-mono text-xs font-medium text-slate-700 dark:text-slate-200">{server.serverName}</p> : null}
+                        <p className="font-mono text-xs text-slate-500 dark:text-slate-400">{server.instanceId || '-'}</p>
+                      </td>
                       <td className="px-4 py-3">
                         {server.status === 'running' ? (
                           <Badge tone="emerald" dot>Running</Badge>

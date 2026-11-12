@@ -51,10 +51,10 @@ export function getGatewayHealth() {
  * Idempotent on the gateway side for a given cyberitaSessionId.
  * Returns { sessionId, status: 'provisioning', expiresAt, ... }.
  */
-export function provisionLabSession({ cyberitaSessionId, studentId, studentEmail, labId, labSlug, profileKey, durationMinutes }) {
+export function provisionLabSession({ cyberitaSessionId, studentId, studentName, studentEmail, labId, labSlug, profileKey, durationMinutes }) {
   return gatewayFetch('/internal/labs/provision', {
     method: 'POST',
-    body: { cyberitaSessionId, studentId, studentEmail, labId, labSlug, profileKey, durationMinutes },
+    body: { cyberitaSessionId, studentId, studentName, studentEmail, labId, labSlug, profileKey, durationMinutes },
   });
 }
 

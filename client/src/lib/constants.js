@@ -43,11 +43,11 @@ export const LAB_MODES = {
 
 /** Fixed VPS gateway profiles an instructor can pick for a Real VPS lab. */
 export const VPS_LAB_PROFILES = [
-  { key: 'ubuntu-basic', label: 'Ubuntu Basic (CyberITA Lab Micro)' },
-  { key: 'debian-admin', label: 'Debian Admin (CyberITA Lab Micro)' },
-  { key: 'network-firewall', label: 'Network and Firewall (CyberITA Lab Micro)' },
-  { key: 'server-hardening', label: 'Server Hardening (CyberITA Lab Micro)' },
-  { key: 'penetration-testing', label: 'Penetration Testing (CyberITA Lab Small)' },
+  { key: 'ubuntu-basic', label: 'CyberITA Lab (Ubuntu)' },
+  { key: 'debian-admin', label: 'CyberITA Lab (Debian)' },
+  { key: 'network-firewall', label: 'CyberITA Lab (Ubuntu - Networking)' },
+  { key: 'server-hardening', label: 'CyberITA Lab (Ubuntu - Hardening)' },
+  { key: 'penetration-testing', label: 'CyberITA Lab (Ubuntu - Pen Testing)' },
 ];
 
 /**
