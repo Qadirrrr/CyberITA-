@@ -31,7 +31,9 @@ export class AiLabError extends Error {
 
 const DEFAULT_MODELS = {
   openai: 'gpt-4o-mini',
-  gemini: 'gemini-2.0-flash',
+  // gemini-2.0-flash was retired by Google (the API now answers 404
+  // "no longer available" and points at this model instead).
+  gemini: 'gemini-3.8-flash',
 };
 
 const POINTS_PER_STEP = 10;
