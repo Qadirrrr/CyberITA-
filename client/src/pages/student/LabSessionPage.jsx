@@ -579,13 +579,10 @@ export default function LabSessionPage() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {!isPractice && (isRealLab || progress.allRequiredCompleted) && (
+          {/* Real and VPS labs keep evidence + submit in the left panel;
+              the header only carries them for guided labs. */}
+          {!isPractice && !isRealLab && progress.allRequiredCompleted && (
             <div className="flex items-center gap-2">
-              {isRealLab && (
-                <Badge tone={progress.allRequiredCompleted ? 'emerald' : 'slate'}>
-                  <IconCamera size={11} /> {data.screenshots.length}/{Math.max(1, progress.minEvidence || data.lab?.min_evidence || 1)} evidence
-                </Badge>
-              )}
               {data.submission?.status === 'approved' ? (
                 <Badge tone="emerald"><IconCheckCircle size={12} /> Approved</Badge>
               ) : data.submission?.status === 'submitted' ? (
@@ -595,14 +592,12 @@ export default function LabSessionPage() {
                   size="xs"
                   onClick={submitLabAssignment}
                   loading={submitting}
-                  disabled={!isRealLab && !progress.allRequiredCompleted}
-                  title={!isRealLab && !progress.allRequiredCompleted ? 'Finish the required work first' : undefined}
                   className="gap-1 bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20"
                 >
                   <IconSend size={12} /> Submit lab
                 </Button>
               )}
-              {!isRealLab && (report ? (
+              {report ? (
                 <Button as={Link} to={`/student/reports/${report.id}`} target="_blank" size="xs" variant="secondary" className="gap-1">
                   <IconFileText size={12} /> Report
                 </Button>
@@ -610,7 +605,7 @@ export default function LabSessionPage() {
                 <Button size="xs" onClick={generateReport} loading={generating} variant="ghost" className="gap-1">
                   <IconZap size={12} /> Get report
                 </Button>
-              ))}
+              )}
             </div>
           )}
 
@@ -820,7 +815,7 @@ export default function LabSessionPage() {
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
       <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
-        <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
+        <div className={`flex h-[60vh] min-h-[420px] lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur ${isRealLab ? 'lg:h-auto lg:max-h-full lg:self-start' : 'lg:h-full'}`}>
           {/* Header Stepper and Progress (guided labs only) */}
           {!isRealLab && (
           <div className="flex shrink-0 flex-col border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
@@ -970,7 +965,7 @@ export default function LabSessionPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-auto space-y-2 pt-1">
+                  <div className="space-y-2">
                     <Button
                       onClick={submitLabAssignment}
                       loading={submitting}
@@ -1232,9 +1227,9 @@ export default function LabSessionPage() {
 
         {/* Right Column: Interactive Lab Terminal. Real VPS labs never render
             the Docker terminal; they show the dedicated server panel instead. */}
-        <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
+        <div className={`flex h-[70vh] min-h-[420px] lg:min-h-0 min-w-0 flex-col ${isVpsLab ? 'lg:h-auto lg:max-h-full lg:self-start' : 'lg:h-full'}`}>
           {isVpsLab ? (
-            <section className="flex h-full w-full flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
+            <section className="flex h-full max-h-full w-full flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 lg:h-auto" aria-label="Your lab server">
               {session.status === 'provisioning' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
