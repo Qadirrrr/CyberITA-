@@ -27,6 +27,30 @@ export default function VpsTerminal({ sessionId, className = '' }) {
   const stateRef = useRef('connecting');
   stateRef.current = state;
 
+  // Fit the grid to the box the terminal actually has. FitAddon accounts
+  // for padding on the .xterm element itself, and the width guard shaves
+  // a column if sub-pixel or font rounding still leaves the grid a hair
+  // wider than its box (which clips text at the right edge).
+  const fitSafely = useCallback(() => {
+    const fit = fitRef.current;
+    const term = termRef.current;
+    const box = containerRef.current;
+    if (!fit || !term || !box || box.clientWidth === 0) return;
+    try {
+      fit.fit();
+      let guard = 0;
+      while (
+        term.element
+        && term.element.offsetWidth > box.clientWidth
+        && term.cols > 20
+        && guard < 4
+      ) {
+        term.resize(term.cols - 1, term.rows);
+        guard += 1;
+      }
+    } catch { /* container hidden */ }
+  }, []);
+
   // Create the xterm instance once.
   useEffect(() => {
     if (!containerRef.current) return undefined;
@@ -64,9 +88,14 @@ export default function VpsTerminal({ sessionId, className = '' }) {
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(containerRef.current);
-    fit.fit();
     termRef.current = term;
     fitRef.current = fit;
+    requestAnimationFrame(fitSafely);
+    // Webfonts change the cell width when they arrive; refit so the
+    // column count matches the real glyph metrics.
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => fitSafely()).catch(() => {});
+    }
 
     const dataDisposable = term.onData((data) => {
       const ws = socketRef.current;
@@ -81,13 +110,23 @@ export default function VpsTerminal({ sessionId, className = '' }) {
       }
     });
 
-    const onWindowResize = () => {
-      try { fit.fit(); } catch { /* container hidden */ }
-    };
+    const onWindowResize = () => fitSafely();
     window.addEventListener('resize', onWindowResize);
+
+    // Refit whenever the box itself changes size (panel layout settling,
+    // the Server details toggle, another column appearing), not only
+    // when the whole window resizes.
+    let rafId = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(fitSafely);
+    });
+    observer.observe(containerRef.current);
 
     return () => {
       window.removeEventListener('resize', onWindowResize);
+      observer.disconnect();
+      cancelAnimationFrame(rafId);
       dataDisposable.dispose();
       resizeDisposable.dispose();
       try { socketRef.current?.close(); } catch { /* already closed */ }
@@ -132,7 +171,7 @@ export default function VpsTerminal({ sessionId, className = '' }) {
       socketRef.current = ws;
 
       ws.onopen = () => {
-        try { fitRef.current?.fit(); } catch { /* ignore */ }
+        fitSafely();
         ws.send(JSON.stringify({ type: 'connect', rows: term.rows || 24, cols: term.cols || 80 }));
       };
       ws.onmessage = (event) => {
@@ -197,6 +236,7 @@ export default function VpsTerminal({ sessionId, className = '' }) {
   return (
     <div className={`vps-term-scroll flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
       <style>{`
+        .vps-term-scroll .xterm { padding: 10px 14px; }
         .vps-term-scroll .xterm-viewport::-webkit-scrollbar { width: 8px; }
         .vps-term-scroll .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
         .vps-term-scroll .xterm-viewport::-webkit-scrollbar-thumb { background: #26303d; border-radius: 8px; }
@@ -237,7 +277,7 @@ export default function VpsTerminal({ sessionId, className = '' }) {
       {state === 'error' && errorText ? (
         <p className="border-b border-white/10 bg-rose-500/10 px-3 py-2 text-xs leading-5 text-rose-200">{errorText}</p>
       ) : null}
-      <div ref={containerRef} className="min-h-0 flex-1 px-3 py-2" />
+      <div ref={containerRef} className="relative min-h-0 flex-1 overflow-hidden" />
     </div>
   );
 }
