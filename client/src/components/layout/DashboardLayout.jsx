@@ -24,6 +24,7 @@ import {
   IconMenu,
   IconSend,
   IconSettings,
+  IconServer,
   IconShield,
   IconTerminal,
   IconUsers,
@@ -134,6 +135,7 @@ const adminNavGroups = [
     label: 'Infrastructure',
     items: [
       { to: '/admin/labs', label: 'Lab Infrastructure', icon: IconTerminal },
+      { to: '/admin/live-lab-servers', label: 'Live Lab Servers', icon: IconServer },
       { to: '/instructor/labs', label: 'All Labs', icon: IconTerminal },
     ],
   },

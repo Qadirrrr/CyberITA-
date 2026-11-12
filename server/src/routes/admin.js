@@ -9,6 +9,7 @@ import { requireRole } from '../middleware/auth.js';
 import { getProvider } from '../labs/providers/index.js';
 import { agentClient } from '../labs/remote/agentClient.js';
 import { stopSession, cleanupExpiredLabSessions } from '../services/labService.js';
+import { getLabSessionStatus } from '../labs/vps/vpsGateway.js';
 import { recordActivity } from '../utils/activity.js';
 import {
     createLabServer,
@@ -252,6 +253,78 @@ router.post(
             })
         );
         res.json({ ok: true, result });
+    })
+);
+
+/** ================= Live Real-VPS Lab Servers ================= */
+
+/** Parse a lab_sessions fs_state value (jsonb object or JSON string). */
+function parseSessionFsState(value) {
+    if (!value) return {};
+    if (typeof value === 'object') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return {};
+    }
+}
+
+/** List live Real VPS lab servers (provisioning + running) with the
+ *  student, lab and gateway detail the admin Live Lab Servers page shows.
+ *  The AWS instance id is read from the gateway per session; when the
+ *  gateway is unreachable the database view still renders without it. */
+router.get(
+    '/live-lab-servers',
+    asyncHandler(async(req, res) => {
+        const { rows } = await query(
+            `SELECT s.id, s.status, s.created_at, s.started_at, s.expires_at, s.instance_id, s.fs_state,
+                    u.name AS student_name, u.email AS student_email,
+                    l.title AS lab_title, l.vps_profile
+             FROM lab_sessions s
+             JOIN users u ON u.id = s.user_id
+             JOIN labs l ON l.id = s.lab_id
+             WHERE s.provider = 'vps' AND s.status IN ('provisioning', 'running')
+             ORDER BY s.created_at DESC
+             LIMIT 200`
+        );
+        const servers = await Promise.all(rows.map(async(row) => {
+            const vps = parseSessionFsState(row.fs_state).vps || {};
+            let instanceId = null;
+            if (row.instance_id) {
+                try {
+                    const status = await getLabSessionStatus(row.instance_id);
+                    instanceId = status?.session?.providerServerId || null;
+                } catch {
+                    // Gateway unreachable: render without the instance id.
+                }
+            }
+            return {
+                sessionId: row.id,
+                studentName: row.student_name,
+                studentEmail: row.student_email,
+                labTitle: row.lab_title,
+                profile: vps.profile || row.vps_profile || 'ubuntu-basic',
+                status: row.status,
+                publicIp: vps.publicIp || null,
+                sshUser: vps.sshUser || 'student',
+                gatewaySessionId: row.instance_id || null,
+                instanceId,
+                startedAt: row.started_at,
+                createdAt: row.created_at,
+                expiresAt: row.expires_at,
+                remainingSeconds: row.expires_at
+                    ? Math.max(0, Math.round((new Date(row.expires_at).getTime() - Date.now()) / 1000))
+                    : null,
+            };
+        }));
+        res.json({
+            servers,
+            counts: {
+                total: servers.length,
+                running: servers.filter((s) => s.status === 'running').length,
+                provisioning: servers.filter((s) => s.status === 'provisioning').length,
+            },
+        });
     })
 );
 

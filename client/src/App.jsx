@@ -58,6 +58,7 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const MessagesPage = lazy(() => import('./pages/admin/MessagesPage'));
 const BroadcastPage = lazy(() => import('./pages/admin/BroadcastPage'));
 const AdminLabsPage = lazy(() => import('./pages/admin/AdminLabsPage'));
+const LiveLabServersPage = lazy(() => import('./pages/admin/LiveLabServersPage'));
 const AdminAuditLogsPage = lazy(() => import('./pages/admin/AdminAuditLogsPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminCoursesPage = lazy(() => import('./pages/admin/AdminCoursesPage'));
@@ -162,6 +163,7 @@ export default function App() {
             <Route path="admin/moderators" element={<ModeratorManagementPage />} />
             <Route path="admin/courses" element={<AdminCoursesPage />} />
             <Route path="admin/labs" element={<AdminLabsPage />} />
+            <Route path="admin/live-lab-servers" element={<LiveLabServersPage />} />
             <Route path="admin/content" element={<AdminContentPage />} />
             <Route path="admin/system" element={<AdminSystemPage />} />
             <Route path="admin/logs" element={<AdminAuditLogsPage />} />
