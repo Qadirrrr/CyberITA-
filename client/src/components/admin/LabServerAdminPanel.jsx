@@ -545,7 +545,7 @@ export default function LabServerAdminPanel() {
             onChange={(event) => setForm((current) => ({ ...current, serverType: event.target.value }))}
           >
             <option value="local">Local Docker host (DOCKER_HOST)</option>
-            <option value="remote-agent">Remote Lab Agent (EC2)</option>
+            <option value="remote-agent">Remote Lab Agent</option>
           </Select>
           {form.serverType === 'remote-agent' ? (
             <>

@@ -592,7 +592,7 @@ export default function LabEditorPage() {
             <p><span className="font-medium text-slate-200">Task brief:</span> {form.taskBrief.trim() ? 'ready' : 'not written yet'}</p>
             <p><span className="font-medium text-slate-200">Minimum evidence:</span> {Math.max(1, Number(form.minEvidence) || 1)} screenshot{(Math.max(1, Number(form.minEvidence) || 1)) === 1 ? '' : 's'}</p>
             {isVpsMode && (
-              <p><span className="font-medium text-slate-200">VPS profile:</span> {VPS_LAB_PROFILES.find((profile) => profile.key === form.vpsProfile)?.label || 'Ubuntu Basic (AWS t3.micro)'}</p>
+              <p><span className="font-medium text-slate-200">VPS profile:</span> {VPS_LAB_PROFILES.find((profile) => profile.key === form.vpsProfile)?.label || 'Ubuntu Basic (CyberITA Lab Micro)'}</p>
             )}
             {steps.length > 0 && (
               <p className="text-amber-300/80">{steps.length} guided step{steps.length === 1 ? '' : 's'} are stored but hidden from learners.</p>

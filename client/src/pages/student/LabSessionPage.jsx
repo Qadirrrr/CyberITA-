@@ -1341,7 +1341,7 @@ export default function LabSessionPage() {
                         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
                           <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Profile</dt>
                           <dd className="text-[13px] font-medium text-slate-900 dark:text-white">
-                            {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.session.vps?.profile))?.label || 'Ubuntu Basic (AWS t3.micro)'}
+                            {VPS_LAB_PROFILES.find((profile) => profile.key === (data.lab?.vps_profile || data.session.vps?.profile))?.label || 'Ubuntu Basic (CyberITA Lab Micro)'}
                           </dd>
                         </div>
                       </dl>

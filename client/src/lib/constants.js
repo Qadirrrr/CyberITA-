@@ -43,11 +43,11 @@ export const LAB_MODES = {
 
 /** Fixed VPS gateway profiles an instructor can pick for a Real VPS lab. */
 export const VPS_LAB_PROFILES = [
-  { key: 'ubuntu-basic', label: 'Ubuntu Basic (AWS t3.micro)' },
-  { key: 'debian-admin', label: 'Debian Admin (AWS t3.micro)' },
-  { key: 'network-firewall', label: 'Network and Firewall (AWS t3.micro)' },
-  { key: 'server-hardening', label: 'Server Hardening (AWS t3.micro)' },
-  { key: 'penetration-testing', label: 'Penetration Testing (AWS t3.small)' },
+  { key: 'ubuntu-basic', label: 'Ubuntu Basic (CyberITA Lab Micro)' },
+  { key: 'debian-admin', label: 'Debian Admin (CyberITA Lab Micro)' },
+  { key: 'network-firewall', label: 'Network and Firewall (CyberITA Lab Micro)' },
+  { key: 'server-hardening', label: 'Server Hardening (CyberITA Lab Micro)' },
+  { key: 'penetration-testing', label: 'Penetration Testing (CyberITA Lab Small)' },
 ];
 
 /**
