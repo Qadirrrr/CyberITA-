@@ -50,12 +50,12 @@ export default function CertificatesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-semibold">Certificates</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Verifiable proof of completion. Share the serial or link with employers. No account is needed to verify.
         </p>
       </div>
 
-      {error && <p className="text-sm text-rose-300">{error}</p>}
+      {error && <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>}
 
       {loading ? (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -78,17 +78,19 @@ export default function CertificatesPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           {certificates.map((certificate) => (
             <Card key={certificate.id} className="relative overflow-hidden p-0">
-              <div className="relative overflow-hidden bg-night-900 p-6">
-                <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-brand-500/15 blur-3xl" />
+              <div className="relative overflow-hidden bg-white p-6 dark:bg-night-900">
+                <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-brand-500/10 blur-3xl dark:bg-brand-500/15" />
+                <div className="pointer-events-none absolute inset-2 rounded-xl border border-brand-600/15 dark:border-brand-400/15" />
+                <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-brand-400 to-brand-700" />
                 <div className="relative">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-400/30 bg-brand-400/10 text-brand-300">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-400/30 dark:bg-brand-400/10 dark:text-brand-300">
                         <IconGraduationCap size={20} />
                       </span>
                       <div>
-                        <p className="font-display text-sm font-semibold tracking-wide text-white">CyberITA+</p>
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-brand-300/70">Certificate of completion</p>
+                        <p className="font-display text-sm font-semibold tracking-wide text-slate-900 dark:text-white">CyberITA+</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-700 dark:text-brand-300/80">Certificate of completion</p>
                       </div>
                     </div>
                     <Badge tone="emerald">
@@ -96,33 +98,33 @@ export default function CertificatesPage() {
                     </Badge>
                   </div>
 
-                  <p className="mt-6 text-[10px] uppercase tracking-wider text-slate-500">Awarded to</p>
-                  <p className="font-display text-xl font-semibold text-white">{certificate.student_name}</p>
-                  <p className="mt-3 text-[10px] uppercase tracking-wider text-slate-500">For successfully completing</p>
-                  <p className="mt-1 text-sm font-medium leading-6 text-brand-200">{certificate.course_title}</p>
+                  <p className="mt-6 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Awarded to</p>
+                  <p className="font-display text-2xl font-semibold text-slate-900 dark:text-white">{certificate.student_name}</p>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">For successfully completing</p>
+                  <p className="mt-1 text-base font-semibold leading-6 text-brand-700 dark:text-brand-200">{certificate.course_title}</p>
 
-                  <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-4 text-[10px]">
+                  <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 dark:border-white/10">
                     <div>
-                      <p className="uppercase tracking-wider text-slate-500">Issued</p>
-                      <p className="mt-0.5 text-slate-300">{formatDate(certificate.issued_at)}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Issued</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-300">{formatDate(certificate.issued_at)}</p>
                     </div>
                     <div>
-                      <p className="uppercase tracking-wider text-slate-500">Duration</p>
-                      <p className="mt-0.5 text-slate-300">{certificate.duration_hours} hours</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Duration</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-300">{certificate.duration_hours} hours</p>
                     </div>
                     <div>
-                      <p className="uppercase tracking-wider text-slate-500">Final score</p>
-                      <p className="mt-0.5 text-slate-300">{Math.round(Number(certificate.final_progress))}%</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Final score</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-300">{Math.round(Number(certificate.final_progress))}%</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-night-950/60 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-950/60">
                 <button
                   type="button"
                   onClick={() => copySerial(certificate.serial)}
-                  className="group inline-flex items-center gap-1.5 font-mono text-[11px] text-slate-400 transition hover:text-brand-300"
+                  className="group inline-flex items-center gap-1.5 font-mono text-[11px] text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-300"
                   title="Copy serial number"
                 >
                   {certificate.serial}
@@ -143,9 +145,9 @@ export default function CertificatesPage() {
       )}
 
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Need to check someone else's certificate?{' '}
-          <Link to="/verify" className="text-brand-300 hover:text-brand-200">
+          <Link to="/verify" className="font-medium text-brand-700 hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200">
             Use the public verification tool
           </Link>
           .
