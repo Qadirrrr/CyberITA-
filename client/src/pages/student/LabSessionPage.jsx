@@ -815,7 +815,7 @@ export default function LabSessionPage() {
       {/* Body: Instructions on LEFT, Terminal on RIGHT */}
       <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[440px_1fr] xl:grid-cols-[480px_1fr] 2xl:grid-cols-[540px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
-        <div className={`flex h-[60vh] min-h-[420px] lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur ${isRealLab ? 'lg:h-auto lg:max-h-full lg:self-start' : 'lg:h-full'}`}>
+        <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
           {/* Header Stepper and Progress (guided labs only) */}
           {!isRealLab && (
           <div className="flex shrink-0 flex-col border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
@@ -902,7 +902,7 @@ export default function LabSessionPage() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/30">
+                <div className="flex flex-1 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-night-900/30">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                       <IconCamera size={11} /> Screenshot evidence ({data.screenshots.length})
@@ -946,7 +946,7 @@ export default function LabSessionPage() {
                   <button
                     type="button"
                     onClick={() => openUpload(null)}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white py-2.5 text-xs text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/[0.02] dark:text-slate-400 dark:hover:border-brand-400/50 dark:hover:bg-brand-400/[0.06] dark:hover:text-brand-300"
+                    className="mt-2 flex w-full flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white py-2.5 text-xs text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/[0.02] dark:text-slate-400 dark:hover:border-brand-400/50 dark:hover:bg-brand-400/[0.06] dark:hover:text-brand-300"
                     title="Press Ctrl+V anywhere in this lab to paste a screenshot, or click to browse"
                   >
                     <IconClipboard size={12} /> Paste screenshot (Ctrl+V) or click to browse
@@ -965,7 +965,7 @@ export default function LabSessionPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="mt-auto space-y-2 pt-1">
                     <Button
                       onClick={submitLabAssignment}
                       loading={submitting}
@@ -1227,9 +1227,9 @@ export default function LabSessionPage() {
 
         {/* Right Column: Interactive Lab Terminal. Real VPS labs never render
             the Docker terminal; they show the dedicated server panel instead. */}
-        <div className={`flex h-[70vh] min-h-[420px] lg:min-h-0 min-w-0 flex-col ${isVpsLab ? 'lg:h-auto lg:max-h-full lg:self-start' : 'lg:h-full'}`}>
+        <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
           {isVpsLab ? (
-            <section className="flex h-full max-h-full w-full flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 lg:h-auto" aria-label="Your lab server">
+            <section className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
               {session.status === 'provisioning' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -1256,7 +1256,7 @@ export default function LabSessionPage() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col p-6">
+                <div className="flex flex-1 flex-col p-6">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="flex items-center gap-2 font-display text-base font-semibold text-slate-900 dark:text-white">
                       <IconServer size={16} className="text-cyan-700 dark:text-brand-400" /> Your server
@@ -1312,8 +1312,8 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} shrink-0`}>
-                        <VpsTerminal sessionId={Number(session.id)} className="h-[420px] sm:h-[480px]" />
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex min-h-[320px] flex-1 flex-col`}>
+                        <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
                       </div>
                     </>
                   ) : (
