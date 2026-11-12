@@ -332,12 +332,12 @@ export default function DashboardLayout() {
   // moderator so all sidebars read as one system.
   const renderGroupHeading = (label, className = '') => (
     <div className={cx('flex items-center gap-2 px-2 pb-2', className)}>
-      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-100/70">{label}</span>
-      <span className="h-px flex-1 bg-white/15" />
+      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">{label}</span>
+      <span className="h-px flex-1 bg-slate-200/80 dark:bg-white/5" />
     </div>
   );
 
-  const renderNavItem = (item, mini = false, surface = 'sidebar') => {
+  const renderNavItem = (item, mini = false) => {
     const IconComponent = item.icon;
     let badgeCount = 0;
     let badgeTone = 'brand';
@@ -362,17 +362,8 @@ export default function DashboardLayout() {
       badgeTone = 'brand';
     }
 
-    const onSidebar = surface === 'sidebar';
     const badgeDot = (tone) =>
-      tone === 'amber'
-        ? 'bg-amber-400'
-        : tone === 'emerald'
-          ? 'bg-emerald-400'
-          : tone === 'rose'
-            ? 'bg-rose-500'
-            : onSidebar
-              ? 'bg-brand-300'
-              : 'bg-brand-400';
+      tone === 'amber' ? 'bg-amber-400' : tone === 'emerald' ? 'bg-emerald-400' : tone === 'rose' ? 'bg-rose-500' : 'bg-brand-400';
     const badgePill = (tone) =>
       tone === 'amber'
         ? 'bg-amber-400 text-night-950 shadow-amber-400/30'
@@ -380,9 +371,7 @@ export default function DashboardLayout() {
           ? 'bg-emerald-400 text-night-950 shadow-emerald-400/30'
           : tone === 'rose'
             ? 'bg-rose-500 text-white shadow-rose-500/30'
-            : onSidebar
-              ? 'bg-brand-600 text-white shadow-brand-900/30'
-              : 'bg-brand-400 text-night-950 shadow-brand-400/30';
+            : 'bg-brand-400 text-night-950 shadow-brand-400/30';
 
     return (
       <NavLink
@@ -402,37 +391,17 @@ export default function DashboardLayout() {
             'group relative flex items-center rounded-xl text-xs font-medium transition-all duration-150',
             mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-[9px]',
             isActive
-              ? onSidebar
-                ? 'border border-transparent bg-white font-semibold text-brand-800 shadow-md shadow-brand-900/25'
-                : 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
-              : onSidebar
-                ? 'border border-transparent text-brand-50/85 hover:bg-white/10 hover:text-white'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
+              ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
           )
         }
       >
         {({ isActive }) => (
           <>
             {isActive && (
-              <span
-                className={cx(
-                  'absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full',
-                  onSidebar ? 'bg-brand-600' : 'bg-brand-500 dark:bg-brand-400'
-                )}
-              />
+              <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 dark:bg-brand-400" />
             )}
-            <span
-              className={cx(
-                'flex shrink-0',
-                onSidebar
-                  ? isActive
-                    ? 'text-brand-700'
-                    : 'text-brand-100/60'
-                  : isActive
-                    ? 'text-brand-600 dark:text-brand-300'
-                    : 'text-slate-400 dark:text-slate-500'
-              )}
-            >
+            <span className={cx('flex shrink-0', isActive ? 'text-brand-600 dark:text-brand-300' : 'text-slate-400 dark:text-slate-500')}>
               <IconComponent size={17} />
             </span>
             {!mini && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
@@ -459,7 +428,7 @@ export default function DashboardLayout() {
   const renderNavGroups = (groups, mini = false) => (
     <div className={cx('no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-4', mini ? 'px-2' : 'px-3')}>
       {groups.map((group, index) => (
-        <div key={group.label} className={cx(mini && index > 0 && 'mt-2 border-t border-white/15 pt-2')}>
+        <div key={group.label} className={cx(mini && index > 0 && 'mt-2 border-t border-slate-200 pt-2 dark:border-white/5')}>
           {!mini && renderGroupHeading(group.label, index > 0 ? 'mt-5' : '')}
           <nav className="space-y-0.5">{(group?.items || []).map((item) => renderNavItem(item, mini))}</nav>
         </div>
@@ -468,21 +437,21 @@ export default function DashboardLayout() {
   );
 
   const renderSidebar = (mini = false) => (
-    <div className="flex h-full flex-col bg-brand-700">
+    <div className="flex h-full flex-col">
       {/* Header */}
       <div
         className={cx(
-          'flex h-16 items-center border-b border-white/15',
+          'flex h-16 items-center border-b border-slate-200/80 dark:border-white/5',
           mini ? 'justify-center px-2' : 'justify-between px-4'
         )}
       >
-        {mini ? <Logo compact /> : <Logo className="[&_.logo-wordmark]:text-white" />}
+        {mini ? <Logo compact /> : <Logo />}
         {!mini && (
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setSidebarCollapsed(true)}
-              className="hidden rounded-lg p-1.5 text-brand-100/80 transition hover:bg-white/10 hover:text-white lg:inline-flex"
+              className="hidden rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-white lg:inline-flex"
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -491,7 +460,7 @@ export default function DashboardLayout() {
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg p-1.5 text-brand-100/80 transition hover:bg-white/10 hover:text-white lg:hidden"
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-white lg:hidden"
               aria-label="Close menu"
             >
               <IconX size={18} />
@@ -510,7 +479,7 @@ export default function DashboardLayout() {
             </nav>
 
             {mini ? (
-              <div className="my-3 h-px bg-white/15" />
+              <div className="my-3 h-px bg-slate-200 dark:bg-white/5" />
             ) : (
               renderGroupHeading('Progress', 'mt-5')
             )}
@@ -521,7 +490,7 @@ export default function DashboardLayout() {
 
           <div
             ref={profileRef}
-            className={cx('shrink-0 border-t border-white/15 py-3', mini ? 'relative px-2' : 'px-3')}
+            className={cx('shrink-0 border-t border-slate-200/80 py-3 dark:border-white/5', mini ? 'relative px-2' : 'px-3')}
           >
             {profileOpen && (
               <div
@@ -531,7 +500,7 @@ export default function DashboardLayout() {
                 )}
               >
                 <nav className="space-y-0.5 p-1.5" onClick={() => setProfileOpen(false)}>
-                  {studentNavSecondary.map((item) => renderNavItem(item, false, 'menu'))}
+                  {studentNavSecondary.map((item) => renderNavItem(item))}
                 </nav>
                 <div className="border-t border-slate-200 p-1.5 dark:border-white/10">
                   <button
@@ -556,7 +525,7 @@ export default function DashboardLayout() {
               aria-label="Profile menu"
               title={mini ? user?.full_name || 'Profile' : undefined}
               className={cx(
-                'group flex w-full items-center rounded-xl border border-white/15 bg-white/10 text-left transition hover:border-white/25 hover:bg-white/15',
+                'group flex w-full items-center rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-white/15 dark:hover:bg-white/[0.06]',
                 mini ? 'justify-center p-1.5' : 'gap-2.5 p-2'
               )}
             >
@@ -564,16 +533,16 @@ export default function DashboardLayout() {
               {!mini && (
                 <>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-semibold text-white">
+                    <span className="block truncate text-xs font-semibold text-slate-800 dark:text-slate-200">
                       {user?.full_name || 'Profile'}
                     </span>
-                    <span className="mt-0.5 block truncate text-[10px] text-brand-100/70">
+                    <span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:text-slate-500">
                       {ROLES[user?.role] || 'Profile'}
                     </span>
                   </span>
                   <IconChevronDown
                     size={14}
-                    className={`shrink-0 text-brand-100/70 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
+                    className={`shrink-0 text-slate-500 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
                   />
                 </>
               )}
@@ -587,7 +556,7 @@ export default function DashboardLayout() {
             user?.role === 'admin' ? adminNavGroups : isModerator ? moderatorNavGroups(user?.role) : instructorNavGroups,
             mini
           )}
-          <div className={cx('mt-auto border-t border-white/15', mini ? 'p-2' : 'p-3')}>
+          <div className={cx('mt-auto border-t border-slate-200/80 dark:border-white/5', mini ? 'p-2' : 'p-3')}>
             <SidebarProfile compact={mini} />
           </div>
         </>
@@ -600,7 +569,7 @@ export default function DashboardLayout() {
     <div className="min-h-screen lg:flex">
       <aside
         className={cx(
-          'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-brand-900/30 transition-[width] duration-300 lg:block',
+          'no-scrollbar fixed inset-y-0 left-0 hidden border-r border-slate-200/80 bg-white/95 transition-[width] duration-300 dark:border-white/5 dark:bg-night-900/70 lg:block',
           sidebarCollapsed ? 'w-[76px]' : 'w-[256px]'
         )}
       >
@@ -615,7 +584,7 @@ export default function DashboardLayout() {
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm dark:bg-night-950/80"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="no-scrollbar relative z-10 h-full w-[268px] border-r border-brand-900/30">
+          <aside className="no-scrollbar relative z-10 h-full w-[268px] border-r border-slate-200 bg-white dark:border-white/10 dark:bg-night-900">
             {renderSidebar(false)}
           </aside>
         </div>
