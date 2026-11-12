@@ -228,7 +228,20 @@ async function callGemini({ system, user }) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: 'application/json',
+          // A full lab JSON is a few thousand tokens; leave ample room
+          // so the response is never truncated mid-object.
+          maxOutputTokens: 8192,
+          // Gemini 3.x models think before answering, which makes a
+          // plain generation call slow (a trivial test request was seen
+          // hanging on the production host). Lab authoring does not
+          // need deep reasoning: keep thinking LOW on 3.x models so
+          // responses stay fast. Older models use a different field
+          // and simply omit this.
+          ...(aiModel().startsWith('gemini-3') ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
+        },
       }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });
