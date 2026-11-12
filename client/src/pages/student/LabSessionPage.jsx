@@ -61,6 +61,7 @@ export default function LabSessionPage() {
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [copiedIp, setCopiedIp] = useState(false);
+  const [showServerDetails, setShowServerDetails] = useState(false);
   // In-app confirmation popup (replaces the browser's window.confirm, which
   // shows the raw server IP and looks nothing like the product).
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -1265,14 +1266,28 @@ export default function LabSessionPage() {
                     <h2 className="flex items-center gap-2 font-display text-base font-semibold text-slate-900 dark:text-white">
                       <IconServer size={16} className="text-cyan-700 dark:text-brand-400" /> Your server
                     </h2>
-                    {running ? (
-                      <Badge tone="emerald" dot="animate-pulse">Ready</Badge>
-                    ) : (
-                      <Badge tone="slate">Ended</Badge>
-                    )}
+                    <span className="flex items-center gap-2">
+                      {running ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowServerDetails((value) => !value)}
+                          aria-expanded={showServerDetails}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                        >
+                          Server details
+                          <IconChevronDown size={13} className={`transition-transform ${showServerDetails ? 'rotate-180' : ''}`} />
+                        </button>
+                      ) : null}
+                      {running ? (
+                        <Badge tone="emerald" dot="animate-pulse">Ready</Badge>
+                      ) : (
+                        <Badge tone="slate">Ended</Badge>
+                      )}
+                    </span>
                   </div>
                   {running ? (
                     <>
+                      {showServerDetails ? (
                       <dl className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm dark:divide-white/[0.06] dark:border-white/10 dark:bg-night-900/40">
                         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
                           <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Public IP</dt>
@@ -1301,7 +1316,8 @@ export default function LabSessionPage() {
                           </dd>
                         </div>
                       </dl>
-                      <div className="mt-4 flex min-h-[320px] flex-1 flex-col">
+                      ) : null}
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex min-h-[320px] flex-1 flex-col`}>
                         <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
                       </div>
                     </>
