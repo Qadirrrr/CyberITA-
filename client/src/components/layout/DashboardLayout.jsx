@@ -388,7 +388,7 @@ export default function DashboardLayout() {
         }}
         className={({ isActive }) =>
           cx(
-            'group relative flex items-center rounded-xl text-xs font-medium transition-all duration-150',
+            'group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150',
             mini ? 'mx-auto h-9 w-9 justify-center' : 'gap-2.5 px-3 py-[9px]',
             isActive
               ? 'bg-brand-50 text-brand-700 font-semibold shadow-sm border border-brand-200/80 dark:border-transparent dark:bg-brand-400/10 dark:text-brand-200 dark:shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]'
