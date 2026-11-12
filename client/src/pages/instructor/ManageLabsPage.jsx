@@ -149,6 +149,7 @@ export default function ManageLabsPage() {
       labPractice: false,
       courseId: courses[0]?.id || '',
       status: 'draft',
+      useAi: true,
     });
   };
 
@@ -183,15 +184,21 @@ export default function ManageLabsPage() {
           courseId: autoModal.labPractice && !isReal ? null : Number(autoModal.courseId) || null,
           status: autoModal.status,
           autoSave: true,
+          useAi: isReal ? false : Boolean(autoModal.useAi),
         },
         { timeout: 120000 }
       );
+      if (data.aiNotice) {
+        toast.info(`AI was not used: ${data.aiNotice} The ready template steps were generated instead.`);
+      }
       toast.success(
         isReal
           ? autoModal.labMode === 'vps'
             ? 'Real VPS lab generated with a task brief. Review it and publish when ready.'
             : 'Real lab generated with a task brief. Review it and publish when ready.'
-          : `Lab generated with ${data.steps?.length || 0} verified steps. Review the steps and publish.`
+          : data.generated?.source === 'ai'
+            ? `AI lab generated with ${data.steps?.length || 0} verified steps. Review the steps and publish.`
+            : `Lab generated with ${data.steps?.length || 0} verified steps. Review the steps and publish.`
       );
       navigate(`/instructor/labs/${data.lab.id}`);
     } catch (err) {
@@ -566,6 +573,20 @@ export default function ManageLabsPage() {
                 <option key={course.id} value={course.id}>{course.title}</option>
               ))}
             </Select>
+            {!isAssessment(autoModal.labMode) && (
+              <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
+                <Checkbox
+                  label="Generate with AI (brand new steps for any topic)"
+                  checked={Boolean(autoModal.useAi)}
+                  onChange={(event) => setAutoModal((current) => ({ ...current, useAi: event.target.checked }))}
+                />
+                <p className="mt-1.5 text-[11px] leading-5 text-slate-400">
+                  The AI writes new steps for the title and brief above, each with a hint and automatic verification.
+                  Turn it off to use the ready template steps instead. If the AI is unavailable, the template steps
+                  are used and you are told.
+                </p>
+              </div>
+            )}
             {!isAssessment(autoModal.labMode) && (
               <div className="rounded-xl border border-brand-400/20 bg-brand-400/[0.04] p-4">
                 <Checkbox

@@ -93,6 +93,18 @@ export const env = {
     verifyTtlMinutes: parsePositiveNumber(process.env.EMAIL_VERIFY_TTL_MINUTES, 24 * 60),
     resetTtlMinutes: parsePositiveNumber(process.env.PASSWORD_RESET_TTL_MINUTES, 60),
   },
+  ai: {
+    // Real AI lab generation (Auto-generate modal, practice labs). Leave
+    // AI_API_KEY blank to disable it: the template generator then stays
+    // in charge and the instructor is told AI is not configured.
+    // AI_PROVIDER is 'openai' (also covers OpenAI-compatible APIs via
+    // AI_BASE_URL) or 'gemini'. AI_MODEL is optional; each provider has
+    // a low-cost default in aiLabGenerator.js.
+    provider: (process.env.AI_PROVIDER || 'openai').toLowerCase(),
+    apiKey: process.env.AI_API_KEY || '',
+    model: process.env.AI_MODEL || '',
+    baseUrl: (process.env.AI_BASE_URL || '').replace(/\/+$/, ''),
+  },
 };
 
 export default env;
