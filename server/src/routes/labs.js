@@ -150,7 +150,10 @@ const stepSchema = z.object({
 });
 
 const LAB_MODES = ['practice', 'real', 'vps'];
-const VPS_PROFILES = ['ubuntu-basic', 'debian-admin', 'network-firewall', 'server-hardening', 'penetration-testing'];
+const VPS_PROFILES = [
+  'ubuntu-basic', 'debian-admin', 'network-firewall', 'server-hardening', 'penetration-testing',
+  'ubuntu-basic-linode', 'debian-admin-linode', 'network-firewall-linode', 'server-hardening-linode', 'penetration-testing-linode',
+];
 const normalizeLabMode = (value, fallback = 'practice') => (LAB_MODES.includes(value) ? value : fallback);
 // Real and Real VPS labs share the graded, question-only assessment
 // semantics: a task brief, screenshot evidence, no steps, never open-to-all.
@@ -172,7 +175,7 @@ const labSchema = z.object({
     initialCwd: z.string().trim().max(300).default('/home/student'),
     initialFiles: z.record(z.any()).default({}),
     labMode: z.enum(LAB_MODES).default('practice'),
-    vpsProfile: z.enum(VPS_PROFILES).default('ubuntu-basic'),
+    vpsProfile: z.enum(VPS_PROFILES).default('ubuntu-basic-linode'),
     taskBrief: z.string().trim().max(20000).default(''),
     minEvidence: z.coerce.number().int().min(0).max(20).default(1),
     isPractice: z.boolean().default(false),

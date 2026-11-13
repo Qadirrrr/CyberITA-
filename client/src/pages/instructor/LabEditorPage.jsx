@@ -78,7 +78,7 @@ export default function LabEditorPage() {
         containerImage: response.lab.container_image || '',
         networkEnabled: Boolean(response.lab.network_enabled),
         labMode: response.lab.lab_mode === 'vps' ? 'vps' : response.lab.lab_mode === 'real' ? 'real' : 'practice',
-        vpsProfile: response.lab.vps_profile || 'ubuntu-basic',
+        vpsProfile: response.lab.vps_profile || 'ubuntu-basic-linode',
         taskBrief: response.lab.task_brief || '',
         minEvidence: response.lab.min_evidence ?? 1,
         isPractice: Boolean(response.lab.is_practice),
@@ -113,7 +113,7 @@ export default function LabEditorPage() {
     containerImage: form.containerImage.trim() || null,
     networkEnabled: Boolean(form.networkEnabled),
     labMode: form.labMode,
-    vpsProfile: form.vpsProfile || 'ubuntu-basic',
+    vpsProfile: form.vpsProfile || 'ubuntu-basic-linode',
     taskBrief: form.taskBrief,
     minEvidence: Number(form.minEvidence) || 1,
     isPractice: form.labMode === 'practice' ? Boolean(form.isPractice) : false,
@@ -397,11 +397,11 @@ export default function LabEditorPage() {
                 {isVpsMode && (
                   <Select
                     label="VPS profile"
-                    value={form.vpsProfile || 'ubuntu-basic'}
+                    value={form.vpsProfile || 'ubuntu-basic-linode'}
                     onChange={update('vpsProfile')}
                     hint="The fixed server profile this lab is provisioned with. Learners cannot change it."
                   >
-                    {VPS_LAB_PROFILES.map((profile) => (
+                    {VPS_LAB_PROFILES.filter((profile) => profile.providerName === 'Linode' || profile.key === form.vpsProfile).map((profile) => (
                       <option key={profile.key} value={profile.key}>{profile.label}{profile.providerName ? ` · ${profile.providerName}` : ''}</option>
                     ))}
                   </Select>
