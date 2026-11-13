@@ -402,7 +402,7 @@ export default function LabEditorPage() {
                     hint="The fixed server profile this lab is provisioned with. Learners cannot change it."
                   >
                     {VPS_LAB_PROFILES.map((profile) => (
-                      <option key={profile.key} value={profile.key}>{profile.label}</option>
+                      <option key={profile.key} value={profile.key}>{profile.label}{profile.providerName ? ` · ${profile.providerName}` : ''}</option>
                     ))}
                   </Select>
                 )}

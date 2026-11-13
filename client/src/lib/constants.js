@@ -43,11 +43,16 @@ export const LAB_MODES = {
 
 /** Fixed VPS gateway profiles an instructor can pick for a Real VPS lab. */
 export const VPS_LAB_PROFILES = [
-  { key: 'ubuntu-basic', label: 'CyberITA Lab (Ubuntu)' },
-  { key: 'debian-admin', label: 'CyberITA Lab (Debian)' },
-  { key: 'network-firewall', label: 'CyberITA Lab (Ubuntu - Networking)' },
-  { key: 'server-hardening', label: 'CyberITA Lab (Ubuntu - Hardening)' },
-  { key: 'penetration-testing', label: 'CyberITA Lab (Ubuntu - Pen Testing)' },
+  { key: 'ubuntu-basic', label: 'CyberITA Lab (Ubuntu)', providerName: 'AWS' },
+  { key: 'debian-admin', label: 'CyberITA Lab (Debian)', providerName: 'AWS' },
+  { key: 'network-firewall', label: 'CyberITA Lab (Ubuntu - Networking)', providerName: 'AWS' },
+  { key: 'server-hardening', label: 'CyberITA Lab (Ubuntu - Hardening)', providerName: 'AWS' },
+  { key: 'penetration-testing', label: 'CyberITA Lab (Ubuntu - Pen Testing)', providerName: 'AWS' },
+  { key: 'ubuntu-basic-linode', label: 'CyberITA Lab (Ubuntu)', providerName: 'Linode' },
+  { key: 'debian-admin-linode', label: 'CyberITA Lab (Debian)', providerName: 'Linode' },
+  { key: 'network-firewall-linode', label: 'CyberITA Lab (Ubuntu - Networking)', providerName: 'Linode' },
+  { key: 'server-hardening-linode', label: 'CyberITA Lab (Ubuntu - Hardening)', providerName: 'Linode' },
+  { key: 'penetration-testing-linode', label: 'CyberITA Lab (Ubuntu - Pen Testing)', providerName: 'Linode' },
 ];
 
 /**
