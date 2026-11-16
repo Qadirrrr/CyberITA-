@@ -71,6 +71,9 @@ export default function LabSessionPage() {
   const [sshAccessLoading, setSshAccessLoading] = useState(false);
   const [sshAccessError, setSshAccessError] = useState('');
   const [copiedSshCommand, setCopiedSshCommand] = useState(false);
+  const [vncAccess, setVncAccess] = useState(null);
+  const [copiedVncCommand, setCopiedVncCommand] = useState(false);
+  const [copiedVncPassword, setCopiedVncPassword] = useState(false);
   // In-app confirmation popup (replaces the browser's window.confirm, which
   // shows the raw server IP and looks nothing like the product).
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -410,6 +413,15 @@ export default function LabSessionPage() {
     } finally {
       setSshAccessLoading(false);
     }
+    // Best effort: the VNC password comes from the desktop ticket endpoint
+    // (same per-session password the in-browser Desktop tab uses). A
+    // failure here must not hide the SSH key above.
+    if (!vncAccess) {
+      try {
+        const { data: desktop } = await api.post(`/labs/sessions/${sessionId}/vps-desktop-ticket`);
+        setVncAccess({ desktopStatus: desktop.desktopStatus, vncPassword: desktop.vncPassword || null });
+      } catch { /* desktop not ready or unavailable; the panel notes it */ }
+    }
   };
 
   const sshCommand = sshAccess
@@ -422,6 +434,28 @@ export default function LabSessionPage() {
       await navigator.clipboard.writeText(sshCommand);
       setCopiedSshCommand(true);
       setTimeout(() => setCopiedSshCommand(false), 1600);
+    } catch { /* clipboard unavailable in this browser */ }
+  };
+
+  const vncCommand = sshAccess
+    ? `ssh -L 5901:127.0.0.1:5901 -i cyberita-lab-key.pem ${sshAccess.sshPort && Number(sshAccess.sshPort) !== 22 ? `-p ${sshAccess.sshPort} ` : ''}${sshAccess.sshUser}@${sshAccess.serverIp}`
+    : '';
+
+  const copyVncCommand = async () => {
+    if (!vncCommand) return;
+    try {
+      await navigator.clipboard.writeText(vncCommand);
+      setCopiedVncCommand(true);
+      setTimeout(() => setCopiedVncCommand(false), 1600);
+    } catch { /* clipboard unavailable in this browser */ }
+  };
+
+  const copyVncPassword = async () => {
+    if (!vncAccess?.vncPassword) return;
+    try {
+      await navigator.clipboard.writeText(vncAccess.vncPassword);
+      setCopiedVncPassword(true);
+      setTimeout(() => setCopiedVncPassword(false), 1600);
     } catch { /* clipboard unavailable in this browser */ }
   };
 
@@ -1512,6 +1546,47 @@ export default function LabSessionPage() {
                               <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                                 Save the key as cyberita-lab-key.pem in the folder where you run the command.
                                 On Linux or Mac, run chmod 600 cyberita-lab-key.pem first.
+                              </p>
+                              <p className="mt-4 text-[13px] font-medium text-slate-900 dark:text-white">Local VNC from your own computer</p>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100 dark:bg-black/50" title={vncCommand}>
+                                  {vncCommand}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={copyVncCommand}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+                                >
+                                  {copiedVncCommand ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                                  {copiedVncCommand ? 'Copied' : 'Copy'}
+                                </button>
+                              </div>
+                              {vncAccess?.vncPassword ? (
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-slate-500 dark:text-slate-400">VNC password</span>
+                                  <code className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-xs font-semibold text-slate-900 dark:bg-white/[0.06] dark:text-white">
+                                    {vncAccess.vncPassword}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    onClick={copyVncPassword}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+                                  >
+                                    {copiedVncPassword ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                                    {copiedVncPassword ? 'Copied' : 'Copy'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                  {vncAccess?.desktopStatus === 'installing' || vncAccess?.desktopStatus === 'connecting'
+                                    ? 'The graphical desktop is still installing. The VNC password will appear here once it is ready.'
+                                    : 'The graphical desktop is not ready on this server yet, so there is no VNC password here. Use the Desktop tab in the browser, or open this panel again after the desktop installs.'}
+                                </p>
+                              )}
+                              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                Run the tunnel command in a second terminal, then open your VNC viewer and
+                                connect to localhost:5901 with the password above. Keep the tunnel window
+                                open while you use the desktop.
                               </p>
                             </>
                           ) : null}
