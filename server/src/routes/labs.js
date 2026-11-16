@@ -29,7 +29,7 @@ import { submitLabSession } from '../services/labSubmissions.js';
 import { generateLab } from '../services/labGenerator.js';
 import { generateLabWithAi } from '../services/aiLabGenerator.js';
 import { getProvider } from '../labs/providers/index.js';
-import { createLabTerminalTicket, createLabDesktopTicket } from '../labs/vps/vpsGateway.js';
+import { createLabTerminalTicket, createLabDesktopTicket, getLabSshKey } from '../labs/vps/vpsGateway.js';
 import {
     assertLabManager,
     assertLabReadable,
@@ -741,6 +741,31 @@ router.post(
       serverIp: ticket.serverIp || null,
       sshUser: ticket.sshUser || null,
       wsUrl: env.labs.vpsGateway.wsUrl,
+    });
+  })
+);
+
+// Direct SSH access: hands the owning student their session's private
+// key so they can SSH in from their own machine (the lab page shows the
+// command and a key download). Owner-only, VPS labs only, and only while
+// the server is running; the gateway re-checks ownership and expiry.
+router.post(
+  '/sessions/:sessionId/vps-ssh-key',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const session = await getSessionOr404(req.params.sessionId, req.user);
+    if (session.user_id !== req.user.id) throw forbidden('Only the session owner can get its SSH key.');
+    const lab = await getLab(session.lab_id, { staff: true });
+    if ((lab.lab_mode || 'practice') !== 'vps') throw badRequest('This lab does not run on a real VPS.');
+    if (session.status !== 'running') throw badRequest('The lab server is not running yet.');
+    const gatewaySessionId = session.instance_id;
+    if (!gatewaySessionId) throw badRequest('The lab server is not ready yet.');
+    const key = await getLabSshKey(gatewaySessionId, req.user.id);
+    res.json({
+      privateKey: key.privateKey,
+      sshUser: key.sshUser,
+      sshPort: key.sshPort || 22,
+      serverIp: key.serverIp,
     });
   })
 );

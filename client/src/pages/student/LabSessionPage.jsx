@@ -20,6 +20,7 @@ import {
   IconChevronRight,
   IconClipboard,
   IconCopy,
+  IconDownload,
   IconFileText,
   IconFlag,
   IconPlay,
@@ -65,6 +66,11 @@ export default function LabSessionPage() {
   const [copiedIp, setCopiedIp] = useState(false);
   const [serverView, setServerView] = useState('terminal'); // terminal | desktop
   const [showServerDetails, setShowServerDetails] = useState(false);
+  const [showSshAccess, setShowSshAccess] = useState(false);
+  const [sshAccess, setSshAccess] = useState(null);
+  const [sshAccessLoading, setSshAccessLoading] = useState(false);
+  const [sshAccessError, setSshAccessError] = useState('');
+  const [copiedSshCommand, setCopiedSshCommand] = useState(false);
   // In-app confirmation popup (replaces the browser's window.confirm, which
   // shows the raw server IP and looks nothing like the product).
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -388,6 +394,51 @@ export default function LabSessionPage() {
     } catch { /* clipboard unavailable in this browser */ }
   };
 
+  // Direct SSH access: fetch this session's private key (owner-only on the
+  // server) the first time the student opens the SSH access panel.
+  const toggleSshAccess = async () => {
+    const next = !showSshAccess;
+    setShowSshAccess(next);
+    if (!next || sshAccess || sshAccessLoading) return;
+    setSshAccessLoading(true);
+    setSshAccessError('');
+    try {
+      const { data: response } = await api.post(`/labs/sessions/${sessionId}/vps-ssh-key`);
+      setSshAccess(response);
+    } catch (err) {
+      setSshAccessError(err?.response?.data?.message || err?.response?.data?.error || 'Could not load the SSH key. Please try again.');
+    } finally {
+      setSshAccessLoading(false);
+    }
+  };
+
+  const sshCommand = sshAccess
+    ? `ssh -i cyberita-lab-key.pem ${sshAccess.sshPort && Number(sshAccess.sshPort) !== 22 ? `-p ${sshAccess.sshPort} ` : ''}${sshAccess.sshUser}@${sshAccess.serverIp}`
+    : '';
+
+  const copySshCommand = async () => {
+    if (!sshCommand) return;
+    try {
+      await navigator.clipboard.writeText(sshCommand);
+      setCopiedSshCommand(true);
+      setTimeout(() => setCopiedSshCommand(false), 1600);
+    } catch { /* clipboard unavailable in this browser */ }
+  };
+
+  const downloadSshKey = () => {
+    if (!sshAccess?.privateKey) return;
+    const keyText = sshAccess.privateKey.endsWith('\n') ? sshAccess.privateKey : `${sshAccess.privateKey}\n`;
+    const blob = new Blob([keyText], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'cyberita-lab-key.pem';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
+
   const submitLabAssignment = async () => {
     if ((!isRealLab && !data?.progress?.allRequiredCompleted) || isPractice || data.submission?.status === 'approved') return;
     const minEvidence = Math.max(1, data.progress?.minEvidence || data.lab?.min_evidence || 1);
@@ -570,6 +621,34 @@ export default function LabSessionPage() {
                     ? `${session.lab_server_name} · isolated Linux container`
                     : 'Isolated Linux container'}
             </p>
+            <div className="mt-1.5 hidden items-center gap-2 sm:flex">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
+              <div className="w-28 lg:w-36">
+                <ProgressBar
+                  value={progress.percent}
+                  tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
+                  size="sm"
+                />
+              </div>
+              <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                {Math.round(progress.percent)}%
+              </span>
+              {!isRealLab && steps.length > 0 ? (
+                <span className="hidden text-[11px] text-slate-500 lg:inline">
+                  {completedCount} of {steps.length} steps
+                </span>
+              ) : null}
+              {isRealLab ? (
+                <span className="hidden text-[11px] text-slate-500 lg:inline">
+                  {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'} attached
+                </span>
+              ) : null}
+              {progress.allRequiredCompleted && running ? (
+                <Badge tone="emerald">
+                  <IconCheckCircle size={11} /> Complete
+                </Badge>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -670,7 +749,7 @@ export default function LabSessionPage() {
               : 'Session safety limit'}
           </span>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:hidden">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
           {!isRealLab && steps.length > 0 && (
             <span className="hidden text-[11px] text-slate-500 md:inline">
@@ -1332,6 +1411,17 @@ export default function LabSessionPage() {
                       {running ? (
                         <button
                           type="button"
+                          onClick={toggleSshAccess}
+                          aria-expanded={showSshAccess}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                        >
+                          SSH access
+                          <IconChevronDown size={13} className={`transition-transform ${showSshAccess ? 'rotate-180' : ''}`} />
+                        </button>
+                      ) : null}
+                      {running ? (
+                        <button
+                          type="button"
                           onClick={() => setShowServerDetails((value) => !value)}
                           aria-expanded={showServerDetails}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
@@ -1383,7 +1473,51 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex max-h-[92%] min-h-[300px] flex-1 flex-col`}>
+                      {showSshAccess ? (
+                        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-night-900/40">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">SSH from your own computer</p>
+                          <p className="mt-1 text-[13px] leading-5 text-slate-500 dark:text-slate-400">
+                            Download this lab's private key, then run the command below in your terminal or CMD.
+                            The key works only on this server and only while the lab is running.
+                          </p>
+                          {sshAccessLoading ? (
+                            <p className="mt-3 flex items-center gap-2 text-[13px] text-slate-500 dark:text-slate-400">
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent" />
+                              Loading your key...
+                            </p>
+                          ) : sshAccessError ? (
+                            <p className="mt-3 text-[13px] text-rose-600 dark:text-rose-400">{sshAccessError}</p>
+                          ) : sshAccess ? (
+                            <>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100 dark:bg-black/50" title={sshCommand}>
+                                  {sshCommand}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={copySshCommand}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+                                >
+                                  {copiedSshCommand ? <IconCheck size={13} /> : <IconCopy size={13} />}
+                                  {copiedSshCommand ? 'Copied' : 'Copy'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={downloadSshKey}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-cyan-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                                >
+                                  <IconDownload size={13} /> Download key
+                                </button>
+                              </div>
+                              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                Save the key as cyberita-lab-key.pem in the folder where you run the command.
+                                On Linux or Mac, run chmod 600 cyberita-lab-key.pem first.
+                              </p>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <div className={`${showServerDetails || showSshAccess ? 'mt-4' : 'mt-3'} flex max-h-[92%] min-h-[300px] flex-1 flex-col`}>
                         {serverView === 'desktop' ? (
                           <VpsDesktop sessionId={Number(session.id)} className="min-h-0 flex-1" />
                         ) : (

@@ -100,6 +100,22 @@ export function createLabDesktopTicket(gatewaySessionId, studentId) {
   });
 }
 
+/**
+ * Direct SSH access for the owning student: fetches the session's own
+ * private key from the gateway so the student can SSH in from their own
+ * machine while the lab runs. Unlike the terminal/desktop tickets (where
+ * the key never leaves the gateway), this key is deliberately handed to
+ * the student: it is per-session, works only on their own lab server,
+ * and dies when the session ends and the server is destroyed.
+ * Returns { privateKey, sshUser, sshPort, serverIp }.
+ */
+export function getLabSshKey(gatewaySessionId, studentId) {
+  return gatewayFetch(`/internal/labs/sessions/${encodeURIComponent(gatewaySessionId)}/ssh-key`, {
+    method: 'POST',
+    body: { studentId },
+  });
+}
+
 export default {
   isVpsGatewayConfigured,
   getGatewayHealth,
@@ -108,4 +124,5 @@ export default {
   terminateLabSession,
   createLabTerminalTicket,
   createLabDesktopTicket,
+  getLabSshKey,
 };
