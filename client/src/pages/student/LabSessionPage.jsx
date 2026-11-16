@@ -1477,15 +1477,15 @@ export default function LabSessionPage() {
                       </dl>
                       ) : null}
                       {showSshAccess ? (
-                        <div className="absolute right-6 top-[3.25rem] z-30 w-[min(640px,calc(100%-3rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-night-900">
-                          <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4 dark:border-white/[0.06]">
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700 dark:bg-brand-400/10 dark:text-brand-300">
+                        <div className="absolute right-6 top-[3.25rem] z-30 w-[min(640px,calc(100%-3rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl ring-1 ring-black/5 dark:border-white/10 dark:bg-night-900 dark:ring-white/10">
+                          <div className="flex items-start gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-700 text-white shadow-sm dark:bg-brand-600">
                               <IconTerminal size={16} />
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-slate-900 dark:text-white">SSH from your own computer</p>
                               <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                Download this lab's private key, then connect from your terminal or CMD.
+                                Connect to this lab server from your own terminal or CMD in two steps.
                                 The key works only on this server and only while the lab is running.
                               </p>
                             </div>
@@ -1493,12 +1493,12 @@ export default function LabSessionPage() {
                               type="button"
                               onClick={() => setShowSshAccess(false)}
                               aria-label="Close SSH access"
-                              className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-white/[0.06] dark:hover:text-slate-200"
+                              className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200/60 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-white/[0.06] dark:hover:text-slate-200"
                             >
                               <IconX size={15} />
                             </button>
                           </div>
-                          <div className="px-5 py-4">
+                          <div className="px-5 py-5">
                             {sshAccessLoading ? (
                               <p className="flex items-center gap-2 text-[13px] text-slate-500 dark:text-slate-400">
                                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent" />
@@ -1508,52 +1508,67 @@ export default function LabSessionPage() {
                               <p className="text-[13px] text-rose-600 dark:text-rose-400">{sshAccessError}</p>
                             ) : sshAccess ? (
                               <>
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">SSH command</p>
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                  <code className="min-w-0 flex-1 break-all rounded-lg bg-slate-900 px-3 py-2 font-mono text-[13px] leading-5 text-white dark:bg-black/60">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-700/10 text-[11px] font-bold text-cyan-800 dark:bg-brand-400/15 dark:text-brand-300">1</span>
+                                  <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">Download your private key</p>
+                                  <button
+                                    type="button"
+                                    onClick={downloadSshKey}
+                                    className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-cyan-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                                  >
+                                    <IconDownload size={13} /> Download key
+                                  </button>
+                                </div>
+                                <p className="mt-1.5 pl-[30px] text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                  Save it as cyberita-lab-key.pem in the folder where you will run the command.
+                                  On Linux or Mac, run chmod 600 cyberita-lab-key.pem first.
+                                </p>
+
+                                <div className="mt-5 flex items-center gap-2.5">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-700/10 text-[11px] font-bold text-cyan-800 dark:bg-brand-400/15 dark:text-brand-300">2</span>
+                                  <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">Run this command</p>
+                                </div>
+                                <div className="mt-2 flex items-start gap-2 pl-[30px]">
+                                  <code className="min-w-0 flex-1 break-words rounded-lg bg-slate-900 px-3 py-2.5 font-mono text-[13px] leading-5 text-white dark:bg-black/60">
                                     {sshCommand}
                                   </code>
                                   <button
                                     type="button"
                                     onClick={copySshCommand}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
                                   >
                                     {copiedSshCommand ? <IconCheck size={13} /> : <IconCopy size={13} />}
                                     {copiedSshCommand ? 'Copied' : 'Copy'}
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={downloadSshKey}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-cyan-600 dark:bg-brand-600 dark:hover:bg-brand-500"
-                                  >
-                                    <IconDownload size={13} /> Download key
-                                  </button>
                                 </div>
-                                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                  Save the key as cyberita-lab-key.pem in the folder where you run the command.
-                                  On Linux or Mac, run chmod 600 cyberita-lab-key.pem first.
-                                </p>
 
-                                <div className="my-4 border-t border-slate-100 dark:border-white/[0.06]" />
+                                <div className="my-5 border-t border-slate-100 dark:border-white/[0.06]" />
 
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Local VNC tunnel</p>
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                  <code className="min-w-0 flex-1 break-all rounded-lg bg-slate-900 px-3 py-2 font-mono text-[13px] leading-5 text-white dark:bg-black/60">
+                                <div className="flex items-center gap-2">
+                                  <IconMonitor size={14} className="text-slate-400 dark:text-slate-500" />
+                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Optional: desktop on your own computer</p>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2.5">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-700/10 text-[11px] font-bold text-cyan-800 dark:bg-brand-400/15 dark:text-brand-300">3</span>
+                                  <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100">Run the VNC tunnel</p>
+                                </div>
+                                <div className="mt-2 flex items-start gap-2 pl-[30px]">
+                                  <code className="min-w-0 flex-1 break-words rounded-lg bg-slate-900 px-3 py-2.5 font-mono text-[13px] leading-5 text-white dark:bg-black/60">
                                     {vncCommand}
                                   </code>
                                   <button
                                     type="button"
                                     onClick={copyVncCommand}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
                                   >
                                     {copiedVncCommand ? <IconCheck size={13} /> : <IconCopy size={13} />}
                                     {copiedVncCommand ? 'Copied' : 'Copy'}
                                   </button>
                                 </div>
                                 {vncAccess?.vncPassword ? (
-                                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                  <div className="mt-3 flex flex-wrap items-center gap-2 pl-[30px]">
                                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">VNC password</span>
-                                    <code className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-[13px] font-semibold tracking-wide text-slate-900 dark:bg-white/[0.08] dark:text-white">
+                                    <code className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-[13px] font-semibold tracking-wide text-slate-900 ring-1 ring-slate-200 dark:bg-white/[0.08] dark:text-white dark:ring-white/10">
                                       {vncAccess.vncPassword}
                                     </code>
                                     <button
@@ -1566,16 +1581,15 @@ export default function LabSessionPage() {
                                     </button>
                                   </div>
                                 ) : (
-                                  <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                  <p className="mt-2 pl-[30px] text-xs leading-5 text-slate-500 dark:text-slate-400">
                                     {vncAccess?.desktopStatus === 'installing' || vncAccess?.desktopStatus === 'connecting'
                                       ? 'The graphical desktop is still installing. The VNC password will appear here once it is ready.'
                                       : 'The graphical desktop is not ready on this server yet, so there is no VNC password here. Use the Desktop tab in the browser, or open this panel again after the desktop installs.'}
                                   </p>
                                 )}
-                                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                  Run the tunnel command in a second terminal, then open your VNC viewer and
-                                  connect to localhost:5901 with the password above. Keep the tunnel window
-                                  open while you use the desktop.
+                                <p className="mt-2 pl-[30px] text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                  Keep the tunnel window open, then connect your VNC viewer to
+                                  localhost:5901 with the password above.
                                 </p>
                               </>
                             ) : null}
