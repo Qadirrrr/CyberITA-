@@ -234,7 +234,7 @@ export default function VpsTerminal({ sessionId, className = '' }) {
           : 'Connection failed';
 
   return (
-    <div className={`vps-term-scroll flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
+    <div className={`vps-term-scroll flex min-h-0 flex-col overflow-hidden rounded-none border border-slate-700/60 bg-[#0a0e14] ${className}`}>
       <style>{`
         .vps-term-scroll .xterm { padding: 10px 14px; }
         .vps-term-scroll .xterm-viewport::-webkit-scrollbar { width: 8px; }

@@ -105,7 +105,7 @@ export default function VpsDesktop({ sessionId, className = '' }) {
   const busy = phase === 'checking' || phase === 'installing' || phase === 'connecting';
 
   return (
-    <div className={`flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
+    <div className={`flex flex-col overflow-hidden rounded-none border border-slate-700/60 bg-[#0a0e14] ${className}`}>
       <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-3 py-2">
         <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-slate-300">
           <IconMonitor size={14} className="shrink-0 text-cyan-300" />
