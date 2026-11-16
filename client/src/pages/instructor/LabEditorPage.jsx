@@ -468,7 +468,7 @@ export default function LabEditorPage() {
               <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
                 {Number(form.timeLimitMinutes) > 0
                   ? `Learners see a ${form.timeLimitMinutes}-minute countdown and can finish early once required work is complete.`
-                  : 'No custom timer. Sessions still end at the platform safety limit if one is configured.'}
+                  : 'No custom timer. The session then runs for the estimated minutes set above, and ends automatically when they run out.'}
               </p>
             </div>
           </div>

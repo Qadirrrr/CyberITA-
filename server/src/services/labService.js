@@ -98,7 +98,16 @@ export async function startSession(user, lab) {
   // deadline. Labs without a limit still get the platform TTL so abandoned
   // sessions are always reclaimed.
   const labLimitMinutes = Math.max(0, Number(lab.time_limit_minutes) || 0);
-  const sessionMinutes = labLimitMinutes > 0 ? labLimitMinutes : env.labs.sessionTtlMinutes;
+  const labEstimatedMinutes = Math.max(0, Number(lab.estimated_minutes) || 0);
+  // The lab's own minutes drive the timer: an explicit time limit wins;
+  // otherwise the session runs for the lab's estimated minutes (the
+  // duration shown for the lab), and the platform TTL is only the
+  // last-resort cap for a lab that has neither.
+  const sessionMinutes = labLimitMinutes > 0
+    ? labLimitMinutes
+    : labEstimatedMinutes > 0
+      ? labEstimatedMinutes
+      : env.labs.sessionTtlMinutes;
   const expiresAt = new Date(Date.now() + sessionMinutes * 60 * 1000);
   let rows;
   try {
@@ -280,7 +289,16 @@ export async function startVpsSession(user, lab) {
   }
 
   const labLimitMinutes = Math.max(0, Number(lab.time_limit_minutes) || 0);
-  const sessionMinutes = labLimitMinutes > 0 ? labLimitMinutes : env.labs.sessionTtlMinutes;
+  const labEstimatedMinutes = Math.max(0, Number(lab.estimated_minutes) || 0);
+  // The lab's own minutes drive the timer: an explicit time limit wins;
+  // otherwise the session runs for the lab's estimated minutes (the
+  // duration shown for the lab), and the platform TTL is only the
+  // last-resort cap for a lab that has neither.
+  const sessionMinutes = labLimitMinutes > 0
+    ? labLimitMinutes
+    : labEstimatedMinutes > 0
+      ? labEstimatedMinutes
+      : env.labs.sessionTtlMinutes;
   const profileKey = lab.vps_profile || 'ubuntu-basic';
 
   const { rows } = await query(
