@@ -1294,11 +1294,41 @@ export default function LabSessionPage() {
                 </div>
               ) : (
                 <div className="flex flex-1 flex-col p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="flex items-center gap-2 font-display text-base font-semibold text-slate-900 dark:text-white">
                       <IconServer size={16} className="text-cyan-700 dark:text-brand-400" /> Your server
                     </h2>
-                    <span className="flex items-center gap-2">
+                    {running ? (
+                      <div className="ml-3 flex gap-1" role="tablist" aria-label="Server view">
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={serverView === 'terminal'}
+                          onClick={() => setServerView('terminal')}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            serverView === 'terminal'
+                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
+                          }`}
+                        >
+                          <IconTerminal size={13} /> Terminal
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={serverView === 'desktop'}
+                          onClick={() => setServerView('desktop')}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            serverView === 'desktop'
+                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
+                          }`}
+                        >
+                          <IconMonitor size={13} /> Desktop
+                        </button>
+                      </div>
+                    ) : null}
+                    <span className="ml-auto flex items-center gap-2">
                       {running ? (
                         <button
                           type="button"
@@ -1353,35 +1383,7 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex gap-1`} role="tablist" aria-label="Server view">
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={serverView === 'terminal'}
-                          onClick={() => setServerView('terminal')}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                            serverView === 'terminal'
-                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
-                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
-                          }`}
-                        >
-                          <IconTerminal size={13} /> Terminal
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={serverView === 'desktop'}
-                          onClick={() => setServerView('desktop')}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                            serverView === 'desktop'
-                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
-                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
-                          }`}
-                        >
-                          <IconMonitor size={13} /> Desktop
-                        </button>
-                      </div>
-                      <div className="mt-3 flex max-h-[92%] min-h-[300px] flex-1 flex-col">
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex max-h-[92%] min-h-[300px] flex-1 flex-col`}>
                         {serverView === 'desktop' ? (
                           <VpsDesktop sessionId={Number(session.id)} className="min-h-0 flex-1" />
                         ) : (
