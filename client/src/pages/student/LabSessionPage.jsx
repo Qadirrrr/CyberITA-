@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
 import LabTerminal from '../../components/lab/LabTerminal';
 import VpsTerminal from '../../components/lab/VpsTerminal';
+import VpsDesktop from '../../components/lab/VpsDesktop';
 import LabTimer from '../../components/lab/LabTimer';
 import { Alert, Badge, Button, Modal, ProgressBar } from '../../components/ui';
 import {
@@ -24,6 +25,7 @@ import {
   IconPlay,
   IconRefresh,
   IconSend,
+  IconMonitor,
   IconServer,
   IconShield,
   IconTerminal,
@@ -61,6 +63,7 @@ export default function LabSessionPage() {
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [copiedIp, setCopiedIp] = useState(false);
+  const [serverView, setServerView] = useState('terminal'); // terminal | desktop
   const [showServerDetails, setShowServerDetails] = useState(false);
   // In-app confirmation popup (replaces the browser's window.confirm, which
   // shows the raw server IP and looks nothing like the product).
@@ -1350,8 +1353,40 @@ export default function LabSessionPage() {
                         </div>
                       </dl>
                       ) : null}
-                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex max-h-[92%] min-h-[300px] flex-1 flex-col`}>
-                        <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                      <div className={`${showServerDetails ? 'mt-4' : 'mt-3'} flex gap-1`} role="tablist" aria-label="Server view">
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={serverView === 'terminal'}
+                          onClick={() => setServerView('terminal')}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            serverView === 'terminal'
+                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
+                          }`}
+                        >
+                          <IconTerminal size={13} /> Terminal
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={serverView === 'desktop'}
+                          onClick={() => setServerView('desktop')}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            serverView === 'desktop'
+                              ? 'bg-cyan-700 text-white dark:bg-brand-600'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white'
+                          }`}
+                        >
+                          <IconMonitor size={13} /> Desktop
+                        </button>
+                      </div>
+                      <div className="mt-3 flex max-h-[92%] min-h-[300px] flex-1 flex-col">
+                        {serverView === 'desktop' ? (
+                          <VpsDesktop sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                        ) : (
+                          <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                        )}
                       </div>
                     </>
                   ) : (

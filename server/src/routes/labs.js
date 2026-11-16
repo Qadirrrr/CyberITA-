@@ -29,7 +29,7 @@ import { submitLabSession } from '../services/labSubmissions.js';
 import { generateLab } from '../services/labGenerator.js';
 import { generateLabWithAi } from '../services/aiLabGenerator.js';
 import { getProvider } from '../labs/providers/index.js';
-import { createLabTerminalTicket } from '../labs/vps/vpsGateway.js';
+import { createLabTerminalTicket, createLabDesktopTicket } from '../labs/vps/vpsGateway.js';
 import {
     assertLabManager,
     assertLabReadable,
@@ -713,6 +713,33 @@ router.post(
       expiresInSeconds: ticket.expiresInSeconds,
       serverIp: ticket.serverIp,
       sshUser: ticket.sshUser,
+      wsUrl: env.labs.vpsGateway.wsUrl,
+    });
+  })
+);
+
+router.post(
+  '/sessions/:sessionId/vps-desktop-ticket',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const session = await getSessionOr404(req.params.sessionId, req.user);
+    if (session.user_id !== req.user.id) throw forbidden('Only the session owner can use its desktop.');
+    const lab = await getLab(session.lab_id, { staff: true });
+    if ((lab.lab_mode || 'practice') !== 'vps') throw badRequest('This lab does not run on a real VPS.');
+    if (session.status !== 'running') throw badRequest('The lab server is not running yet.');
+    if (!env.labs.vpsGateway.wsUrl) {
+      throw badRequest('The VPS desktop is not configured on this server.');
+    }
+    const gatewaySessionId = session.instance_id;
+    if (!gatewaySessionId) throw badRequest('The lab server is not ready yet.');
+    const ticket = await createLabDesktopTicket(gatewaySessionId, req.user.id);
+    res.json({
+      desktopStatus: ticket.desktopStatus,
+      ticket: ticket.ticket || null,
+      expiresInSeconds: ticket.expiresInSeconds || null,
+      vncPassword: ticket.vncPassword || null,
+      serverIp: ticket.serverIp || null,
+      sshUser: ticket.sshUser || null,
       wsUrl: env.labs.vpsGateway.wsUrl,
     });
   })

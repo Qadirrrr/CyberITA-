@@ -82,6 +82,24 @@ export function createLabTerminalTicket(gatewaySessionId, studentId) {
   });
 }
 
+/**
+ * Desktop counterpart of the terminal ticket. The lab server's graphical
+ * desktop (XFCE + TigerVNC) installs at first boot; the gateway probes its
+ * status and answers { desktopStatus } while it is still installing
+ * ('installing' | 'failed' | 'unsupported' | 'not_installed'). Once the
+ * desktop is ready it also returns a 5-minute 'lab-desktop' ticket and the
+ * session's VNC password: { desktopStatus: 'ready', ticket,
+ * expiresInSeconds, vncPassword, serverIp, sshUser }. The browser presents
+ * the ticket to the gateway's /api/lab-desktop WebSocket; the password is
+ * used by noVNC for the RFB handshake with the student's own lab server.
+ */
+export function createLabDesktopTicket(gatewaySessionId, studentId) {
+  return gatewayFetch(`/internal/labs/sessions/${encodeURIComponent(gatewaySessionId)}/desktop-ticket`, {
+    method: 'POST',
+    body: { studentId },
+  });
+}
+
 export default {
   isVpsGatewayConfigured,
   getGatewayHealth,
@@ -89,4 +107,5 @@ export default {
   getLabSessionStatus,
   terminateLabSession,
   createLabTerminalTicket,
+  createLabDesktopTicket,
 };

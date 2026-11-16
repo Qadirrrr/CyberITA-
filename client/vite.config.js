@@ -15,5 +15,9 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1200,
+    // @novnc/novnc (the lab desktop viewer) ships a top-level await in its
+    // WebCodecs detection, which needs an ES2022+ transpile target. Same
+    // setting the VPS-Reselling client uses for the same library.
+    target: 'es2022',
   },
 });

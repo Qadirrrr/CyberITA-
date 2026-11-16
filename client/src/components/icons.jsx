@@ -74,6 +74,7 @@ export const IconShield = make(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 
 export const IconSparkles = make(<><path d="m12 3-1.9 5.8L4 10l6.1 1.9L12 18l1.9-6.1L20 10l-6.1-1.2L12 3z" /><path d="M5 3v4M3 5h4M19 17v4M17 19h4" /></>);
 export const IconStar = make(<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />);
 export const IconTerminal = make(<><path d="m4 17 6-6-6-6" /><path d="M12 19h8" /></>);
+export const IconMonitor = make(<><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" /></>);
 export const IconTrash = make(<><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M10 11v6M14 11v6" /></>);
 export const IconUpload = make(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></>);
 export const IconUser = make(<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>);
