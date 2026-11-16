@@ -105,20 +105,21 @@ export default function VpsDesktop({ sessionId, className = '' }) {
   const busy = phase === 'checking' || phase === 'installing' || phase === 'connecting';
 
   return (
-    <div className={`flex flex-col overflow-hidden rounded-xl bg-black ${className}`}>
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-white/10 dark:bg-night-900">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <IconMonitor size={16} className="shrink-0 text-cyan-700 dark:text-cyan-400" />
-          <span className="truncate text-sm font-medium text-slate-900 dark:text-white">Graphical desktop</span>
+    <div className={`flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] ${className}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03] px-3 py-2">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-slate-300">
+          <IconMonitor size={14} className="shrink-0 text-cyan-300" />
+          <span className="truncate">Graphical desktop</span>
           <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
               phase === 'connected'
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'
+                ? 'bg-emerald-400/10 text-emerald-300'
                 : busy
-                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300'
-                  : 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300'
+                  ? 'bg-slate-400/10 text-slate-300'
+                  : 'bg-rose-400/10 text-rose-300'
             }`}
           >
+            <span className={`h-1.5 w-1.5 rounded-full ${phase === 'connected' ? 'bg-emerald-400' : busy ? 'bg-slate-400' : 'bg-rose-400'} ${busy ? 'animate-pulse' : ''}`} />
             {phase === 'connected'
               ? 'Connected'
               : phase === 'installing'
@@ -131,13 +132,13 @@ export default function VpsDesktop({ sessionId, className = '' }) {
                       ? 'Failed'
                       : 'Disconnected'}
           </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => { try { rfbRef.current?.sendCtrlAltDel(); } catch { /* not connected */ } }}
             disabled={phase !== 'connected'}
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
             title="Send Ctrl+Alt+Del to the desktop"
           >
             Ctrl+Alt+Del
@@ -145,11 +146,11 @@ export default function VpsDesktop({ sessionId, className = '' }) {
           <button
             type="button"
             onClick={() => setAttempt((value) => value + 1)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
           >
             <IconRefresh size={13} /> Reconnect
           </button>
-        </div>
+        </span>
       </div>
 
       <div className="relative min-h-0 flex-1">
