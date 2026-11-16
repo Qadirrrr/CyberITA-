@@ -106,17 +106,17 @@ export default function VpsDesktop({ sessionId, className = '' }) {
 
   return (
     <div className={`flex flex-col overflow-hidden rounded-xl bg-black ${className}`}>
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#111318] px-4 py-2.5">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-white/10 dark:bg-night-900">
         <div className="flex min-w-0 items-center gap-2.5">
-          <IconMonitor size={16} className="shrink-0 text-cyan-400" />
-          <span className="truncate text-sm font-medium text-slate-200">Graphical desktop</span>
+          <IconMonitor size={16} className="shrink-0 text-cyan-700 dark:text-cyan-400" />
+          <span className="truncate text-sm font-medium text-slate-900 dark:text-white">Graphical desktop</span>
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
               phase === 'connected'
-                ? 'bg-emerald-500/15 text-emerald-300'
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'
                 : busy
-                  ? 'bg-amber-500/15 text-amber-300'
-                  : 'bg-red-500/15 text-red-300'
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300'
+                  : 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300'
             }`}
           >
             {phase === 'connected'
@@ -137,7 +137,7 @@ export default function VpsDesktop({ sessionId, className = '' }) {
             type="button"
             onClick={() => { try { rfbRef.current?.sendCtrlAltDel(); } catch { /* not connected */ } }}
             disabled={phase !== 'connected'}
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
             title="Send Ctrl+Alt+Del to the desktop"
           >
             Ctrl+Alt+Del
@@ -145,7 +145,7 @@ export default function VpsDesktop({ sessionId, className = '' }) {
           <button
             type="button"
             onClick={() => setAttempt((value) => value + 1)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:bg-white/10"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
           >
             <IconRefresh size={13} /> Reconnect
           </button>
