@@ -621,7 +621,7 @@ export default function LabSessionPage() {
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{confirmDialog?.message}</p>
       </Modal>
 
-      <header className="z-30 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-1.5 dark:border-white/10 dark:bg-night-950">
+      <header className="z-30 flex min-h-12 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-1 dark:border-white/10 dark:bg-night-950">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -655,38 +655,19 @@ export default function LabSessionPage() {
                     ? `${session.lab_server_name} · isolated Linux container`
                     : 'Isolated Linux container'}
             </p>
-            <div className="mt-1.5 hidden items-center gap-2 sm:flex">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
-              <div className="w-28 lg:w-36">
-                <ProgressBar
-                  value={progress.percent}
-                  tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
-                  size="sm"
-                />
-              </div>
-              <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                {Math.round(progress.percent)}%
-              </span>
-              {!isRealLab && steps.length > 0 ? (
-                <span className="hidden text-[11px] text-slate-500 lg:inline">
-                  {completedCount} of {steps.length} steps
-                </span>
-              ) : null}
-              {isRealLab ? (
-                <span className="hidden text-[11px] text-slate-500 lg:inline">
-                  {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'} attached
-                </span>
-              ) : null}
-              {progress.allRequiredCompleted && running ? (
-                <Badge tone="emerald">
-                  <IconCheckCircle size={11} /> Complete
-                </Badge>
-              ) : null}
-            </div>
           </div>
         </div>
 
-        {/* Countdown: large and always in front, next to the lab title */}
+        {/* Countdown: always in front, next to the lab title */}
+        <div className="shrink-0 lg:hidden">
+          <LabTimer
+            expiresAt={session.expires_at}
+            remainingSeconds={session.remaining_seconds}
+            running={running}
+            limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
+            endedReason={session.ended_reason}
+          />
+        </div>
         <div className="hidden shrink-0 lg:block">
           <LabTimer
             size="lg"
@@ -766,52 +747,6 @@ export default function LabSessionPage() {
         </div>
       </header>
 
-      <div className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-night-900/70 sm:px-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="lg:hidden">
-            <LabTimer
-              expiresAt={session.expires_at}
-              remainingSeconds={session.remaining_seconds}
-              running={running}
-              limitMinutes={Number(data.lab?.time_limit_minutes) || 0}
-              endedReason={session.ended_reason}
-            />
-          </span>
-          <span className="hidden text-[11px] text-slate-500 sm:inline">
-            {Number(data.lab?.time_limit_minutes) > 0
-              ? `Lab time limit: ${data.lab.time_limit_minutes} min`
-              : 'Session safety limit'}
-          </span>
-        </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:hidden">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
-          {!isRealLab && steps.length > 0 && (
-            <span className="hidden text-[11px] text-slate-500 md:inline">
-              {completedCount} of {steps.length} steps
-            </span>
-          )}
-          {isRealLab && (
-            <span className="hidden text-[11px] text-slate-500 md:inline">
-              {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'} attached
-            </span>
-          )}
-          <div className="w-24 sm:w-40">
-            <ProgressBar
-              value={progress.percent}
-              tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
-              size="sm"
-            />
-          </div>
-          <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-            {Math.round(progress.percent)}%
-          </span>
-          {progress.allRequiredCompleted && running && (
-            <Badge tone="emerald">
-              <IconCheckCircle size={11} /> Complete
-            </Badge>
-          )}
-        </div>
-      </div>
 
       {!isRealLab && !running && session.ended_reason === 'completed' && (
         <div className="shrink-0 px-3 pt-3 sm:px-4">
@@ -966,6 +901,38 @@ export default function LabSessionPage() {
       <main className="flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] 2xl:grid-cols-[460px_1fr] lg:overflow-hidden content-start lg:content-stretch">
         {/* Left Column: Interactive Lab Instructions & Step Workflow */}
         <div className="flex h-[60vh] min-h-[420px] lg:h-full lg:min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 dark:shadow-2xl dark:backdrop-blur">
+          {/* Progress: top of the guide column, above the steps / task brief */}
+          <div className="flex shrink-0 flex-col gap-1.5 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Progress</span>
+              {!isRealLab && steps.length > 0 ? (
+                <span className="text-[11px] text-slate-500">
+                  {completedCount} of {steps.length} steps
+                </span>
+              ) : null}
+              {isRealLab ? (
+                <span className="text-[11px] text-slate-500">
+                  {data.screenshots.length} screenshot{data.screenshots.length === 1 ? '' : 's'} attached
+                </span>
+              ) : null}
+              <span className="ml-auto flex items-center gap-2">
+                {progress.allRequiredCompleted && running ? (
+                  <Badge tone="emerald">
+                    <IconCheckCircle size={11} /> Complete
+                  </Badge>
+                ) : null}
+                <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  {Math.round(progress.percent)}%
+                </span>
+              </span>
+            </div>
+            <ProgressBar
+              value={progress.percent}
+              tone={progress.allRequiredCompleted ? 'emerald' : 'brand'}
+              size="sm"
+            />
+          </div>
+
           {/* Header Stepper and Progress (guided labs only) */}
           {!isRealLab && (
           <div className="flex shrink-0 flex-col border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-night-900/80">
