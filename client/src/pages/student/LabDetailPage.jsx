@@ -171,6 +171,7 @@ export default function LabDetailPage() {
 
   return (
     <div className="animate-fade-up space-y-5">
+      {confirmNode}
       <Link to="/student/labs" className="group inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300">
         <IconArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" /> Back to lab catalog
       </Link>
