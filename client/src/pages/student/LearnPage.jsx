@@ -386,7 +386,16 @@ export default function LearnPage() {
                     return (
                       <div className="mb-6 aspect-video overflow-hidden rounded-xl border border-white/10 bg-black">
                         {video.kind === 'file' ? (
-                          <video src={video.src} title={lesson.title} controls preload="metadata" className="h-full w-full" />
+                          <video
+                            src={video.src}
+                            title={lesson.title}
+                            controls
+                            controlsList="nodownload"
+                            disablePictureInPicture
+                            onContextMenu={(event) => event.preventDefault()}
+                            preload="metadata"
+                            className="h-full w-full"
+                          />
                         ) : (
                           <iframe
                             src={video.src}
