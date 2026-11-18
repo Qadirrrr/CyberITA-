@@ -28,6 +28,20 @@ import {
   IconTerminal,
   IconZap,
 } from '../../components/icons';
+
+// A lesson video is either an uploaded file (played directly) or an external
+// link. Plain YouTube and Vimeo page links refuse to play inside an iframe,
+// so they are converted to the providers' embed URLs first.
+function resolveLessonVideo(url) {
+  const youtube = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  if (youtube) return { kind: 'embed', src: `https://www.youtube.com/embed/${youtube[1]}` };
+  const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeo) return { kind: 'embed', src: `https://player.vimeo.com/video/${vimeo[1]}` };
+  if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url) || url.startsWith('/uploads/')) {
+    return { kind: 'file', src: url };
+  }
+  return { kind: 'embed', src: url };
+}
 import { DIFFICULTIES, ENROLLMENT_STATUS } from '../../lib/constants';
 
 export default function LearnPage() {
@@ -367,17 +381,24 @@ export default function LearnPage() {
                 </div>
 
                 <div className="p-5 sm:p-6">
-                  {lesson.video_url && (
-                    <div className="mb-6 aspect-video overflow-hidden rounded-xl border border-white/10 bg-black">
-                      <iframe
-                        src={lesson.video_url}
-                        title={lesson.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="h-full w-full"
-                      />
-                    </div>
-                  )}
+                  {lesson.video_url && (() => {
+                    const video = resolveLessonVideo(lesson.video_url);
+                    return (
+                      <div className="mb-6 aspect-video overflow-hidden rounded-xl border border-white/10 bg-black">
+                        {video.kind === 'file' ? (
+                          <video src={video.src} title={lesson.title} controls preload="metadata" className="h-full w-full" />
+                        ) : (
+                          <iframe
+                            src={video.src}
+                            title={lesson.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="h-full w-full"
+                          />
+                        )}
+                      </div>
+                    );
+                  })()}
                   {lesson.content ? (
                     <Markdown>{lesson.content}</Markdown>
                   ) : (

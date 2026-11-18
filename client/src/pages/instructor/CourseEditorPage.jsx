@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
@@ -90,6 +90,9 @@ export default function CourseEditorPage() {
 
   const [moduleModal, setModuleModal] = useState(null);
   const [lessonModal, setLessonModal] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const videoFileRef = useRef(null);
   const [lessonLoading, setLessonLoading] = useState(false);
   const [labModal, setLabModal] = useState(null);
   const [modalSaving, setModalSaving] = useState(false);
@@ -364,6 +367,32 @@ export default function CourseEditorPage() {
       setLessonModal(null);
     } finally {
       setLessonLoading(false);
+    }
+  };
+
+  const uploadLessonVideo = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    const courseId = Number(id);
+    if (!file || !courseId) return;
+    setVideoUploading(true);
+    setVideoProgress(0);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post(`/courses/${courseId}/lessons/video-upload`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 0,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) setVideoProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        },
+      });
+      setLessonModal((current) => ({ ...current, videoUrl: data.url, lessonType: 'video' }));
+      toast.success('Video uploaded. Save the lesson to attach it.');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not upload that video.'));
+    } finally {
+      setVideoUploading(false);
     }
   };
 
@@ -939,7 +968,18 @@ export default function CourseEditorPage() {
               </Select>
               <Input label="Duration (min)" type="number" min="0" value={lessonModal.durationMinutes} onChange={(event) => setLessonModal((current) => ({ ...current, durationMinutes: event.target.value }))} />
             </div>
-            <Input label="Video URL (optional)" value={lessonModal.videoUrl} onChange={(event) => setLessonModal((current) => ({ ...current, videoUrl: event.target.value }))} />
+            <div>
+              <Input label="Video URL (optional)" value={lessonModal.videoUrl} onChange={(event) => setLessonModal((current) => ({ ...current, videoUrl: event.target.value }))} />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <input ref={videoFileRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" className="hidden" onChange={uploadLessonVideo} />
+                <Button type="button" size="sm" variant="secondary" onClick={() => videoFileRef.current?.click()} loading={videoUploading} disabled={videoUploading}>
+                  {videoUploading ? `Uploading ${videoProgress}%` : 'Upload a video file'}
+                </Button>
+                <span className="text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                  Paste a YouTube or Vimeo link above, or upload an MP4, WebM or MOV file (up to 200 MB).
+                </span>
+              </div>
+            </div>
             <Textarea label="Content (markdown)" rows={10} value={lessonModal.content} onChange={(event) => setLessonModal((current) => ({ ...current, content: event.target.value }))} className="font-mono text-[12px]" />
             <Checkbox label="Free preview (visible without enrollment)" checked={lessonModal.isFreePreview} onChange={(event) => setLessonModal((current) => ({ ...current, isFreePreview: event.target.checked }))} />
           </form>

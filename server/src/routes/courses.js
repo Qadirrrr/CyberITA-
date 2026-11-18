@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { query, withTransaction } from '../config/db.js';
 import { asyncHandler, badRequest, conflict, notFound, forbidden } from '../utils/errors.js';
 import { validateBody } from '../middleware/validate.js';
@@ -431,6 +435,59 @@ async function assertLessonAccess(lessonId, user) {
     }
     return lesson;
 }
+
+/* Lesson video uploads: stored under the public uploads dir (served at
+   /uploads) and referenced from lessons.video_url, the same field a pasted
+   YouTube or Vimeo link uses. 200 MB cap; nginx client_max_body_size must
+   allow at least this much on /api (set to 200m on the host). */
+const LESSON_VIDEO_DIR = path.resolve(process.cwd(), 'uploads', 'lesson-videos');
+fs.mkdirSync(LESSON_VIDEO_DIR, { recursive: true });
+
+const LESSON_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime'];
+const LESSON_VIDEO_EXT = ['.mp4', '.webm', '.mov'];
+const lessonVideoUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, LESSON_VIDEO_DIR),
+        filename: (_req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
+            cb(null, `lesson-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${LESSON_VIDEO_EXT.includes(ext) ? ext : '.mp4'}`);
+        },
+    }),
+    limits: { fileSize: 200 * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (!LESSON_VIDEO_MIME.includes(file.mimetype) && !LESSON_VIDEO_EXT.includes(ext)) {
+            return cb(new Error('Only MP4, WebM and MOV video files are allowed.'));
+        }
+        cb(null, true);
+    },
+});
+
+const lessonVideoUploadMiddleware = (req, res, next) => {
+    lessonVideoUpload.single('file')(req, res, (error) => {
+        if (error) return next(badRequest(error.message));
+        next();
+    });
+};
+
+router.post(
+    '/:id/lessons/video-upload',
+    requireRole('admin', 'instructor'),
+    lessonVideoUploadMiddleware,
+    asyncHandler(async(req, res) => {
+        const course = await getCourseOr404(req.params.id, { staff: true });
+        if (req.user.role === 'instructor' && course.instructor_id !== req.user.id) {
+            if (req.file) fs.unlink(req.file.path, () => {});
+            throw forbidden('You can only manage your own courses.');
+        }
+        if (!req.file) throw badRequest('No video file was uploaded.');
+        res.status(201).json({
+            url: `/uploads/lesson-videos/${req.file.filename}`,
+            name: req.file.originalname,
+            size: req.file.size,
+        });
+    })
+);
 
 router.post(
     '/:id/lessons',
