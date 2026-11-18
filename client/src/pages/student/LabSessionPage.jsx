@@ -70,11 +70,8 @@ export default function LabSessionPage() {
   const [serverView, setServerView] = useState('terminal'); // terminal | desktop
   const [showServerDetails, setShowServerDetails] = useState(false);
   const [showSshAccess, setShowSshAccess] = useState(false);
-  const [panelHeight, setPanelHeight] = useState(null);
   const [panelFullscreen, setPanelFullscreen] = useState(false);
   const serverPanelRef = useRef(null);
-  const rightColRef = useRef(null);
-  const panelDragRef = useRef(null);
 
   // Full screen covers the whole server panel, so whichever view is
   // active (Terminal or Desktop) fills the screen. Exit is the same
@@ -98,33 +95,6 @@ export default function LabSessionPage() {
     }
   }, []);
 
-  // Drag-to-resize for the lab panel height. The chosen height is an
-  // inline style, so it wins over the default 70vh / full-height
-  // classes; double-clicking the handle restores the automatic height.
-  const startPanelResize = useCallback((event) => {
-    const col = rightColRef.current;
-    if (!col) return;
-    event.preventDefault();
-    panelDragRef.current = { startY: event.clientY, startHeight: col.getBoundingClientRect().height };
-    const onMove = (moveEvent) => {
-      const drag = panelDragRef.current;
-      if (!drag) return;
-      const next = Math.min(
-        Math.max(drag.startHeight + (moveEvent.clientY - drag.startY), 320),
-        Math.round(window.innerHeight * 0.95),
-      );
-      setPanelHeight(next);
-    };
-    const onUp = () => {
-      panelDragRef.current = null;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      // Let noVNC rescale to the final size.
-      window.dispatchEvent(new Event('resize'));
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, []);
   const [sshAccess, setSshAccess] = useState(null);
   const [sshAccessLoading, setSshAccessLoading] = useState(false);
   const [sshAccessError, setSshAccessError] = useState('');
@@ -1421,11 +1391,7 @@ export default function LabSessionPage() {
 
         {/* Right Column: Interactive Lab Terminal. Real VPS labs never render
             the Docker terminal; they show the dedicated server panel instead. */}
-        <div
-          ref={rightColRef}
-          className="relative flex h-[70vh] min-h-[420px] min-w-0 flex-col lg:h-full lg:min-h-0"
-          style={panelHeight ? { height: panelHeight, minHeight: 320 } : undefined}
-        >
+        <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
           {isVpsLab ? (
             <section ref={serverPanelRef} className={`flex h-full w-full flex-col overflow-hidden border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 ${panelFullscreen ? 'rounded-none' : 'rounded-2xl'}`} aria-label="Your lab server">
               {session.status === 'provisioning' ? (
@@ -1765,19 +1731,6 @@ export default function LabSessionPage() {
               onProgress={handleProgress}
             />
           )}
-          {!panelFullscreen ? (
-            <div
-              role="separator"
-              aria-orientation="horizontal"
-              aria-label="Resize the lab panel"
-              title="Drag to resize the panel. Double-click to reset the height."
-              onPointerDown={startPanelResize}
-              onDoubleClick={() => setPanelHeight(null)}
-              className="group absolute inset-x-0 bottom-0 z-40 flex h-4 cursor-ns-resize touch-none items-end justify-center pb-0.5"
-            >
-              <span className="h-1 w-16 rounded-full bg-slate-300/80 transition group-hover:bg-cyan-600 dark:bg-white/25 dark:group-hover:bg-brand-400" />
-            </div>
-          ) : null}
         </div>
       </main>
       )}
