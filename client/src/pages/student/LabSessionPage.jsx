@@ -27,6 +27,8 @@ import {
   IconRefresh,
   IconSend,
   IconMonitor,
+  IconMaximize,
+  IconMinimize,
   IconServer,
   IconShield,
   IconTerminal,
@@ -68,6 +70,61 @@ export default function LabSessionPage() {
   const [serverView, setServerView] = useState('terminal'); // terminal | desktop
   const [showServerDetails, setShowServerDetails] = useState(false);
   const [showSshAccess, setShowSshAccess] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(null);
+  const [panelFullscreen, setPanelFullscreen] = useState(false);
+  const serverPanelRef = useRef(null);
+  const rightColRef = useRef(null);
+  const panelDragRef = useRef(null);
+
+  // Full screen covers the whole server panel, so whichever view is
+  // active (Terminal or Desktop) fills the screen. Exit is the same
+  // button, the Esc key, or the browser's own full screen UI.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setPanelFullscreen(Boolean(document.fullscreenElement));
+      // noVNC rescales on window resize, so nudge it once the full
+      // screen transition has settled.
+      window.setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const togglePanelFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (serverPanelRef.current) {
+      serverPanelRef.current.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // Drag-to-resize for the lab panel height. The chosen height is an
+  // inline style, so it wins over the default 70vh / full-height
+  // classes; double-clicking the handle restores the automatic height.
+  const startPanelResize = useCallback((event) => {
+    const col = rightColRef.current;
+    if (!col) return;
+    event.preventDefault();
+    panelDragRef.current = { startY: event.clientY, startHeight: col.getBoundingClientRect().height };
+    const onMove = (moveEvent) => {
+      const drag = panelDragRef.current;
+      if (!drag) return;
+      const next = Math.min(
+        Math.max(drag.startHeight + (moveEvent.clientY - drag.startY), 320),
+        Math.round(window.innerHeight * 0.95),
+      );
+      setPanelHeight(next);
+    };
+    const onUp = () => {
+      panelDragRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      // Let noVNC rescale to the final size.
+      window.dispatchEvent(new Event('resize'));
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, []);
   const [sshAccess, setSshAccess] = useState(null);
   const [sshAccessLoading, setSshAccessLoading] = useState(false);
   const [sshAccessError, setSshAccessError] = useState('');
@@ -1364,9 +1421,13 @@ export default function LabSessionPage() {
 
         {/* Right Column: Interactive Lab Terminal. Real VPS labs never render
             the Docker terminal; they show the dedicated server panel instead. */}
-        <div className="flex h-[70vh] min-h-[420px] lg:h-full lg:min-h-0 min-w-0 flex-col">
+        <div
+          ref={rightColRef}
+          className="relative flex h-[70vh] min-h-[420px] min-w-0 flex-col lg:h-full lg:min-h-0"
+          style={panelHeight ? { height: panelHeight, minHeight: 320 } : undefined}
+        >
           {isVpsLab ? (
-            <section className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90" aria-label="Your lab server">
+            <section ref={serverPanelRef} className={`flex h-full w-full flex-col overflow-hidden border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-night-950/90 ${panelFullscreen ? 'rounded-none' : 'rounded-2xl'}`} aria-label="Your lab server">
               {session.status === 'provisioning' ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
@@ -1429,6 +1490,16 @@ export default function LabSessionPage() {
                       </div>
                     ) : null}
                     <span className="ml-auto flex items-center gap-2">
+                      {running ? (
+                        <button
+                          type="button"
+                          onClick={togglePanelFullscreen}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                        >
+                          {panelFullscreen ? <IconMinimize size={13} /> : <IconMaximize size={13} />}
+                          {panelFullscreen ? 'Exit full screen' : 'Full screen'}
+                        </button>
+                      ) : null}
                       {running ? (
                         <button
                           type="button"
@@ -1694,6 +1765,19 @@ export default function LabSessionPage() {
               onProgress={handleProgress}
             />
           )}
+          {!panelFullscreen ? (
+            <div
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize the lab panel"
+              title="Drag to resize the panel. Double-click to reset the height."
+              onPointerDown={startPanelResize}
+              onDoubleClick={() => setPanelHeight(null)}
+              className="group absolute inset-x-0 bottom-0 z-40 flex h-4 cursor-ns-resize touch-none items-end justify-center pb-0.5"
+            >
+              <span className="h-1 w-16 rounded-full bg-slate-300/80 transition group-hover:bg-cyan-600 dark:bg-white/25 dark:group-hover:bg-brand-400" />
+            </div>
+          ) : null}
         </div>
       </main>
       )}

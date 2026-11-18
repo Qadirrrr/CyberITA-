@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import api, { getAccessToken } from '../../lib/api';
-import { IconCheck, IconCopy, IconRefresh, IconTerminal } from '../icons';
+import { IconCheck, IconCopy, IconMaximize, IconMinimize, IconRefresh, IconTerminal } from '../icons';
 import { IconButton } from '../ui';
 
 function promptFor(identity, cwd) {
@@ -43,7 +43,9 @@ export default function LabTerminal({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [cwd, setCwd] = useState('/home/student');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const rootRef = useRef(null);
   const containerRef = useRef(null);
   const termRef = useRef(null);
   const fitRef = useRef(null);
@@ -63,6 +65,24 @@ export default function LabTerminal({
   const welcomeRef = useRef(welcome);
   const studentRef = useRef(student);
   const attachedRef = useRef(false);
+
+  // Full screen for this terminal window. The xterm grid refits on
+  // window resize and on container resize, so it follows the change.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === rootRef.current);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (rootRef.current) {
+      rootRef.current.requestFullscreen().catch(() => {});
+    }
+  }, []);
   const copiedTimer = useRef(null);
   const onProgressRef = useRef(onProgress);
   useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
@@ -694,7 +714,7 @@ export default function LabTerminal({
   }, []);
 
   return (
-    <div className={`terminal-window terminal-surface flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] text-zinc-100 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6)] ${className}`}>
+    <div ref={rootRef} className={`terminal-window terminal-surface flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-[#0a0e14] text-zinc-100 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6)] ${className}`}>
       <div className="flex shrink-0 items-center gap-2 border-b border-white/5 bg-[#161b22] px-3 py-2">
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-[#ff5f57] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
@@ -716,6 +736,9 @@ export default function LabTerminal({
           </IconButton>
           <IconButton label="Clear terminal" onClick={clearTerminal} className="h-7 w-7 text-zinc-400 hover:text-zinc-100">
             <IconRefresh size={13} />
+          </IconButton>
+          <IconButton label={isFullscreen ? 'Exit full screen' : 'Full screen'} onClick={toggleFullscreen} className="h-7 w-7 text-zinc-400 hover:text-zinc-100">
+            {isFullscreen ? <IconMinimize size={13} /> : <IconMaximize size={13} />}
           </IconButton>
         </div>
       </div>
