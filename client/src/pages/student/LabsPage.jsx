@@ -26,13 +26,13 @@ const MODES = {
       'Open a real, isolated Linux container in your browser. Install packages, try commands, start over any time and learn at your own pace.',
     points: ['Real Linux container', 'Unlimited sessions', 'Open to everyone'],
   },
-  course: {
-    id: 'course',
-    label: 'Course labs',
+  real: {
+    id: 'real',
+    label: 'Real labs',
     tagline: 'Graded practicals',
     description:
-      'Hands-on labs from your enrolled courses. Guided labs walk you through verified steps; real labs give you a question to solve and review your screenshot evidence.',
-    points: ['Guided or question-only', 'Tied to your course', 'Instructor review'],
+      'Real labs run on a real cloud server. You get a question to solve, work directly on the server, and submit screenshot evidence for instructor review.',
+    points: ['Real cloud server', 'Question-only tasks', 'Screenshot evidence'],
   },
 };
 
@@ -119,7 +119,8 @@ export default function LabsPage() {
   const [error, setError] = useState('');
 
   const requestedMode = params.get('mode');
-  const mode = requestedMode === 'course' || requestedMode === 'practice' ? requestedMode : 'practice';
+  // 'course' is the legacy name of the real labs tab; keep old links working.
+  const mode = requestedMode === 'real' || requestedMode === 'course' ? 'real' : 'practice';
 
   const setMode = (next) => {
     const nextParams = new URLSearchParams(params);
@@ -146,10 +147,16 @@ export default function LabsPage() {
     };
   }, []);
 
-  const practiceLabs = useMemo(() => labs.filter((lab) => lab.is_practice), [labs]);
-  const courseLabs = useMemo(() => labs.filter((lab) => !lab.is_practice), [labs]);
+  // Tabs split strictly by lab mode: guided labs (practice mode) on one side,
+  // real labs (real mode, plus vps mode which is the same question-only style
+  // on a real server) on the other.
+  const practiceLabs = useMemo(() => labs.filter((lab) => lab.lab_mode === 'practice'), [labs]);
+  const realLabs = useMemo(
+    () => labs.filter((lab) => lab.lab_mode === 'real' || lab.lab_mode === 'vps'),
+    [labs],
+  );
 
-  const activeLabs = mode === 'practice' ? practiceLabs : courseLabs;
+  const activeLabs = mode === 'practice' ? practiceLabs : realLabs;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -177,9 +184,15 @@ export default function LabsPage() {
     }
   };
 
+  // Quick start prefers an open practice lab (startable by anyone), then a
+  // lab the student already started, then the first guided lab.
+  const quickLab =
+    practiceLabs.find((lab) => lab.is_practice) ||
+    practiceLabs.find((lab) => lab.last_started_at) ||
+    practiceLabs[0];
+
   const quickStart = () => {
-    const preferred = practiceLabs.find((lab) => lab.last_started_at) || practiceLabs[0];
-    startPractice(preferred);
+    startPractice(quickLab);
   };
 
   const resetFilters = () => {
@@ -197,7 +210,7 @@ export default function LabsPage() {
           </p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Practical labs</h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-            Warm up on practice labs, or open course labs for graded practicals.
+            Warm up on guided practice labs, or open a real lab for a graded practical.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -205,7 +218,7 @@ export default function LabsPage() {
             <IconZap size={12} /> {practiceLabs.length} practice
           </Badge>
           <Badge tone="sky">
-            <IconServer size={12} /> {courseLabs.length} course
+            <IconServer size={12} /> {realLabs.length} real
           </Badge>
           {startedCount > 0 && (
             <Badge tone="brand">
@@ -223,17 +236,17 @@ export default function LabsPage() {
           onSelect={() => setMode('practice')}
           onPrimary={practiceLabs.length ? quickStart : undefined}
           primaryLabel={practiceLabs.length ? 'Start practice' : 'No labs yet'}
-          primaryLoading={Boolean(startingId) && startingId === (practiceLabs.find((l) => l.last_started_at) || practiceLabs[0])?.id}
+          primaryLoading={Boolean(startingId) && startingId === quickLab?.id}
           disabled={!practiceLabs.length || loading}
           disabledReason={practiceLabs.length ? undefined : 'No practice labs have been published yet.'}
         />
         <ModeCard
-          mode="course"
-          active={mode === 'course'}
-          count={courseLabs.length}
-          onSelect={() => setMode('course')}
-          onPrimary={() => setMode('course')}
-          primaryLabel={mode === 'course' ? 'Browse labs' : 'Browse practicals'}
+          mode="real"
+          active={mode === 'real'}
+          count={realLabs.length}
+          onSelect={() => setMode('real')}
+          onPrimary={() => setMode('real')}
+          primaryLabel="Browse labs"
           disabled={loading}
         />
       </div>
@@ -244,7 +257,7 @@ export default function LabsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={mode === 'practice' ? 'Search practice labs…' : 'Search course practicals…'}
+            placeholder={mode === 'practice' ? 'Search practice labs…' : 'Search real labs…'}
             className="input pl-9"
             aria-label="Search labs"
           />
@@ -284,7 +297,7 @@ export default function LabsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            {mode === 'practice' ? 'Practice labs' : 'Course labs'}
+            {mode === 'practice' ? 'Practice labs' : 'Real labs'}
           </h2>
           <Badge tone="slate">{filtered.length}</Badge>
           {!loading && activeLabs.length > 0 && filtered.length !== activeLabs.length && (
@@ -315,18 +328,18 @@ export default function LabsPage() {
           <EmptyState
             icon={IconZap}
             title="No practice labs yet"
-            message="Instructors have not published any practice labs yet. Course practicals are available now."
+            message="Instructors have not published any guided practice labs yet. Real labs are available now."
             action={
-              <Button variant="secondary" onClick={() => setMode('course')}>
-                Browse course practicals <IconArrowRight size={13} />
+              <Button variant="secondary" onClick={() => setMode('real')}>
+                Browse real labs <IconArrowRight size={13} />
               </Button>
             }
           />
         ) : (
           <EmptyState
             icon={IconTerminal}
-            title="No course practicals found"
-            message="Practical labs appear here once you are enrolled in a course that includes them."
+            title="No real labs found"
+            message="Real labs appear here once an instructor publishes one, for example inside a course you are enrolled in."
             action={
               <Button as={Link} to="/student/courses" variant="secondary">
                 Browse my courses <IconArrowRight size={13} />
@@ -451,7 +464,7 @@ export default function LabsPage() {
         <IconArrowRight size={12} className="mt-1 shrink-0" />
         {mode === 'practice'
           ? 'Practice labs are not graded. Start as many sessions as you like.'
-          : 'Finish every required step in a course lab to unlock your practical report.'}
+          : 'Real labs are graded from your submitted evidence. Capture clear screenshots of your work before you submit.'}
       </p>
     </div>
   );
