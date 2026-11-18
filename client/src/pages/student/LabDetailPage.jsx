@@ -124,6 +124,13 @@ export default function LabDetailPage() {
   const isPractice = Boolean(lab.is_practice);
   const isVps = lab.lab_mode === 'vps';
   const isReal = lab.lab_mode === 'real' || isVps;
+  // A real lab the student has already submitted (pending review or
+  // approved) is finished for them and cannot be started again. Guided labs
+  // stay re-runnable, and a changes-requested submission reopens the lab.
+  const realSubmission = isReal
+    ? sessions.find((s) => s.submission_status === 'submitted' || s.submission_status === 'approved')
+    : null;
+  const realLabLocked = Boolean(realSubmission);
   const minEvidence = Math.max(1, Number(lab.min_evidence) || 1);
   // Every lab - including open-to-all practice labs - needs a running Docker
   // provider, so availability is required for all of them.
@@ -282,7 +289,11 @@ export default function LabDetailPage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
-            {running ? (
+            {realLabLocked ? (
+              <Badge tone={realSubmission.submission_status === 'approved' ? 'emerald' : 'amber'} className="px-3 py-2 text-xs">
+                <IconCheckCircle size={14} /> {realSubmission.submission_status === 'approved' ? 'Lab completed' : 'Submitted, pending review'}
+              </Badge>
+            ) : running ? (
               <>
                 <Button as="a" href={`/labs/session/${mySession.id}`} target="_blank" rel="noopener noreferrer">
                   <IconPlay size={15} /> Resume session
@@ -304,8 +315,10 @@ export default function LabDetailPage() {
               </Button>
             )}
             <p className="max-w-[240px] text-xs leading-5 text-slate-500 dark:text-slate-400 lg:text-right">
-              {isReal
-                ? isVps
+              {realLabLocked
+                ? 'You have already submitted this real lab, so it cannot be started again. If your instructor requests changes, this lab will reopen so you can fix the work and resubmit it.'
+                : isReal
+                  ? isVps
                   ? `Read the task brief, complete it on your dedicated cloud server and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review. The server takes a few minutes to prepare, and your timer starts when it is ready.`
                   : `Read the task brief, complete it in the terminal and upload at least ${minEvidence} screenshot${minEvidence === 1 ? '' : 's'} for instructor review.`
                 : isPractice

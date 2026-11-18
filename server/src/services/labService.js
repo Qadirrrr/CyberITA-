@@ -59,6 +59,19 @@ export async function getSessionOr404(sessionId, user) {
 
 /** Provisions (or reuses) a lab session for a user. */
 export async function startSession(user, lab) {
+  // A real lab is finished for a student once they submit it: while the
+  // submission is pending review or approved, the lab cannot be started
+  // again. A changes-requested submission reopens it so the student can fix
+  // the work and resubmit. Guided labs can always be re-run for practice.
+  if (user.role === 'student' && (lab.lab_mode === 'real' || lab.lab_mode === 'vps')) {
+    const { rows: doneRows } = await query(
+      `SELECT id FROM lab_submissions WHERE lab_id = $1 AND user_id = $2 AND status IN ('submitted', 'approved') LIMIT 1`,
+      [lab.id, user.id]
+    );
+    if (doneRows[0]) {
+      throw forbidden('You have already submitted this real lab, so it cannot be started again.');
+    }
+  }
   // Real VPS labs provision asynchronously through the gateway (a cloud
   // server takes minutes to boot), so they have their own session-first flow.
   if (lab.lab_mode === 'vps') return startVpsSession(user, lab);
