@@ -147,8 +147,8 @@ export async function getSubmissionForSession(sessionId) {
  * "changes requested" submission for the same lab. A re-opened submission
  * moves to the session being submitted, so a student who redoes the work in
  * a fresh session resubmits cleanly instead of leaving a duplicate behind.
- * The guided-lab completion check is enforced server-side, never trusted
- * from the client.
+ * Partial submissions are allowed in every graded mode; the evidence
+ * snapshot carries the completed counts for the instructor.
  */
 export async function submitLabSession({ session, lab, user, note = '', file = null }) {
   if (session.status === 'error') throw badRequest('This lab session failed and cannot be submitted.');
@@ -157,22 +157,12 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
     throw badRequest('Practice labs are open-ended: there is nothing to submit for review.');
   }
 
-  if (lab.lab_mode === 'real' || lab.lab_mode === 'vps') {
-    // Real labs are graded on evidence, not on guided steps. Students submit
-    // however much they completed: any number of screenshots may be sent, and
-    // the evidence snapshot records evidence_count against min_evidence so the
-    // instructor can see whether the submission is partial or complete.
-  } else {
-    const { rows: remainingRows } = await query(
-      `SELECT COUNT(*)::int AS remaining FROM lab_steps s
-       WHERE s.lab_id = $1 AND s.is_optional = FALSE
-         AND s.id NOT IN (SELECT step_id FROM lab_step_progress WHERE session_id = $2)`,
-      [lab.id, session.id]
-    );
-    if (remainingRows[0].remaining > 0) {
-      throw badRequest(`Finish all required steps first (${remainingRows[0].remaining} remaining).`);
-    }
-  }
+  // Every graded lab may be submitted with whatever work is saved, complete
+  // or partial. Real labs are graded on screenshot evidence; guided labs on
+  // verified steps. The evidence snapshot records the counts either way
+  // (evidence_count against min_evidence, completed_required against
+  // required_total), so the instructor can see whether a submission is
+  // partial or complete instead of the student being blocked at the door.
 
   let existing = await getSubmissionForSession(session.id);
   if (existing && existing.status !== 'changes_requested') {
@@ -270,7 +260,7 @@ export async function submitLabSession({ session, lab, user, note = '', file = n
         userIds: [instructorId],
         type: 'lab',
         title: `Lab submission: ${lab.title}`,
-        body: `${user.full_name || 'A student'} submitted a completed lab for review.`,
+        body: `${user.full_name || 'A student'} submitted a lab for review.`,
         link: '/instructor/lab-submissions',
       });
     } else {

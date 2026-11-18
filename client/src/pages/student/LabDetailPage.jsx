@@ -130,27 +130,30 @@ export default function LabDetailPage() {
   const offlineReason = 'This lab cannot start right now. Please try again later.';
   const requiredSteps = stepCounts?.required ?? 0;
 
-  // Saved-work submission: an ended session can be sent for instructor review
-  // straight from this page. Real labs may be submitted with partial evidence
-  // (the instructor sees the counts); guided labs must finish all required
-  // steps. The server applies the same rules, so this only drives the UI.
+  // Saved-work submission: any saved session can be sent for instructor
+  // review straight from this page, whether it has ended or is still running
+  // (submitting a running session ends it) and whether the work is complete
+  // or partial. The instructor sees the saved counts, so a partial
+  // submission is labelled as one instead of being blocked.
   const sessionSubmitState = (session) => {
     if (isPractice) return null;
     if (session.submission_status === 'approved') return 'approved';
     if (session.submission_status === 'submitted') return 'submitted';
-    if (session.status === 'running' || session.status === 'error') return null;
-    const eligible = isReal
-      ? true
-      : (session.completed_steps || 0) >= requiredSteps;
-    if (!eligible) return 'ineligible';
+    if (session.status === 'error') return null;
     return session.submission_status === 'changes_requested' ? 'changes' : 'eligible';
   };
 
   const submitSession = async (session) => {
     const missingShots = isReal ? Math.max(0, minEvidence - (session.screenshot_count || 0)) : 0;
-    const message = isReal
+    const missingSteps = !isReal ? Math.max(0, requiredSteps - (session.completed_steps || 0)) : 0;
+    let message = isReal
       ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?${missingShots > 0 ? ` That is ${missingShots} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
-      : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
+      : missingSteps > 0
+        ? `Submit this saved lab with ${session.completed_steps || 0} of ${requiredSteps} required steps completed? Your instructor will see a partial submission.`
+        : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
+    if (session.status === 'running') {
+      message += ' Submitting ends this session now, so its server or container will be shut down.';
+    }
     if (!(await askConfirm({ title: 'Submit lab for review?', message, confirmLabel: 'Submit lab' }))) return;
     setSubmittingId(session.id);
     try {
@@ -363,8 +366,8 @@ export default function LabDetailPage() {
             <Card className="p-5">
               <h2 className="font-display text-base font-semibold text-slate-900 dark:text-white">Your saved work</h2>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                Ended labs stay saved here with their steps and screenshots.
-                {!isPractice && ' Submit any completed one for instructor review.'}
+                Your sessions stay saved here with their steps and screenshots.
+                {!isPractice && ' Submit any saved one for instructor review, finished or partial.'}
               </p>
               <ul className="mt-1 divide-y divide-slate-100 dark:divide-white/5">
                 {sessions.slice(0, 5).map((session) => {
@@ -417,13 +420,7 @@ export default function LabDetailPage() {
                           </Button>
                         </div>
                       )}
-                      {state === 'ineligible' && (
-                        <p className="mt-1.5 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
-                          {isReal
-                            ? `Add ${missingShots} more screenshot${missingShots === 1 ? '' : 's'} inside the session to submit this lab.`
-                            : 'Finish all required steps in a session to submit it for review.'}
-                        </p>
-                      )}
+
                     </li>
                   );
                 })}

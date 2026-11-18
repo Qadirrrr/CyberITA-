@@ -73,6 +73,15 @@ export default function LabSessionPage() {
   const [panelFullscreen, setPanelFullscreen] = useState(false);
   const serverPanelRef = useRef(null);
 
+  // The desktop view stays mounted while hidden, so when its tab is opened
+  // its container changes size from zero: nudge a window resize (the same
+  // trick the full screen handler uses) so the desktop canvas rescales.
+  useEffect(() => {
+    if (serverView !== 'desktop') return;
+    const timer = setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+    return () => clearTimeout(timer);
+  }, [serverView]);
+
   // Full screen covers the whole server panel, so whichever view is
   // active (Terminal or Desktop) fills the screen. Exit is the same
   // button, the Esc key, or the browser's own full screen UI.
@@ -521,12 +530,17 @@ export default function LabSessionPage() {
   };
 
   const submitLabAssignment = async () => {
-    if ((!isRealLab && !data?.progress?.allRequiredCompleted) || isPractice || data.submission?.status === 'approved') return;
+    if (isPractice || data.submission?.status === 'approved') return;
     const minEvidence = Math.max(1, data.progress?.minEvidence || data.lab?.min_evidence || 1);
     const shortfall = isRealLab ? Math.max(0, minEvidence - data.screenshots.length) : 0;
+    const stepsShortfall = !isRealLab
+      ? Math.max(0, (data.progress?.requiredTotal || 0) - (data.progress?.completedRequired || 0))
+      : 0;
     const message = isRealLab
       ? `Submit this lab with ${data.screenshots.length} screenshot evidence file${data.screenshots.length === 1 ? '' : 's'} for instructor review?${shortfall > 0 ? ` That is ${shortfall} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
-      : 'Submit this completed lab assignment for instructor review?';
+      : stepsShortfall > 0
+        ? `Submit this lab with ${data.progress?.completedRequired || 0} of ${data.progress?.requiredTotal || 0} required steps completed? Your instructor will see a partial submission.`
+        : 'Submit this completed lab assignment for instructor review?';
     askConfirm({
       title: 'Submit lab for review?',
       message,
@@ -537,7 +551,9 @@ export default function LabSessionPage() {
           const form = new FormData();
           form.append('note', isRealLab
             ? 'Submitted from the real lab session with screenshot evidence.'
-            : 'Submitted from the completed lab session.');
+            : stepsShortfall > 0
+              ? 'Submitted from the lab session with partial progress.'
+              : 'Submitted from the completed lab session.');
           await api.post(`/labs/sessions/${sessionId}/submit`, form);
           toast.success('Lab assignment submitted for instructor review.');
           await load({ silent: true });
@@ -730,7 +746,7 @@ export default function LabSessionPage() {
         <div className="flex shrink-0 items-center gap-2">
           {/* Real and VPS labs keep evidence + submit in the left panel;
               the header only carries them for guided labs. */}
-          {!isPractice && !isRealLab && progress.allRequiredCompleted && (
+          {!isPractice && !isRealLab && (
             <div className="flex items-center gap-2">
               {data.submission?.status === 'approved' ? (
                 <Badge tone="emerald"><IconCheckCircle size={12} /> Approved</Badge>
@@ -1703,11 +1719,16 @@ export default function LabSessionPage() {
                         </div>
                       ) : null}
                       <div className="mt-3 flex min-h-[300px] flex-1 flex-col">
-                        {serverView === 'desktop' ? (
-                          <VpsDesktop sessionId={Number(session.id)} className="min-h-0 flex-1" />
-                        ) : (
+                        {/* Both views stay mounted the whole time: switching tabs
+                            only hides one, so the terminal keeps its connection
+                            and scrollback and the desktop keeps its VNC session
+                            instead of restarting on every switch. */}
+                        <div className={serverView === 'terminal' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
                           <VpsTerminal sessionId={Number(session.id)} className="min-h-0 flex-1" />
-                        )}
+                        </div>
+                        <div className={serverView === 'desktop' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+                          <VpsDesktop sessionId={Number(session.id)} className="min-h-0 flex-1" />
+                        </div>
                       </div>
                     </>
                   ) : (
