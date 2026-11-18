@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { getErrorMessage } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import Markdown from '../../components/Markdown';
-import { Alert, Badge, Button, Card, ProgressBar, Skeleton } from '../../components/ui';
+import { Alert, Badge, Button, Card, Modal, ProgressBar, Skeleton, Textarea } from '../../components/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -12,16 +12,15 @@ import {
   IconCheckCircle,
   IconClock,
   IconExternalLink,
+  IconPaperclip,
   IconPlay,
   IconSend,
   IconTerminal,
 } from '../../components/icons';
 import { DIFFICULTIES } from '../../lib/constants';
 import { formatDateTime, timeAgo } from '../../lib/format';
-import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function LabDetailPage() {
-  const [confirmNode, askConfirm] = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -30,6 +29,9 @@ export default function LabDetailPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [submittingId, setSubmittingId] = useState(null);
+  const [submitTarget, setSubmitTarget] = useState(null);
+  const [reportFile, setReportFile] = useState(null);
+  const [reportNote, setReportNote] = useState('');
   const [error, setError] = useState('');
 
   const refresh = async () => {
@@ -96,7 +98,6 @@ export default function LabDetailPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        {confirmNode}
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-56 w-full" />
@@ -143,24 +144,39 @@ export default function LabDetailPage() {
     return session.submission_status === 'changes_requested' ? 'changes' : 'eligible';
   };
 
-  const submitSession = async (session) => {
+  const submitWarning = (session) => {
+    if (!session) return '';
     const missingShots = isReal ? Math.max(0, minEvidence - (session.screenshot_count || 0)) : 0;
     const missingSteps = !isReal ? Math.max(0, requiredSteps - (session.completed_steps || 0)) : 0;
     let message = isReal
-      ? `Submit this saved lab with ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'} for instructor review?${missingShots > 0 ? ` That is ${missingShots} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
+      ? `This saved lab has ${session.screenshot_count || 0} screenshot evidence file${session.screenshot_count === 1 ? '' : 's'}.${missingShots > 0 ? ` That is ${missingShots} short of the required ${minEvidence}, so your instructor will see a partial submission.` : ''}`
       : missingSteps > 0
-        ? `Submit this saved lab with ${session.completed_steps || 0} of ${requiredSteps} required steps completed? Your instructor will see a partial submission.`
-        : 'Submit this saved, completed lab for instructor review? Your verified steps and screenshots will be sent as evidence.';
+        ? `This saved lab has ${session.completed_steps || 0} of ${requiredSteps} required steps completed, so your instructor will see a partial submission.`
+        : 'Your verified steps and screenshots will be sent as evidence.';
     if (session.status === 'running') {
       message += ' Submitting ends this session now, so its server or container will be shut down.';
     }
-    if (!(await askConfirm({ title: 'Submit lab for review?', message, confirmLabel: 'Submit lab' }))) return;
-    setSubmittingId(session.id);
+    return message;
+  };
+
+  const openSubmit = (session) => {
+    setSubmitTarget(session);
+    setReportFile(null);
+    setReportNote('');
+  };
+
+  const confirmSubmitSaved = async () => {
+    if (!submitTarget) return;
+    setSubmittingId(submitTarget.id);
     try {
       const form = new FormData();
-      form.append('note', isReal ? 'Submitted from the lab page with screenshot evidence.' : 'Submitted from the lab page.');
-      await api.post(`/labs/sessions/${session.id}/submit`, form);
+      form.append('note', reportNote.trim() || (isReal ? 'Submitted from the lab page with screenshot evidence.' : 'Submitted from the lab page.'));
+      if (reportFile) form.append('file', reportFile);
+      await api.post(`/labs/sessions/${submitTarget.id}/submit`, form);
       toast.success('Lab submitted for instructor review.');
+      setSubmitTarget(null);
+      setReportFile(null);
+      setReportNote('');
       await refresh();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not submit this lab.'));
@@ -171,7 +187,49 @@ export default function LabDetailPage() {
 
   return (
     <div className="animate-fade-up space-y-5">
-      {confirmNode}
+      <Modal
+        open={Boolean(submitTarget)}
+        onClose={() => setSubmitTarget(null)}
+        title="Submit lab for review"
+        description={submitTarget ? `${lab.title} · ${formatDateTime(submitTarget.started_at)}` : ''}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSubmitTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmSubmitSaved} loading={submittingId === submitTarget?.id}>
+              <IconSend size={14} /> Submit lab
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {submitTarget && <p className="text-sm text-slate-500 dark:text-slate-400">{submitWarning(submitTarget)}</p>}
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">Report file (optional)</span>
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2.5 text-sm text-slate-500 transition hover:border-brand-400 hover:text-brand-600 dark:border-white/15 dark:text-slate-400 dark:hover:border-brand-400">
+              <IconPaperclip size={15} className="shrink-0" />
+              <span className="min-w-0 truncate">
+                {reportFile ? `${reportFile.name} (${Math.max(1, Math.round(reportFile.size / 1024))} KB)` : 'Choose your lab report file'}
+              </span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp"
+                className="hidden"
+                onChange={(event) => setReportFile(event.target.files?.[0] || null)}
+              />
+            </label>
+            <p className="mt-1 text-xs text-slate-400">PDF, Word, text or image file, up to 25 MB. Your instructor can download it from the submission.</p>
+          </div>
+          <Textarea
+            label="Note for your instructor (optional)"
+            rows={3}
+            value={reportNote}
+            onChange={(event) => setReportNote(event.target.value)}
+            placeholder="Anything your instructor should know about this work"
+          />
+        </div>
+      </Modal>
       <Link to="/student/labs" className="group inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-300">
         <IconArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" /> Back to lab catalog
       </Link>
@@ -416,7 +474,7 @@ export default function LabDetailPage() {
                               Your instructor requested changes. Review the feedback, fix the work and resubmit.
                             </p>
                           )}
-                          <Button size="sm" onClick={() => submitSession(session)} loading={submittingId === session.id}>
+                          <Button size="sm" onClick={() => openSubmit(session)} loading={submittingId === session.id}>
                             <IconSend size={13} /> {state === 'changes' ? 'Resubmit lab' : 'Submit for review'}
                           </Button>
                         </div>

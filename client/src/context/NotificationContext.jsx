@@ -105,6 +105,7 @@ export function NotificationProvider({ children }) {
         const matches =
           !item.read_at &&
           (item.type === category ||
+            (category === 'labAssignment' && item.link?.includes('lab-assignments')) ||
             (category === 'lab' && (item.link?.includes('lab') || item.title?.toLowerCase().includes('lab'))) ||
             (category === 'submission' && (item.link?.includes('submission') || item.title?.toLowerCase().includes('submission'))));
         if (matches) {

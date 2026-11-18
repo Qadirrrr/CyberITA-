@@ -54,6 +54,7 @@ router.post(
          AND read_at IS NULL
          AND (
            type = $2
+           OR ($2 = 'labAssignment' AND link LIKE '%lab-assignments%')
            OR ($2 = 'quiz' AND (link LIKE '%quiz%' OR LOWER(title) LIKE '%quiz%'))
            OR ($2 = 'assignment' AND (link LIKE '%assignment%' OR LOWER(title) LIKE '%assignment%'))
            OR ($2 = 'submission' AND (link LIKE '%submission%' OR LOWER(title) LIKE '%submission%'))

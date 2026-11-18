@@ -226,11 +226,13 @@ export default function DashboardLayout() {
           ? 'Moderation workspace'
           : 'Learning workspace';
 
-  // Calculate unread notification counts per category
+  // Calculate unread notification counts per category. The Lab assignments
+  // badge counts ONLY assignment notifications (new assignment published,
+  // instructor reminders): those are the ones that link to the assignments
+  // page. Lab lifecycle notifications (started / ready / completed) still
+  // appear in the Notifications section but never light up this tab.
   const labAssignmentNotifs = useMemo(() => {
-    return (notifications || []).filter(
-      (n) => !n.read_at && (n.type === 'lab' || n.link?.includes('lab-assignment') || n.title?.toLowerCase().includes('lab'))
-    ).length;
+    return (notifications || []).filter((n) => !n.read_at && n.link?.includes('lab-assignments')).length;
   }, [notifications]);
 
   const submissionNotifs = useMemo(() => {
@@ -258,7 +260,7 @@ export default function DashboardLayout() {
   useEffect(() => {
     const path = location.pathname;
     if (path.startsWith('/student/lab-assignments')) {
-      if (labAssignmentNotifs > 0) markCategoryRead?.('lab');
+      if (labAssignmentNotifs > 0) markCategoryRead?.('labAssignment');
     } else if (path.startsWith('/instructor/lab-submissions')) {
       if (submissionNotifs > 0) markCategoryRead?.('submission');
     } else if (path.startsWith('/moderator/')) {
@@ -381,7 +383,7 @@ export default function DashboardLayout() {
         title={mini ? item.label : undefined}
         onClick={() => {
           setMobileOpen(false);
-          if (item.badge === 'labAssignments') markCategoryRead?.('lab');
+          if (item.badge === 'labAssignments') markCategoryRead?.('labAssignment');
           if (item.badge === 'submissions') markCategoryRead?.('submission');
           if (item.badge === 'labSubmissions') markCategoryRead?.('lab');
           if (item.badge === 'moderation') markCategoryRead?.('moderation');
