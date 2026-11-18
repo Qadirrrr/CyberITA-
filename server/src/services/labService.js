@@ -148,15 +148,6 @@ export async function startSession(user, lab) {
       entityId: lab.id,
       metadata: { title: lab.title, instanceId: descriptor.instanceId, practice: isPractice },
     });
-    await notify(client, {
-      userIds: [user.id],
-      type: 'lab',
-      title: `Lab started: ${lab.title}`,
-      body: isPractice
-        ? 'Your practice lab container is ready. Install packages and explore freely.'
-        : 'Your isolated lab environment is ready in the browser terminal.',
-      link: `/labs/${lab.id}`,
-    });
   });
 
   const fullSession = await loadSession(session.id);
@@ -245,17 +236,6 @@ async function launchVpsProvisioning(session, lab, user, sessionMinutes) {
            WHERE id = $1 AND status = 'provisioning' RETURNING *`,
           [session.id, expiresAt]
         );
-        if (updated[0]) {
-          await withTransaction((client) =>
-            notify(client, {
-              userIds: [user.id],
-              type: 'lab',
-              title: `Lab server ready: ${lab.title}`,
-              body: 'Your lab server is ready.',
-              link: `/labs/${lab.id}`,
-            })
-          ).catch(() => {});
-        }
         return;
       }
       if (gatewaySession.status === 'error') {
@@ -317,13 +297,6 @@ export async function startVpsSession(user, lab) {
       entityType: 'lab',
       entityId: lab.id,
       metadata: { title: lab.title, practice: false, provider: 'vps', profile: profileKey },
-    });
-    await notify(client, {
-      userIds: [user.id],
-      type: 'lab',
-      title: `Lab started: ${lab.title}`,
-      body: 'Your real lab server is being prepared. This usually takes a few minutes.',
-      link: `/labs/${lab.id}`,
     });
   });
 
@@ -490,13 +463,6 @@ export async function checkLabCompletion(session) {
       entityType: 'lab',
       entityId: session.lab_id,
       metadata: { title: session.lab_title, sessionId: session.id },
-    });
-    await notify(client, {
-      userIds: [session.user_id],
-      type: 'lab',
-      title: `Lab completed: ${session.lab_title}`,
-      body: 'All required steps verified. You can now generate your practical report.',
-      link: `/labs/session/${session.id}`,
     });
     // Sync the linked lesson's completion so course progress reflects the lab.
     if (session.lesson_id && session.course_id) {
