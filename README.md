@@ -53,6 +53,22 @@ The database starts empty. Create the first administrator from another terminal:
 npm run user:create -- --email admin@example.com --name "Platform Admin" --role admin
 ```
 
+## Production install (one command)
+
+On a fresh Ubuntu 24.04 server, the installer in this repo does the whole
+production setup: packages, code, database, migrations, frontend build,
+nginx, pm2 and a final check. Run it as root:
+
+```bash
+bash install.sh
+```
+
+The script is safe to re-run. It stops with clear instructions at the two
+points that need a human (filling in `server/.env` with your own secrets),
+and continues where it left off when you run it again. The same steps,
+explained for a manual setup, are in
+[Production setup guide](docs/PRODUCTION-SETUP.md).
+
 ## Accounts
 
 CyberITA+ does not ship with demo users. Provision every account explicitly:
@@ -112,6 +128,7 @@ Each lab also offers simulated practice mode. Practice uses an in-memory shell, 
 ## Documentation
 
 - [Setup and local development](docs/SETUP.md)
+- [Production setup guide](docs/PRODUCTION-SETUP.md)
 - [Production deployment](docs/DEPLOYMENT.md)
 
 ## License
