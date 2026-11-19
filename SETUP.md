@@ -114,7 +114,6 @@ Open http://localhost:5173. The API runs on http://localhost:4000 and Vite proxi
 | `npm run dev` | Run API and Vite dev server together |
 | `npm run build` | Build the frontend into `client/dist` |
 | `npm start` | Run the production server |
-| `npm run test` | Run server and client tests |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:reset` | Drop, recreate and migrate the configured database |
 | `npm run user:create` | Provision an admin, instructor or student account |
@@ -166,7 +165,7 @@ For more than one Docker host, keep `LAB_DOCKER_HOST` as the default and registe
 Verify the complete container lifecycle without touching application data:
 
 ```bash
-npm run lab:doctor   # CLI, engine and image diagnostics
+npm run lab:doctor -w server   # CLI, engine and image diagnostics
 npm run lab:smoke
 ```
 
@@ -181,7 +180,7 @@ Security notes:
 - Access to the Docker daemon is root-equivalent. Run the API and Docker on a dedicated lab host, restrict host access, and prefer rootless Docker where possible.
 - Root inside the session container is intentional and gives learners a real terminal. Containers are never privileged, have no host mounts and no Docker socket, and keep resource limits, so root applies only to the disposable container.
 - Network access is on by default so `apt` works. Restrict outbound traffic at the host/network level if learners should not reach arbitrary internet hosts, or disable networking per lab.
-- Two lab providers ship in production: `docker` for course practicals and `practice` for container-less practice terminals. The in-process simulator (`server/tests/support/lab-mock/`) is registered only by the automated test suite and never runs in production.
+- All new lab sessions run on the `docker` provider, practice labs included. The in-process `practice` provider (`server/src/labs/practice/`) is legacy: it only serves and stops practice sessions created before this change and is never selected for a new session.
 
 ### Two lab modes
 
@@ -189,21 +188,19 @@ CyberITA+ deliberately separates warm-up practice from graded course work:
 
 | Mode | Runtime | Docker required | Graded |
 | --- | --- | --- | --- |
-| **Practice terminal** (`labs.is_practice`) | In-process simulated Ubuntu shell (`PracticeLabProvider`, `server/src/labs/practice/`) | No | No |
+| **Practice lab** (`labs.is_practice`) | One isolated Docker container per session (`DockerLabProvider`) | Yes | No |
 | **Course practical** | One isolated Docker container per session (`DockerLabProvider`) | Yes | Yes, with a practical report |
 
-Practice terminals start instantly, keep working while the Docker engine is offline, have no session expiry, and never touch a lab server or container. Their state lives in `lab_sessions.fs_state`, so a reload resumes the same simulated filesystem. Stopping a practice session discards that sandbox; the next start is clean.
+Practice labs need no course enrollment, produce no practical report and cannot be submitted for grading. They run in a real container with the same session expiry and cleanup as course labs; the practice flag changes access and grading only, not the runtime. Create one from **Lab builder → Auto-generate lab** (tick *Practice lab*) or tick the practice toggle in any lab's settings. Course labs keep the screenshot evidence and written report workflow.
 
-Practice labs need no course enrollment, produce no practical report and cannot be submitted for grading. Create one from **Lab builder → Auto-generate lab** (tick *Practice lab*) or tick the practice toggle in any lab's settings. Course labs keep the screenshot evidence and written report workflow.
-
-In the student UI, **Practical labs** shows two clear options: *Practice terminal* (instant, no Docker) and *Course practicals* (real containers). When Docker is offline only the course option is blocked; the practice terminal stays available.
+(Older practice sessions created on the retired in-process simulator are still served and can be stopped; new sessions never use it.)
 
 Instructors and admins can generate content from a title plus a short brief:
 
-- **Content Studio** (`/instructor/studio`) creates a lab, quiz and assignment in one step.
-- **Lab builder**, **Quizzes** and **Assignments** each have their own *Auto-generate* button; manual authoring is unchanged.
+- **Content Studio** (`/instructor/studio`) creates a lab in one step.
+- The **Lab builder** has its own *Auto-generate* button; manual authoring is unchanged.
 
-Generation is deterministic and blueprint based (no external AI call). Generated labs only use tools present in the runtime image and ship fixture files through `initial_files`, so course steps verify against real command output and practice steps run in the simulated shell.
+Generation uses a real AI model when `AI_API_KEY` is set (see the AI settings in `.env.example`); without a key it falls back to deterministic blueprint templates. Generated labs only use tools present in the runtime image and ship fixture files through `initial_files`, so steps verify against real command output.
 
 Real lab sessions use the WebSocket endpoint at `/ws` with `lab.attach` and `lab.exec` messages.
 

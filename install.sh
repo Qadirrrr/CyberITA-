@@ -91,6 +91,10 @@ DB_USER=$(grep "^DB_USER=" "$ENV_FILE" | cut -d= -f2-); DB_USER=${DB_USER:-postg
 
 echo "==> [4/9] Database"
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$DB_PASS';" >/dev/null
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
+  echo "Creating database role $DB_USER (does not exist yet)"
+  sudo -u postgres psql -c "CREATE ROLE \"$DB_USER\" LOGIN PASSWORD '$DB_PASSWORD';"
+fi
 sudo -u postgres psql -lqt | cut -d'|' -f1 | grep -qw "$DB_NAME" || \
   sudo -u postgres psql -c "CREATE DATABASE \"$DB_NAME\" OWNER $DB_USER;"
 

@@ -7,8 +7,7 @@ A professional IT learning platform built around practice, not just video. Cyber
 - Public marketing site with course catalog, learning paths, blog, contact form and certificate verification.
 - Role-based accounts for students, instructors and administrators.
 - Course curriculum with modules, lessons, progress tracking and completion certificates.
-- Quizzes with server-side grading, attempts history and per-question explanations.
-- Assignments with submissions, grading, feedback and resubmission.
+- Lab assignments: a published lab with a due date is the assignment, with submissions, grading, feedback and resubmission.
 - Practical labs running in isolated Docker containers with an in-browser Linux terminal.
 - Lab sessions with step verification, hints, screenshot evidence, cleanup and expiry.
 - Admin-managed lab servers: register Docker hosts, assign one per lab and route each student's separate container to it.
@@ -87,8 +86,6 @@ Supported roles are `admin`, `instructor` and `student`. Omit `--password` to ge
 | `npm run dev` | Run API and Vite dev server together |
 | `npm run build` | Build the frontend into `client/dist` |
 | `npm start` | Run the production server (serves the built frontend) |
-| `npm run test` | Run server and client tests |
-| `npm run test:client` | Run client unit tests |
 | `npm run db:migrate` | Apply pending SQL migrations |
 | `npm run db:reset` | Drop, recreate and migrate an empty database |
 | `npm run user:create` | Provision an admin, instructor or student account |
@@ -108,7 +105,7 @@ server/
   src/
     config/               Environment, database, logger
     db/                   Migrations, runner and reset scripts
-    labs/                 Provider abstraction, Docker runtime and test mock
+    labs/                 Provider abstraction and Docker runtime
     middleware/           Auth, RBAC, validation, error handling
     routes/               REST endpoints
     scripts/              Account provisioning CLI
@@ -121,7 +118,7 @@ server/
 
 `LAB_PROVIDER=docker` runs real Linux commands in a dedicated container per session. Every learner gets a real terminal: full root permission inside their own disposable container, so they can install any package and use professional tooling, and the shell shows their own name/student id. The container is still isolated from the host (no `--privileged`, no host mounts, no Docker socket) and keeps CPU/memory/PID limits and a non-persistent filesystem. Network access is on by default so package installs work, and instructors can disable it per lab. Sessions are removed on stop or expiry. See [Setup](SETUP.md#labs) for Docker and image requirements and [Lab runtime runbook](LABS.md) for the full guide (host requirements, building the `cyberita/lab-runtime` image, the admin readiness check and troubleshooting).
 
-Each lab also offers simulated practice mode. Practice uses an in-memory shell, is clearly labelled as simulated, persists progress, supports reset/repeat, and never provisions a container or requires screenshots. See [Setup](SETUP.md#practice-mode) for the practice workflow and API.
+Labs marked as practice are open to everyone (no enrollment needed) and are not submitted for grading. They run in the same Docker containers as course labs; the practice flag only controls access and grading. See [Setup](SETUP.md#two-lab-modes) for details.
 
 `LAB_PROVIDER=mock` remains available for automated tests only; it does not execute real commands.
 

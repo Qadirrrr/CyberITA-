@@ -118,7 +118,7 @@ in chat or email.** Generate the two JWT secrets with
 | `DB_HOST` | `127.0.0.1` |
 | `DB_PORT` | `5432` |
 | `DB_NAME` | `CyberITA` |
-| `DB_USER` | `postgres` (or a dedicated user you created) |
+| `DB_USER` | `postgres` (or a dedicated user; the install script creates the role automatically if it does not exist yet) |
 | `DB_PASSWORD` | The PostgreSQL user's password |
 | `DB_SSL` | `false` for a local database |
 | `JWT_ACCESS_SECRET` | Random 64-char hex string |
@@ -135,8 +135,7 @@ in chat or email.** Generate the two JWT secrets with
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | The FULL Gmail address (e.g. `you@gmail.com`). Only a name here breaks sending (Gmail error 535) |
 | `SMTP_PASS` | The Gmail **App Password** (not the normal account password) |
-| `SMTP_FROM` | e.g. `CyberITA <you@gmail.com>` : this is the sender name users see |
-| `MAIL_FROM` | Same as `SMTP_FROM` |
+| `MAIL_FROM` | e.g. `CyberITA <you@gmail.com>` : the sender name and address users see (this is the setting the code reads) |
 
 Without SMTP values the platform still runs, but verification links are only
 written to the server log instead of being emailed. Do not run production
@@ -149,7 +148,7 @@ that way.
 | `LAB_PROVIDER` | `docker` |
 | `LAB_DOCKER_IMAGE` | `cyberita/lab-runtime:1.0` (built in Step 5) |
 | `LAB_SESSION_TTL_MINUTES` | `120` fallback session length |
-| `MAX_UPLOAD_MB` | `25` (course video uploads allow up to 200 MB through nginx, see Step 7) |
+| `MAX_UPLOAD_MB` | `8` (course video uploads allow up to 200 MB through nginx, see Step 7) |
 
 ### Optional: real/VPS labs through the NovaVPS gateway
 

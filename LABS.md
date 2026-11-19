@@ -19,10 +19,9 @@ not start until the engine and image are ready.
 | Piece | Where it lives | What it does |
 | --- | --- | --- |
 | Container provider | `server/src/labs/docker/` | Creates one disposable container per session (memory/CPU/PID limits, no `--privileged`, no host mounts, no Docker socket), creates a per-session root identity named after the learner, bootstraps the workspace, and executes commands as UID 0 inside the container. |
-| Practice provider | `server/src/labs/practice/` | Container-less practice terminals. `PracticeShell` runs a simulated Ubuntu 22.04 shell (filesystem, permissions, processes, networking, text processing, hashing, package/service stubs) entirely in-process; state is persisted per session in `lab_sessions.fs_state`. |
+| Practice provider (legacy) | `server/src/labs/practice/` | In-process simulated shell kept only to serve and stop practice sessions created before practice labs moved to Docker. New sessions never select it. |
 | Terminal bridge | `server/src/websocket/index.js` | Line-oriented terminal over `/ws` (`lab.attach`, `lab.exec`), with per-session history persisted in PostgreSQL. The same bridge serves Docker and practice sessions. |
-| Session lifecycle | `server/src/services/labService.js` | Start/reuse sessions, verify lab steps against executed commands, expire real labs after `LAB_SESSION_TTL_MINUTES`, sweep expired containers every `LAB_CLEANUP_INTERVAL_MINUTES`. Practice sessions have no expiry and are torn down when the learner stops them. |
-| Test simulator | `server/tests/support/lab-mock/` | In-process provider used only by the automated test suite (`LAB_PROVIDER=mock`); never registered in production. The real practice provider is always registered, in tests and production alike. |
+| Session lifecycle | `server/src/services/labService.js` | Start/reuse sessions, verify lab steps against executed commands, expire real labs after `LAB_SESSION_TTL_MINUTES`, sweep expired containers every `LAB_CLEANUP_INTERVAL_MINUTES`. Practice labs are Docker sessions with the same expiry; legacy simulated sessions have no expiry and are torn down when the learner stops them. |
 | Admin monitoring | **Admin → Lab Infrastructure** | Service health, provider breakdown, sessions, failed labs, limits, cleanup, plus a live **Runtime readiness** check. |
 | Smoke test | `npm run lab:smoke` (in `/server`) | Provisions a throwaway container, runs real commands, removes the container. |
 | Doctor | `npm run lab:doctor` (in `/server`) | Prints the resolved Docker CLI, engine status and image availability, with the exact fix when something is missing. |
@@ -70,7 +69,7 @@ simplest reliable setup is Option A, or run the API inside the same WSL distro.
 
 ## 3. Build the lab image
 
-The default image is `cyberita/lab-runtime:1.0`, built from `docker/lab-image/`:
+The image set in `.env.example` is `cyberita/lab-runtime:1.0`, built from `docker/lab-image/` (the code-level default, when no env value is set, is `ubuntu:22.04`):
 
 ```bash
 cd server
@@ -208,66 +207,42 @@ attachments. Admins can **Acknowledge** a submission
 
 ## 6. Practice labs and auto-generated content
 
-### Practice terminals (container-less)
+### Practice labs
 
-Practice labs are warm-up terminals. They are **not** Docker containers: the
-session is served by `PracticeLabProvider` (`server/src/labs/practice/`), which
-replaces the Docker container with an in-process simulated Ubuntu 22.04 shell.
+Practice labs are open-access warm-up labs. They run in Docker containers
+exactly like course labs; the `labs.is_practice` flag only changes access
+(no enrollment needed) and grading (no report, no submission).
 
-- **Provider selection is per lab.** `startSession` calls
-  `getProviderForLab(lab)`: `labs.is_practice = true` always uses `practice`;
-  every other lab uses `LAB_PROVIDER` (`docker` in production, `mock` in tests).
-- **No container, no lab server.** Practice sessions never resolve a lab server,
-  never contact Docker, and record `lab_server_id = NULL`. They start even when
-  the engine is down, when a lab is assigned to a disabled server, or when the
-  image has not been built.
-- **Simulated shell.** `PracticeShell` supports a practical Ubuntu subset:
-  - filesystem: `pwd cd ls cat head tail touch mkdir rm cp mv find tree stat file`
-  - text: `echo grep awk sort uniq cut tr sed wc`
-  - integrity: `sha256sum sha1sum md5sum base64`
-  - system: `whoami id groups uname hostname date uptime nproc ps pgrep top df du free env history`
-  - network: `ip ifconfig ping traceroute ss netstat curl wget nmap getent`
-  - services: `apt apt-get systemctl service sudo`
-  - shell syntax: pipelines (`|`), redirection (`>` / `>>`), `&&`, `||`, `;`,
-    `~` expansion, quotes, `sudo`, `help`, `clear`, `exit`.
-- **Realistic seed filesystem.** `/etc/os-release`, `/etc/passwd`, `/etc/resolv.conf`,
-  `/proc/{loadavg,1,cpuinfo,meminfo,mounts,self/ns}`, `/bin/bash` (ELF marker),
-  `/var/log/{syslog,auth.log,nginx/…}` and a learner home directory are seeded,
-  then the lab's `initial_files` are merged in (for example
-  `practice/access.log`).
-- **Persistent, private state.** The simulated filesystem and cwd are stored in
-  `lab_sessions.fs_state`/`cwd`, so a page reload resumes exactly where the
-  learner stopped. Nothing executes on the host and no network traffic is sent.
-- **Unlimited sessions.** `expires_at` is `NULL`; the learner ends the session
-  with **Stop**. Stopping discards the simulated filesystem; the next start is a
-  clean sandbox.
-- **Not graded.** No course or enrollment is required (`course_id` stays `NULL`),
-  no practical report is generated and the submission/review flow is disabled
-  server-side (`POST /api/reports/sessions/:id/generate` and
-  `POST /api/labs/sessions/:id/submit` both return `400`).
+- **Provider selection.** `startSession` calls `getProviderForLab(lab)`:
+  every lab uses `LAB_PROVIDER` (`docker` in production); only
+  `lab_mode = 'vps'` labs use the VPS gateway. The `practice` provider is
+  legacy: it stays registered so pre-change simulated sessions can be
+  served and stopped, and new sessions never select it.
+- **Legacy simulated sessions.** Sessions created before this change ran
+  in the in-process `PracticeShell` (simulated filesystem persisted in
+  `lab_sessions.fs_state`/`cwd`, `expires_at` NULL). They can still be
+  opened and stopped; stopping one discards its simulated filesystem.
+- **Not graded.** No course or enrollment is required for standalone
+  practice labs, and practice labs cannot be submitted for grading.
 
-In the UI, **Practical labs** presents two explicit options: *Practice terminal*
-(instant, no Docker, unlimited) and *Course practicals* (real containers, graded).
 Create practice labs from **Lab builder → Auto-generate lab** (tick *Practice
 lab*) or by editing any lab and ticking the practice toggle.
 
-### Auto-generated labs, quizzes and assignments
+### Auto-generated labs
 
-Instructors and admins can turn a *title + short brief* into finished content.
-Generation is deterministic and blueprint based; it never calls an external AI
-service, so the same brief always produces the same structure.
+Instructors and admins can turn a *title + short brief* into a finished lab.
+With `AI_API_KEY` set, generation calls the configured AI model; without a
+key it uses deterministic blueprint templates, so the same brief always
+produces the same structure.
 
 | Method & path | Who | Purpose |
 | --- | --- | --- |
 | `POST /api/labs/generate` | instructor/admin | Generate + save a lab and its steps |
-| `POST /api/quizzes/generate` | instructor/admin | Generate MCQs + scenario questions |
-| `POST /api/assignments/generate` | instructor/admin | Generate a full assignment brief |
-| `POST /api/content/generate` | instructor/admin | One call: lab + quiz + assignment |
+| `POST /api/content/generate` | instructor/admin | Generate + save a lab (Content Studio) |
 
 Each endpoint accepts `details` (free-text scope). `autoSave` is available on
-the single-artefact endpoints; the Content Studio endpoint always saves and
-supports `publish` plus per-artefact toggles (`includeLab`, `includeQuiz`,
-`includeAssignment`).
+the single-lab endpoints; the Content Studio endpoint always saves and
+supports `publish`.
 
 Generated labs only use tooling that exists in `cyberita/lab-runtime:1.0`
 (coreutils, procps, iproute2, nmap, ping, file, grep, awk, sha256sum, python3).
@@ -276,17 +251,15 @@ Starter data is shipped through `initial_files` (for example
 Those are ordinary files inside the real container. Nothing about the runtime is
 simulated. Steps are verified against real command output inside the container.
 
-The same blueprints are used for practice labs, and the practice shell implements
-every command and pipe they rely on. `server/tests/practiceLabs.test.js` executes
-each generated step in `PracticeShell` and asserts the exit code and output
-pattern, so a generated practice lab is guaranteed to be solvable in-browser.
+The same blueprints are used for practice labs, whose steps run and verify
+inside the real container like any other lab.
 
 ## 7. Configuration reference
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `LAB_PROVIDER` | `docker` | Provider for **course** labs. `docker` for real containers. `mock` is a test-only simulator registered by the automated test suite. Practice labs always use the built-in `practice` provider regardless of this value. |
-| `LAB_DOCKER_IMAGE` | `cyberita/lab-runtime:1.0` | Default image; overridable per lab in the lab editor. |
+| `LAB_PROVIDER` | `docker` | Provider for all labs. `docker` for real containers. Practice labs use this provider too; the legacy `practice` provider only serves pre-change sessions. |
+| `LAB_DOCKER_IMAGE` | `ubuntu:22.04` (code default) | `.env.example` sets `cyberita/lab-runtime:1.0`. Overridable per lab in the lab editor. |
 | `LAB_DOCKER_BINARY` | `docker` | Docker CLI binary (name or full path). The API looks the name up on `PATH` and then in common install locations (`/usr/bin`, `/usr/local/bin`, `/snap/bin`, `/opt/homebrew/bin`, Docker Desktop), so services with a minimal `PATH` still work. Set a full path if the CLI is elsewhere. |
 | `LAB_DOCKER_HOST` | *(empty)* | Remote daemon, e.g. `ssh://labuser@lab-host`. |
 | `LAB_DOCKER_NETWORK` | `true` | Global network allowance. Lab sessions need it for `apt` installs; instructors can still disable it per lab. |

@@ -31,11 +31,9 @@ Add to `server/.env` (do not commit secrets):
 ```dotenv
 # Remote agent master key (encrypts agent secrets at rest). Strong random string.
 LAB_AGENT_MASTER_KEY=<openssl rand -hex 32>
-# Optional: how long before a remote agent is considered offline (ms, default 120000)
-LAB_AGENT_HEARTBEAT_TIMEOUT_MS=120000
 ```
 
-Existing variables (`LAB_PROVIDER=docker`, `LAB_DOCKER_IMAGE`, ...) stay unchanged.
+Existing variables (`LAB_PROVIDER=docker`, `LAB_DOCKER_IMAGE`, ...) stay unchanged. An agent is considered offline after 2 minutes without a heartbeat; this threshold is fixed in the code and is not configurable.
 
 ## 4. Register the two Lab Servers (Admin)
 
