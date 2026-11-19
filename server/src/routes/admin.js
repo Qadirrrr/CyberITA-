@@ -1401,7 +1401,7 @@ router.post(
                 const imageHint = inspected.exitCode === 0 ?
                     null :
                     String(image).startsWith('cyberita/') ?
-                    'Build it with `npm run lab:image:build` (see docs/LABS.md).' :
+                    'Build it with `npm run lab:image:build` (see LABS.md).' :
                     'It will be pulled automatically on the first session, or pull it now with `docker pull <image>`.';
                 add('image', `Lab image "${image}" available`, inspected.exitCode === 0,
                     inspected.exitCode === 0 ? 'Image found on the Docker host.' : imageHint, Date.now() - inspectStarted);

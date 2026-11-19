@@ -172,7 +172,7 @@ export class DockerLabProvider extends LabProvider {
     if (inspected.exitCode === 0) return;
     const localImage = String(image).startsWith('cyberita/');
     const buildHint = localImage
-      ? ' It is a local CyberITA+ image: build it on the Docker host with `npm run lab:image:build` (see docs/LABS.md).'
+      ? ' It is a local CyberITA+ image: build it on the Docker host with `npm run lab:image:build` (see LABS.md).'
       : '';
     if (!this.config.pull) {
       throw providerError(
@@ -325,7 +325,7 @@ export class DockerLabProvider extends LabProvider {
     const lines = [
       'set -eu',
       `if [ ! -w ${HOME_DIR} ]; then`,
-      `  echo '${HOME_DIR} is not writable by the student user (UID ${STUDENT_UID}). Use the cyberita/lab-runtime image, or bake a student user (UID ${STUDENT_UID}) with a writable home directory (see docs/LABS.md).' >&2`,
+      `  echo '${HOME_DIR} is not writable by the student user (UID ${STUDENT_UID}). Use the cyberita/lab-runtime image, or bake a student user (UID ${STUDENT_UID}) with a writable home directory (see LABS.md).' >&2`,
       '  exit 1',
       'fi',
       `mkdir -p ${HOME_DIR}/notes ${HOME_DIR}/scripts`,

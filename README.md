@@ -67,7 +67,7 @@ The script is safe to re-run. It stops with clear instructions at the two
 points that need a human (filling in `server/.env` with your own secrets),
 and continues where it left off when you run it again. The same steps,
 explained for a manual setup, are in
-[Production setup guide](docs/PRODUCTION-SETUP.md).
+[Production setup guide](PRODUCTION-SETUP.md).
 
 ## Accounts
 
@@ -119,16 +119,16 @@ server/
 
 ## Lab provider
 
-`LAB_PROVIDER=docker` runs real Linux commands in a dedicated container per session. Every learner gets a real terminal: full root permission inside their own disposable container, so they can install any package and use professional tooling, and the shell shows their own name/student id. The container is still isolated from the host (no `--privileged`, no host mounts, no Docker socket) and keeps CPU/memory/PID limits and a non-persistent filesystem. Network access is on by default so package installs work, and instructors can disable it per lab. Sessions are removed on stop or expiry. See [Setup](docs/SETUP.md#labs) for Docker and image requirements and [Lab runtime runbook](docs/LABS.md) for the full guide (host requirements, building the `cyberita/lab-runtime` image, the admin readiness check and troubleshooting).
+`LAB_PROVIDER=docker` runs real Linux commands in a dedicated container per session. Every learner gets a real terminal: full root permission inside their own disposable container, so they can install any package and use professional tooling, and the shell shows their own name/student id. The container is still isolated from the host (no `--privileged`, no host mounts, no Docker socket) and keeps CPU/memory/PID limits and a non-persistent filesystem. Network access is on by default so package installs work, and instructors can disable it per lab. Sessions are removed on stop or expiry. See [Setup](SETUP.md#labs) for Docker and image requirements and [Lab runtime runbook](LABS.md) for the full guide (host requirements, building the `cyberita/lab-runtime` image, the admin readiness check and troubleshooting).
 
-Each lab also offers simulated practice mode. Practice uses an in-memory shell, is clearly labelled as simulated, persists progress, supports reset/repeat, and never provisions a container or requires screenshots. See [Setup](docs/SETUP.md#practice-mode) for the practice workflow and API.
+Each lab also offers simulated practice mode. Practice uses an in-memory shell, is clearly labelled as simulated, persists progress, supports reset/repeat, and never provisions a container or requires screenshots. See [Setup](SETUP.md#practice-mode) for the practice workflow and API.
 
 `LAB_PROVIDER=mock` remains available for automated tests only; it does not execute real commands.
 
 ## Documentation
 
-- [Setup and local development](docs/SETUP.md)
-- [Production setup guide](docs/PRODUCTION-SETUP.md)
+- [Setup and local development](SETUP.md)
+- [Production setup guide](PRODUCTION-SETUP.md)
 
 ## License
 
