@@ -27,6 +27,7 @@ import {
   IconSend,
   IconSettings,
   IconServer,
+  IconStar,
   IconShield,
   IconTerminal,
   IconUsers,
@@ -58,6 +59,7 @@ const studentNavPrimary = [
 
 const studentNavProgress = [
   { to: '/student/reports', label: 'Lab reports', icon: IconFileText },
+  { to: '/student/leaderboard', label: 'Leaderboard', icon: IconStar },
   { to: '/student/certificates', label: 'Certificates', icon: IconAward },
   { to: '/student/history', label: 'Learning history', icon: IconClock },
 ];

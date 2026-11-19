@@ -6,6 +6,7 @@ import { validateBody } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { certificateSerial, percentComplete } from '../utils/helpers.js';
 import { notify, recordActivity } from '../utils/activity.js';
+import { awardXp, XP_RULES } from '../services/xp.js';
 
 const router = Router();
 
@@ -57,6 +58,12 @@ export async function recomputeCourseProgress(client, userId, courseId) {
         [certificateSerial(), userId, courseId]
       );
       certificate = certRows[0];
+      await awardXp(runner, {
+        userId,
+        points: XP_RULES.courseCompleted,
+        sourceType: 'course',
+        sourceId: courseId,
+      });
     }
   }
   return { percent, enrolled: true, completedNow, certificate, total, done };

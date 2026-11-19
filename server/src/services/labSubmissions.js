@@ -4,6 +4,7 @@ import path from 'node:path';
 import { badRequest, notFound } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
 import { isAdmin } from './access.js';
+import { awardXp, XP_RULES } from './xp.js';
 
 /**
  * Lab submissions: the "completed lab -> instructor review -> admin record"
@@ -380,6 +381,15 @@ export async function reviewLabSubmission({ submission, reviewer, status, feedba
     [status, feedback.trim(), reviewer.id, submission.id]
   );
   const updated = rows[0];
+
+  if (status === 'approved') {
+    await awardXp(null, {
+      userId: updated.user_id,
+      points: XP_RULES.submissionApproved,
+      sourceType: 'submission',
+      sourceId: updated.id,
+    });
+  }
 
   await withTransaction(async (client) => {
     await recordActivity(client, {
