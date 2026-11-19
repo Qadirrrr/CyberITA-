@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { query } from '../config/db.js';
 import { asyncHandler } from '../utils/errors.js';
 import { requireAuth } from '../middleware/auth.js';
-import { levelFor, XP_RULES } from '../services/xp.js';
 
 const router = Router();
 
@@ -142,69 +141,6 @@ router.get(
       [req.user.id]
     );
     res.json({ events: rows });
-  })
-);
-
-/**
- * XP leaderboard: the top students by earned XP, plus the caller's own
- * standing even when they are not on the board yet.
- */
-router.get(
-  '/leaderboard',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      `SELECT u.id, u.full_name, u.xp_points,
-              (SELECT COUNT(*)::int FROM xp_events e
-                WHERE e.user_id = u.id AND e.source_type IN ('lab', 'submission')) AS labs_finished,
-              (SELECT COUNT(*)::int FROM xp_events e
-                WHERE e.user_id = u.id AND e.source_type = 'course') AS courses_finished
-       FROM users u
-       WHERE u.role = 'student' AND u.is_active = TRUE AND u.xp_points > 0
-       ORDER BY u.xp_points DESC, u.id ASC
-       LIMIT 50`
-    );
-    const leaders = rows.map((row, index) => ({
-      rank: index + 1,
-      id: row.id,
-      name: row.full_name,
-      xp: row.xp_points,
-      level: levelFor(row.xp_points).level,
-      labsFinished: row.labs_finished,
-      coursesFinished: row.courses_finished,
-      isMe: row.id === req.user.id,
-    }));
-
-    let me = leaders.find((entry) => entry.isMe) || null;
-    if (!me) {
-      const { rows: mine } = await query(
-        `SELECT xp_points,
-                (SELECT COUNT(*)::int FROM users u2
-                  WHERE u2.role = 'student' AND u2.is_active = TRUE AND u2.xp_points > u.xp_points) AS ahead
-         FROM users u WHERE u.id = $1`,
-        [req.user.id]
-      );
-      const xp = mine[0]?.xp_points || 0;
-      me = {
-        rank: xp > 0 ? (mine[0]?.ahead || 0) + 1 : null,
-        id: req.user.id,
-        name: req.user.full_name,
-        xp,
-        level: levelFor(xp).level,
-        isMe: true,
-      };
-    }
-
-    res.json({
-      leaders,
-      me: { ...me, ...levelFor(me.xp) },
-      rules: {
-        stepPoints: 'Each verified lab step earns its own points (usually 10).',
-        labCompleted: XP_RULES.labCompleted,
-        submissionApproved: XP_RULES.submissionApproved,
-        courseCompleted: XP_RULES.courseCompleted,
-      },
-    });
   })
 );
 

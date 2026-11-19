@@ -33,7 +33,6 @@ const LabSessionPage = lazy(() => import('./pages/student/LabSessionPage'));
 const ReportsPage = lazy(() => import('./pages/student/ReportsPage'));
 const ReportEditorPage = lazy(() => import('./pages/student/ReportEditorPage'));
 const CertificatesPage = lazy(() => import('./pages/student/CertificatesPage'));
-const LeaderboardPage = lazy(() => import('./pages/student/LeaderboardPage'));
 const HistoryPage = lazy(() => import('./pages/student/HistoryPage'));
 const ProfilePage = lazy(() => import('./pages/student/ProfilePage'));
 const StudentSupportPage = lazy(() => import('./pages/student/StudentSupportPage'));
@@ -115,7 +114,6 @@ export default function App() {
           <Route path="student/reports" element={<ReportsPage />} />
           <Route path="student/reports/:id" element={<ReportEditorPage />} />
           <Route path="student/certificates" element={<CertificatesPage />} />
-          <Route path="student/leaderboard" element={<LeaderboardPage />} />
           <Route path="student/history" element={<HistoryPage />} />
           <Route path="student/support" element={<StudentSupportPage />} />
           <Route path="student/notifications" element={<StudentNotificationsPage />} />

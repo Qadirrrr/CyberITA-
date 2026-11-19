@@ -6,7 +6,6 @@ import { normalizeCommand, matchesPattern, slugify } from '../utils/helpers.js';
 import { provisionLabSession, getLabSessionStatus, terminateLabSession } from '../labs/vps/vpsGateway.js';
 import { notFound, forbidden, badRequest } from '../utils/errors.js';
 import { notify, recordActivity } from '../utils/activity.js';
-import { awardXp, XP_RULES } from './xp.js';
 import { recomputeCourseProgress } from '../routes/enrollment.js';
 import { assertSessionAccess } from './access.js';
 import { hostForSession, resolveServerForNewSession, reserveCapacity, releaseCapacity } from './labServers.js';
@@ -428,14 +427,6 @@ async function markStepCompleted({ session, step, command, output, client }) {
      VALUES ($1, $2, $3, $4)`,
     [session.id, step.id, (command || null)?.slice(0, 500), (output || '').slice(0, 2000)]
   );
-  // A verified step earns its points once per student, however many
-  // sessions they needed to finish it.
-  await awardXp(runner, {
-    userId: session.user_id,
-    points: step.points || 10,
-    sourceType: 'step',
-    sourceId: step.id,
-  });
   return true;
 }
 
@@ -519,12 +510,6 @@ export async function checkLabCompletion(session) {
       title: `Lab completed: ${session.lab_title}`,
       body: 'All required steps verified. You can now generate your practical report.',
       link: `/labs/session/${session.id}`,
-    });
-    await awardXp(client, {
-      userId: session.user_id,
-      points: XP_RULES.labCompleted,
-      sourceType: 'lab',
-      sourceId: session.lab_id,
     });
     // Sync the linked lesson's completion so course progress reflects the lab.
     if (session.lesson_id && session.course_id) {
