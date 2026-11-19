@@ -129,7 +129,6 @@ Each lab also offers simulated practice mode. Practice uses an in-memory shell, 
 
 - [Setup and local development](docs/SETUP.md)
 - [Production setup guide](docs/PRODUCTION-SETUP.md)
-- [Production deployment](docs/DEPLOYMENT.md)
 
 ## License
 
