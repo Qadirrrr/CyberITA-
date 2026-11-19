@@ -4,9 +4,6 @@ coverage/
 .env
 .env.*
 !.env.example
-!.env.agent.example
-!.env.lab1.example
-!.env.lab2.example
 *.log
 server/uploads/*
 !server/uploads/.gitkeep
